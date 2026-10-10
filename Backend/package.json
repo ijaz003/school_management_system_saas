@@ -20,6 +20,7 @@
     "create-admin": "tsx src/scripts/create-super-admin.ts"
   },
   "dependencies": {
+    "@node-rs/argon2": "^2.2.2",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -27,9 +28,11 @@
     "drizzle-orm": "^0.45.4",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
     "postgres": "^3.4.7",
+    "slugify": "^1.6.9",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -37,6 +40,7 @@
     "@types/cookie-parser": "^1.4.8",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.13.10",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9.22.0",
@@ -47,7 +51,12 @@
   "overrides": {
     "esbuild": "^0.25.12"
   },
-  "keywords": ["school", "management", "saas", "multi-tenant"],
+  "keywords": [
+    "school",
+    "management",
+    "saas",
+    "multi-tenant"
+  ],
   "author": "Your Name",
   "license": "MIT"
 }
