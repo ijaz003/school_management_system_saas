@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+logs/
+.DS_Store
+.vscode/
+.idea/
+drizzle/meta/_journal.json.bak
+coverage/
