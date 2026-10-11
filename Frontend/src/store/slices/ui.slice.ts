@@ -6,7 +6,7 @@ interface UiState {
 }
 
 const initialState: UiState = {
-  sidebarOpen: true,
+  sidebarOpen: false,
   theme: 'light',
 };
 

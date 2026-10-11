@@ -34,7 +34,7 @@ export const tokenStorage = {
   remove: () => localStorage.removeItem(ACCESS_TOKEN_KEY),
 };
 
-function getTenantSlug(): string | null {
+export function getTenantSlug(): string | null {
   const hostname = window.location.hostname;
 
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -72,9 +72,6 @@ async function refreshAccessToken(): Promise<void> {
       tokenStorage.set(body.data.accessToken);
     } catch (error) {
       tokenStorage.remove();
-      if (window.location.pathname !== '/login') {
-        window.location.assign('/login');
-      }
       throw error;
     } finally {
       refreshPromise = null;
