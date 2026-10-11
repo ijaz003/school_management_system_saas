@@ -189,7 +189,7 @@ export const api = {
 };
 
 export function buildQueryString(
-  params: Record<string, unknown> | undefined,
+  params: object | undefined,
 ): string {
   if (!params) return '';
 

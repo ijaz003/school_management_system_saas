@@ -1,8 +1,11 @@
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, Outlet, RouterProvider } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { SchoolDashboard } from '@/features/school/dashboard/SchoolDashboard';
 import { SuperAdminDashboard } from '@/features/super-admin/dashboard/SuperAdminDashboard';
+import { SchoolsListPage } from '@/features/super-admin/schools/pages/SchoolsListPage';
+import { SchoolCreatePage } from '@/features/super-admin/schools/pages/SchoolCreatePage';
+import { SchoolDetailPage } from '@/features/super-admin/schools/pages/SchoolDetailPage';
 import { usePermission } from '@/hooks/usePermission';
 import { useAppSelector } from '@/store/hooks';
 import { selectUser } from '@/store/selectors/permissions';
@@ -49,6 +52,11 @@ function SectionRoute({
   return <PlaceholderPage title={title} />;
 }
 
+function SuperAdminRoute() {
+  const user = useAppSelector(selectUser);
+  return user?.role === 'super_admin' ? <Outlet /> : <Navigate to="/forbidden" replace />;
+}
+
 const router = createBrowserRouter([
   {
     element: <GuestRoute />,
@@ -70,13 +78,20 @@ const router = createBrowserRouter([
       { path: '/notices', element: <SectionRoute title="Notices" permission="notices.read" /> },
       { path: '/settings/roles', element: <SectionRoute title="Custom roles" permission="settings.roles.manage" /> },
       { path: '/settings/staff', element: <SectionRoute title="Staff" permission="settings.users.manage" /> },
-      { path: '/schools', element: <SectionRoute title="Schools" superAdminOnly /> },
       { path: '/subscriptions', element: <SectionRoute title="Subscriptions" superAdminOnly /> },
       { path: '/billing', element: <SectionRoute title="Billing" superAdminOnly /> },
       { path: '/permissions', element: <SectionRoute title="Permissions" superAdminOnly /> },
       { path: '/system-roles', element: <SectionRoute title="System roles" superAdminOnly /> },
       { path: '/analytics', element: <SectionRoute title="Analytics" superAdminOnly /> },
       { path: '/support', element: <SectionRoute title="Support" superAdminOnly /> },
+      {
+        element: <SuperAdminRoute />,
+        children: [
+          { path: '/schools', element: <SchoolsListPage /> },
+          { path: '/schools/new', element: <SchoolCreatePage /> },
+          { path: '/schools/:id', element: <SchoolDetailPage /> },
+        ],
+      },
     ],
   },
   { path: '/forbidden', element: <Forbidden /> },
