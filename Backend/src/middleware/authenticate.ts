@@ -48,6 +48,10 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
 
     const { user } = result;
 
+    if (req.tenantId && req.tenantId !== user.tenantId) {
+      throw new ForbiddenError('Request tenant does not match authenticated user');
+    }
+
     if (user.tenantId && (!result.tenantStatus || result.tenantDeletedAt)) {
       throw new UnauthorizedError('School account is unavailable');
     }

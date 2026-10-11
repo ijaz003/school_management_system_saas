@@ -12,6 +12,9 @@ import authRoutes from './modules/auth/auth.routes.js';
 import healthRoutes from './modules/health/health.routes.js';
 import { ApiResponse } from './lib/response.js';
 import superAdminSchoolsRoutes from './modules/super-admin/schools/schools.routes.js';
+import customRolesRoutes from './modules/school/custom-roles/custom-roles.routes.js';
+import assignRoleRoutes from './modules/school/staff/assign-role.routes.js';
+import systemRolesRoutes from './modules/roles/roles.routes.js';
 
 export function createApp() {
   const app = express();
@@ -47,6 +50,9 @@ export function createApp() {
   app.use('/api/auth', authRoutes);
   app.use('/api/health', healthRoutes);
   app.use('/api/super-admin/schools', superAdminSchoolsRoutes);
+  app.use('/api/super-admin/roles', systemRolesRoutes);
+  app.use('/api/school/roles', customRolesRoutes);
+  app.use('/api/school/users', assignRoleRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
