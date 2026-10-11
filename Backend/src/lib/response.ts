@@ -1,5 +1,29 @@
 import type { Response } from 'express';
 
+export interface ApiErrorDetail {
+  path: string;
+  message: string;
+}
+
+export interface ApiResponseBody<T = unknown> {
+  data: T | null;
+  message: string;
+  status: number;
+  errors?: ApiErrorDetail[];
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaginatedData<T> {
+  items: T[];
+  pagination: PaginationMeta;
+}
+
 export class ApiResponse {
   static success<T>(
     res: Response,
@@ -8,7 +32,7 @@ export class ApiResponse {
     status = 200,
   ) {
     return res.status(status).json({
-      success: true,
+      status,
       message,
       data,
     });
@@ -18,16 +42,35 @@ export class ApiResponse {
     return ApiResponse.success(res, data, message, 201);
   }
 
+  static paginated<T>(
+    res: Response,
+    items: T[],
+    pagination: PaginationMeta,
+    message = 'Data fetched successfully',
+  ) {
+    return ApiResponse.success(
+      res,
+      { items, pagination },
+      message,
+    );
+  }
+
   static error(
     res: Response,
     message: string,
     status = 400,
-    details?: unknown,
+    errors?: ApiErrorDetail[],
   ) {
-    return res.status(status).json({
-      success: false,
-      error: message,
-      ...(details !== undefined ? { details } : {}),
-    });
+    const body: ApiResponseBody<null> = {
+      status,
+      message,
+      data: null,
+    };
+
+    if (errors?.length) {
+      body.errors = errors;
+    }
+
+    return res.status(status).json(body);
   }
 }

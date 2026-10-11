@@ -6,6 +6,9 @@ import helmet from 'helmet';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { notFound } from './middleware/not-found.js';
+import { requestLogger } from './middleware/request-logger.js';
+import authRoutes from './modules/auth/auth.routes.js';
+import { ApiResponse } from './lib/response.js';
 
 export function createApp() {
   const app = express();
@@ -23,13 +26,21 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
 
+  app.use(requestLogger);
+
   app.get('/health', (_req, res) => {
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      environment: env.NODE_ENV,
-    });
+    return ApiResponse.success(
+      res,
+      {
+        timestamp: new Date().toISOString(),
+        environment: env.NODE_ENV,
+        uptime: process.uptime(),
+      },
+      'Server is healthy',
+    );
   });
+
+  app.use('/api/auth', authRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
