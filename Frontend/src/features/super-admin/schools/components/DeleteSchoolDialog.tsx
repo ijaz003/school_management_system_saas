@@ -9,10 +9,16 @@ import type { School } from '../hooks/useSchools';
 interface DeleteSchoolDialogProps {
   school: School;
   isOpen: boolean;
+  redirectOnDelete?: boolean;
   onClose: () => void;
 }
 
-export function DeleteSchoolDialog({ school, isOpen, onClose }: DeleteSchoolDialogProps) {
+export function DeleteSchoolDialog({
+  school,
+  isOpen,
+  redirectOnDelete = true,
+  onClose,
+}: DeleteSchoolDialogProps) {
   const navigate = useNavigate();
   const deleteSchool = useDeleteSchool();
   const [confirmText, setConfirmText] = useState('');
@@ -49,7 +55,7 @@ export function DeleteSchoolDialog({ school, isOpen, onClose }: DeleteSchoolDial
       onSuccess: () => {
         setConfirmText('');
         onClose();
-        navigate('/schools', { replace: true });
+        if (redirectOnDelete) navigate('/schools', { replace: true });
       },
     });
   };
