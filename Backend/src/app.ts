@@ -11,6 +11,7 @@ import { resolveTenant } from './middleware/resolve-tenant.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import healthRoutes from './modules/health/health.routes.js';
 import { ApiResponse } from './lib/response.js';
+import superAdminSchoolsRoutes from './modules/super-admin/schools/schools.routes.js';
 
 export function createApp() {
   const app = express();
@@ -45,6 +46,7 @@ export function createApp() {
   app.use('/api', resolveTenant);
   app.use('/api/auth', authRoutes);
   app.use('/api/health', healthRoutes);
+  app.use('/api/super-admin/schools', superAdminSchoolsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

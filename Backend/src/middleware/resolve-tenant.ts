@@ -28,6 +28,12 @@ function getSubdomain(host: string, rootDomain: string): string | null {
 
 export const resolveTenant: RequestHandler = async (req, res, next) => {
   try {
+    if (req.path.startsWith('/super-admin/')) {
+      req.tenantId = null;
+      req.tenant = undefined;
+      return next();
+    }
+
     const host = normalizeDomain(req.hostname);
     const rootDomain = normalizeDomain(env.ROOT_DOMAIN);
     const isLocalHost =
