@@ -1,3 +1,5 @@
+import type { Tenant } from '../modules/tenants/tenants.schema.js';
+
 declare global {
   namespace Express {
     interface Request {
@@ -9,6 +11,7 @@ declare global {
         permissions: string[];
       };
       tenantId?: string | null;
+      tenant?: Tenant;
     }
   }
 }

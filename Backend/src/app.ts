@@ -7,7 +7,9 @@ import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { notFound } from './middleware/not-found.js';
 import { requestLogger } from './middleware/request-logger.js';
+import { resolveTenant } from './middleware/resolve-tenant.js';
 import authRoutes from './modules/auth/auth.routes.js';
+import healthRoutes from './modules/health/health.routes.js';
 import { ApiResponse } from './lib/response.js';
 
 export function createApp() {
@@ -40,7 +42,9 @@ export function createApp() {
     );
   });
 
+  app.use('/api', resolveTenant);
   app.use('/api/auth', authRoutes);
+  app.use('/api/health', healthRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
