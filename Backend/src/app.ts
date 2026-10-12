@@ -14,6 +14,7 @@ import { ApiResponse } from './lib/response.js';
 import superAdminSchoolsRoutes from './modules/super-admin/schools/schools.routes.js';
 import customRolesRoutes from './modules/school/custom-roles/custom-roles.routes.js';
 import assignRoleRoutes from './modules/school/staff/assign-role.routes.js';
+import staffRoutes from './modules/school/staff/staff.routes.js';
 import systemRolesRoutes from './modules/roles/roles.routes.js';
 
 export function createApp() {
@@ -53,6 +54,7 @@ export function createApp() {
   app.use('/api/super-admin/roles', systemRolesRoutes);
   app.use('/api/school/roles', customRolesRoutes);
   app.use('/api/school/users', assignRoleRoutes);
+  app.use('/api/school/staff', staffRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

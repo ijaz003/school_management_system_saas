@@ -54,6 +54,6 @@ export function SchoolsListPage() {
           </Card>
         ) : null}
       </div>
-    </AppLayout>
+    </AppLayout> 
   );
 }

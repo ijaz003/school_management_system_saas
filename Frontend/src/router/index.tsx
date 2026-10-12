@@ -6,6 +6,10 @@ import { SuperAdminDashboard } from '@/features/super-admin/dashboard/SuperAdmin
 import { SchoolsListPage } from '@/features/super-admin/schools/pages/SchoolsListPage';
 import { SchoolCreatePage } from '@/features/super-admin/schools/pages/SchoolCreatePage';
 import { SchoolDetailPage } from '@/features/super-admin/schools/pages/SchoolDetailPage';
+import { StaffCreatePage } from '@/features/school/staff/pages/StaffCreatePage';
+import { StaffDetailPage } from '@/features/school/staff/pages/StaffDetailPage';
+import { StaffEditPage } from '@/features/school/staff/pages/StaffEditPage';
+import { StaffListPage } from '@/features/school/staff/pages/StaffListPage';
 import { usePermission } from '@/hooks/usePermission';
 import { useAppSelector } from '@/store/hooks';
 import { selectUser } from '@/store/selectors/permissions';
@@ -57,6 +61,15 @@ function SuperAdminRoute() {
   return user?.role === 'super_admin' ? <Outlet /> : <Navigate to="/forbidden" replace />;
 }
 
+function StaffRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || !can('settings.users.manage')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <Outlet />;
+}
+
 const router = createBrowserRouter([
   {
     element: <GuestRoute />,
@@ -77,7 +90,15 @@ const router = createBrowserRouter([
       { path: '/attendance', element: <SectionRoute title="Attendance" permission="attendance.read" /> },
       { path: '/notices', element: <SectionRoute title="Notices" permission="notices.read" /> },
       { path: '/settings/roles', element: <SectionRoute title="Custom roles" permission="settings.roles.manage" /> },
-      { path: '/settings/staff', element: <SectionRoute title="Staff" permission="settings.users.manage" /> },
+      {
+        element: <StaffRoute />,
+        children: [
+          { path: '/settings/staff', element: <StaffListPage /> },
+          { path: '/settings/staff/new', element: <StaffCreatePage /> },
+          { path: '/settings/staff/:id', element: <StaffDetailPage /> },
+          { path: '/settings/staff/:id/edit', element: <StaffEditPage /> },
+        ],
+      },
       { path: '/subscriptions', element: <SectionRoute title="Subscriptions" superAdminOnly /> },
       { path: '/billing', element: <SectionRoute title="Billing" superAdminOnly /> },
       { path: '/permissions', element: <SectionRoute title="Permissions" superAdminOnly /> },
