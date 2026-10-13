@@ -6,6 +6,7 @@ import { SuperAdminDashboard } from '@/features/super-admin/dashboard/SuperAdmin
 import { SchoolsListPage } from '@/features/super-admin/schools/pages/SchoolsListPage';
 import { SchoolCreatePage } from '@/features/super-admin/schools/pages/SchoolCreatePage';
 import { SchoolDetailPage } from '@/features/super-admin/schools/pages/SchoolDetailPage';
+import { RolesListPage } from '@/features/school/custom-roles/pages/RolesListPage';
 import { StaffCreatePage } from '@/features/school/staff/pages/StaffCreatePage';
 import { StaffDetailPage } from '@/features/school/staff/pages/StaffDetailPage';
 import { StaffEditPage } from '@/features/school/staff/pages/StaffEditPage';
@@ -70,6 +71,15 @@ function StaffRoute() {
   return <Outlet />;
 }
 
+function CustomRolesRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || !can('settings.roles.manage')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <RolesListPage />;
+}
+
 const router = createBrowserRouter([
   {
     element: <GuestRoute />,
@@ -89,7 +99,7 @@ const router = createBrowserRouter([
       { path: '/exams', element: <SectionRoute title="Exams" permission="exams.marks.enter" /> },
       { path: '/attendance', element: <SectionRoute title="Attendance" permission="attendance.read" /> },
       { path: '/notices', element: <SectionRoute title="Notices" permission="notices.read" /> },
-      { path: '/settings/roles', element: <SectionRoute title="Custom roles" permission="settings.roles.manage" /> },
+      { path: '/settings/roles', element: <CustomRolesRoute /> },
       {
         element: <StaffRoute />,
         children: [

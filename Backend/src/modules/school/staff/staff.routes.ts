@@ -13,7 +13,7 @@ import {
 
 const router = Router();
 
-router.use(authenticate, enforceTenantScope, requireRole('school_admin', 'principal'));
+router.use(authenticate, enforceTenantScope);
 
 router.get(
   '/',

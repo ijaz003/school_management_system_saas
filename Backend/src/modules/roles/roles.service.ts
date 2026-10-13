@@ -143,7 +143,7 @@ export async function listSystemRoles() {
 }
 
 export async function listTenantRoles(tenantId: string) {
-  return db
+  const tenantRoles = await db
     .select()
     .from(roles)
     .where(
@@ -154,6 +154,31 @@ export async function listTenantRoles(tenantId: string) {
       ),
     )
     .orderBy(asc(roles.isSystem), asc(roles.displayName));
+
+  if (tenantRoles.length === 0) return [];
+
+  const userCounts = await db
+    .select({
+      roleId: users.roleId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(users)
+    .where(
+      and(
+        eq(users.tenantId, tenantId),
+        inArray(users.roleId, tenantRoles.map(({ id }) => id)),
+        isNull(users.deletedAt),
+      ),
+    )
+    .groupBy(users.roleId);
+  const countsByRole = new Map(
+    userCounts.map(({ roleId, count }) => [roleId, Number(count)]),
+  );
+
+  return tenantRoles.map((role) => ({
+    ...role,
+    userCount: countsByRole.get(role.id) ?? 0,
+  }));
 }
 
 export async function listCustomRoles(tenantId: string) {
