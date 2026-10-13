@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import { ApiResponse } from '../lib/response.js';
-import { hasAllPermissions, hasPermission } from '../lib/permissions.js';
+import { hasPermission } from '../lib/permissions.js';
 
 export function can(...requiredPermissions: string[]): RequestHandler {
   if (requiredPermissions.length === 0) {
@@ -78,40 +78,6 @@ export function requireRole(...roles: string[]): RequestHandler {
         message: `Required role: ${roles.join(' or ')}`,
       },
     ]);
-  };
-}
-
-export function requireRoleOrPermission(
-  roles: readonly string[],
-  permissions: readonly string[],
-): RequestHandler {
-  if (roles.length === 0 && permissions.length === 0) {
-    throw new TypeError('requireRoleOrPermission() requires at least one role or permission');
-  }
-
-  return (req, res, next) => {
-    if (!req.user) {
-      return ApiResponse.error(res, 'Authentication required', 401);
-    }
-
-    if (
-      req.user.role === 'super_admin' ||
-      roles.includes(req.user.role) ||
-      (permissions.length > 0 &&
-        hasAllPermissions(req.user.permissions, [...permissions]))
-    ) {
-      return next();
-    }
-
-    return ApiResponse.error(
-      res,
-      'Access denied — insufficient role or permissions',
-      403,
-      [{
-        path: 'access',
-        message: `Required role: ${roles.join(' or ') || 'none'} OR permissions: ${permissions.join(', ') || 'none'}`,
-      }],
-    );
   };
 }
 
