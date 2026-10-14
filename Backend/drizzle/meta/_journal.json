@@ -8,6 +8,13 @@
       "when": 1791653208972,
       "tag": "0000_sturdy_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791878884586,
+      "tag": "0001_dry_tarot",
+      "breakpoints": true
     }
   ]
 }

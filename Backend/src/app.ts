@@ -16,6 +16,9 @@ import customRolesRoutes from './modules/school/custom-roles/custom-roles.routes
 import assignRoleRoutes from './modules/school/staff/assign-role.routes.js';
 import staffRoutes from './modules/school/staff/staff.routes.js';
 import systemRolesRoutes from './modules/roles/roles.routes.js';
+import classesRoutes from './modules/classes/classes.routes.js';
+import subjectsRoutes from './modules/subjects/subjects.routes.js';
+import sectionsRoutes from './modules/sections/sections.routes.js';
 
 export function createApp() {
   const app = express();
@@ -55,6 +58,9 @@ export function createApp() {
   app.use('/api/school/roles', customRolesRoutes);
   app.use('/api/school/users', assignRoleRoutes);
   app.use('/api/school/staff', staffRoutes);
+  app.use('/api/school/subjects', subjectsRoutes);
+  app.use('/api/school/classes', classesRoutes);
+  app.use('/api/school', sectionsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
