@@ -17,6 +17,7 @@ import {
   feeStructures,
 } from '../modules/fees/fees.schema.js';
 import { examMarks, exams, examSubjects } from '../modules/exams/exams.schema.js';
+import { auditLogs } from '../modules/audit/audit.schema.js';
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
@@ -36,6 +37,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   exams: many(exams),
   examSubjects: many(examSubjects),
   examMarks: many(examMarks),
+  auditLogs: many(auditLogs),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -317,3 +319,14 @@ export const teacherAssignmentsRelations = relations(
     }),
   }),
 );
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [auditLogs.tenantId],
+    references: [tenants.id],
+  }),
+  actor: one(users, {
+    fields: [auditLogs.actorId],
+    references: [users.id],
+  }),
+}));

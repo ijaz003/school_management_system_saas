@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Banknote, Plus, Receipt, Trash2, Wallet } from 'lucide-react';
+import { Banknote, Download, Plus, Receipt, Trash2, Wallet } from 'lucide-react';
+import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,8 @@ import { Modal } from '@/components/ui/modal';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
+import { buildQueryString } from '@/lib/api';
+import { downloadFile } from '@/lib/download';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useStudents } from '@/features/school/students/hooks/useStudents';
 import {
@@ -65,6 +68,7 @@ export function FeesPage() {
   const [detailInvoiceId, setDetailInvoiceId] = useState<string | null>(null);
   const [pendingStructureDelete, setPendingStructureDelete] = useState<FeeStructure | null>(null);
   const [pendingVoidPaymentId, setPendingVoidPaymentId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const invoicesQuery = useInvoices(filters);
   const structuresQuery = useFeeStructures();
@@ -76,6 +80,24 @@ export function FeesPage() {
   const pagination = invoicesQuery.data?.pagination;
   const structures = structuresQuery.data ?? [];
 
+  const handleExportInvoices = async () => {
+    setExporting(true);
+    try {
+      await downloadFile(
+        `/school/exports/invoices${buildQueryString({
+          search: filters.search,
+          status: filters.status,
+          classId: filters.classId,
+        })}`,
+        'fee-invoices.csv',
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -85,6 +107,15 @@ export function FeesPage() {
           description="Structures, invoices, and payments."
           actions={
             <>
+              {tab === 'invoices' && (
+                <Button
+                  variant="outline"
+                  onClick={() => void handleExportInvoices()}
+                  isLoading={exporting}
+                >
+                  <Download className="h-4 w-4" aria-hidden="true" /> Export CSV
+                </Button>
+              )}
               {tab === 'invoices' && canCreateInvoice && (
                 <>
                   <Button variant="outline" onClick={() => setGenerating(true)}>

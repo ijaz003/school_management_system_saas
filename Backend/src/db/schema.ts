@@ -12,4 +12,5 @@ export * from '../modules/attendance/attendance.schema.js';
 export * from '../modules/notices/notices.schema.js';
 export * from '../modules/fees/fees.schema.js';
 export * from '../modules/exams/exams.schema.js';
+export * from '../modules/audit/audit.schema.js';
 export * from './relations.js';

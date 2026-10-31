@@ -33,6 +33,7 @@ export const PERMISSIONS_LIST = [
   { key: 'reports.fees', displayName: 'Fee Reports', module: 'reports', action: 'read', category: 'Reports' },
   { key: 'reports.academic', displayName: 'Academic Reports', module: 'reports', action: 'read', category: 'Reports' },
   { key: 'reports.attendance', displayName: 'Attendance Reports', module: 'reports', action: 'read', category: 'Reports' },
+  { key: 'audit.read', displayName: 'View Audit Log', module: 'audit', action: 'read', category: 'Settings' },
   { key: 'settings.school.edit', displayName: 'Edit School Settings', module: 'settings', action: 'update', category: 'Settings' },
   { key: 'settings.users.manage', displayName: 'Manage Users', module: 'settings', action: 'update', category: 'Settings' },
   { key: 'settings.roles.manage', displayName: 'Manage Roles', module: 'settings', action: 'update', category: 'Settings' },

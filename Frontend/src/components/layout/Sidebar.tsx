@@ -11,6 +11,7 @@ import {
   LifeBuoy,
   Megaphone,
   School,
+  ScrollText,
   Settings,
   Shield,
   UserCog,
@@ -118,6 +119,12 @@ const SCHOOL_GROUPS: MenuGroup[] = [
         path: '/settings/staff',
         icon: UserCog,
         permission: 'settings.users.manage',
+      },
+      {
+        label: 'Audit log',
+        path: '/audit',
+        icon: ScrollText,
+        anyOf: ['audit.read', 'settings.users.manage', 'settings.school.edit'],
       },
       {
         label: 'Settings',

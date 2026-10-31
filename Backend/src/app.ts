@@ -27,6 +27,8 @@ import feesRoutes from './modules/fees/fees.routes.js';
 import examsRoutes from './modules/exams/exams.routes.js';
 import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
 import reportsRoutes from './modules/reports/reports.routes.js';
+import auditRoutes from './modules/audit/audit.routes.js';
+import exportsRoutes from './modules/exports/exports.routes.js';
 import settingsRoutes from './modules/school/settings/settings.routes.js';
 
 export function createApp() {
@@ -77,6 +79,8 @@ export function createApp() {
   app.use('/api/school/exams', examsRoutes);
   app.use('/api/school/dashboard', dashboardRoutes);
   app.use('/api/school/reports', reportsRoutes);
+  app.use('/api/school/audit-logs', auditRoutes);
+  app.use('/api/school/exports', exportsRoutes);
   app.use('/api/school/settings', settingsRoutes);
   app.use('/api/school', sectionsRoutes);
 

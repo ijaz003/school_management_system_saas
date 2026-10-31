@@ -28,6 +28,7 @@ import { ExamsListPage } from '@/features/school/exams/pages/ExamsListPage';
 import { ExamDetailPage } from '@/features/school/exams/pages/ExamDetailPage';
 import { ExamReportCardsPage } from '@/features/school/exams/pages/ExamReportCardsPage';
 import { ReportsPage } from '@/features/school/reports/pages/ReportsPage';
+import { AuditLogPage } from '@/features/school/audit/pages/AuditLogPage';
 import { SchoolSettingsPage } from '@/features/school/settings/pages/SchoolSettingsPage';
 import { ProfilePage } from '@/features/auth/pages/ProfilePage';
 import { usePermission } from '@/hooks/usePermission';
@@ -209,6 +210,17 @@ function ReportsRoute() {
   return <ReportsPage />;
 }
 
+function AuditRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  const allowed =
+    can('audit.read') || can('settings.users.manage') || can('settings.school.edit');
+  if (user?.role === 'super_admin' || !allowed) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <AuditLogPage />;
+}
+
 const router = createBrowserRouter([
   {
     element: <GuestRoute />,
@@ -262,6 +274,7 @@ const router = createBrowserRouter([
         ],
       },
       { path: '/reports', element: <ReportsRoute /> },
+      { path: '/audit', element: <AuditRoute /> },
       { path: '/attendance', element: <AttendanceRoute /> },
       { path: '/notices', element: <NoticesRoute /> },
       { path: '/settings/roles', element: <CustomRolesRoute /> },

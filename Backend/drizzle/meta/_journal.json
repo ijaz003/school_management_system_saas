@@ -50,6 +50,13 @@
       "when": 1793444330791,
       "tag": "0006_sudden_zarek",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793456444007,
+      "tag": "0007_nice_bill_hollister",
+      "breakpoints": true
     }
   ]
 }

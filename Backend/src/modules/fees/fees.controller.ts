@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { recordAuditFromRequest } from '../../lib/audit.js';
 import { BadRequestError, UnauthorizedError } from '../../lib/errors.js';
 import { ApiResponse } from '../../lib/response.js';
 import { asyncHandler } from '../../middleware/async-handler.js';
@@ -35,6 +36,14 @@ export const feesController = {
       tenantId: context.tenantId,
       data: req.body,
     });
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'fees.structure.create',
+      entityType: 'fee_structure',
+      entityId: item.id,
+      summary: `Created fee structure "${item.name}"`,
+    });
     return ApiResponse.created(res, item, 'Fee structure created');
   }),
 
@@ -45,12 +54,29 @@ export const feesController = {
       tenantId: context.tenantId,
       data: req.body,
     });
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'fees.structure.update',
+      entityType: 'fee_structure',
+      entityId: item.id,
+      summary: `Updated fee structure "${item.name}"`,
+    });
     return ApiResponse.success(res, item, 'Fee structure updated');
   }),
 
   deleteStructure: asyncHandler(async (req: Request, res: Response) => {
     const context = getSchoolContext(req);
-    await feesService.deleteFeeStructure(getId(req), context.tenantId);
+    const structureId = getId(req);
+    await feesService.deleteFeeStructure(structureId, context.tenantId);
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'fees.structure.delete',
+      entityType: 'fee_structure',
+      entityId: structureId,
+      summary: 'Deleted fee structure',
+    });
     return ApiResponse.success(res, null, 'Fee structure deleted');
   }),
 
@@ -77,6 +103,15 @@ export const feesController = {
       createdBy: context.userId,
       data: req.body,
     });
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'fees.invoice.create',
+      entityType: 'fee_invoice',
+      entityId: invoice.id,
+      summary: `Created invoice "${invoice.title}"`,
+      metadata: { amount: invoice.amount, studentId: invoice.studentId },
+    });
     return ApiResponse.created(res, invoice, 'Invoice created');
   }),
 
@@ -87,12 +122,28 @@ export const feesController = {
       createdBy: context.userId,
       data: req.body,
     });
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'fees.invoice.generate',
+      entityType: 'fee_invoice',
+      summary: `Generated ${result.createdCount} invoices`,
+      metadata: { structureId: req.body.feeStructureId, invoiceIds: result.invoiceIds },
+    });
     return ApiResponse.created(res, result, 'Invoices generated');
   }),
 
   issueInvoice: asyncHandler(async (req: Request, res: Response) => {
     const context = getSchoolContext(req);
     const invoice = await feesService.issueInvoice(getId(req), context.tenantId);
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'fees.invoice.issue',
+      entityType: 'fee_invoice',
+      entityId: invoice.id,
+      summary: `Issued invoice "${invoice.title}"`,
+    });
     return ApiResponse.success(res, invoice, 'Invoice issued');
   }),
 
@@ -104,12 +155,31 @@ export const feesController = {
       invoiceId: getId(req),
       data: req.body,
     });
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'fees.payment.record',
+      entityType: 'fee_invoice',
+      entityId: invoice.id,
+      summary: `Recorded payment of ${req.body.amount} on invoice "${invoice.title}"`,
+      metadata: { amount: req.body.amount, method: req.body.method },
+    });
     return ApiResponse.created(res, invoice, 'Payment recorded');
   }),
 
   voidPayment: asyncHandler(async (req: Request, res: Response) => {
     const context = getSchoolContext(req);
-    const invoice = await feesService.voidPayment(getId(req), context.tenantId);
+    const paymentId = getId(req);
+    const invoice = await feesService.voidPayment(paymentId, context.tenantId);
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'fees.payment.void',
+      entityType: 'fee_payment',
+      entityId: paymentId,
+      summary: `Voided payment on invoice "${invoice.title}"`,
+      metadata: { invoiceId: invoice.id },
+    });
     return ApiResponse.success(res, invoice, 'Payment voided');
   }),
 };

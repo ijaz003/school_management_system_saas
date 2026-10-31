@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { recordAuditFromRequest } from '../../lib/audit.js';
 import { BadRequestError, UnauthorizedError } from '../../lib/errors.js';
 import { ApiResponse } from '../../lib/response.js';
 import { asyncHandler } from '../../middleware/async-handler.js';
@@ -42,6 +43,14 @@ export const examsController = {
       createdBy: context.userId,
       data: req.body,
     });
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'exams.create',
+      entityType: 'exam',
+      entityId: exam.id,
+      summary: `Created exam "${exam.name}"`,
+    });
     return ApiResponse.created(res, exam, 'Exam created');
   }),
 
@@ -52,12 +61,29 @@ export const examsController = {
       tenantId: context.tenantId,
       data: req.body,
     });
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'exams.update',
+      entityType: 'exam',
+      entityId: exam.id,
+      summary: `Updated exam "${exam.name}"`,
+    });
     return ApiResponse.success(res, exam, 'Exam updated');
   }),
 
   delete: asyncHandler(async (req: Request, res: Response) => {
     const context = getSchoolContext(req);
-    await examsService.deleteExam(getId(req), context.tenantId);
+    const examId = getId(req);
+    await examsService.deleteExam(examId, context.tenantId);
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'exams.delete',
+      entityType: 'exam',
+      entityId: examId,
+      summary: 'Deleted exam',
+    });
     return ApiResponse.success(res, null, 'Exam deleted');
   }),
 
@@ -68,18 +94,43 @@ export const examsController = {
       tenantId: context.tenantId,
       subjects: req.body.subjects,
     });
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'exams.subjects.set',
+      entityType: 'exam',
+      entityId: exam.id,
+      summary: `Set subjects on exam "${exam.name}"`,
+      metadata: { subjectCount: req.body.subjects?.length ?? 0 },
+    });
     return ApiResponse.success(res, exam, 'Exam subjects updated');
   }),
 
   openMarks: asyncHandler(async (req: Request, res: Response) => {
     const context = getSchoolContext(req);
     const exam = await examsService.openMarksEntry(getId(req), context.tenantId);
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'exams.marks.open',
+      entityType: 'exam',
+      entityId: exam.id,
+      summary: `Opened marks entry for "${exam.name}"`,
+    });
     return ApiResponse.success(res, exam, 'Marks entry opened');
   }),
 
   publish: asyncHandler(async (req: Request, res: Response) => {
     const context = getSchoolContext(req);
     const exam = await examsService.publishExam(getId(req), context.tenantId);
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'exams.publish',
+      entityType: 'exam',
+      entityId: exam.id,
+      summary: `Published results for "${exam.name}"`,
+    });
     return ApiResponse.success(res, exam, 'Results published');
   }),
 
@@ -100,13 +151,26 @@ export const examsController = {
 
   saveMarks: asyncHandler(async (req: Request, res: Response) => {
     const context = getSchoolContext(req);
+    const examId = getId(req);
     const sheet = await examsService.saveMarks({
       tenantId: context.tenantId,
       enteredBy: context.userId,
-      examId: getId(req),
+      examId,
       examSubjectId: req.body.examSubjectId,
       sectionId: req.body.sectionId,
       records: req.body.records,
+    });
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'exams.marks.save',
+      entityType: 'exam',
+      entityId: examId,
+      summary: `Saved marks for ${req.body.records?.length ?? 0} students`,
+      metadata: {
+        examSubjectId: req.body.examSubjectId,
+        sectionId: req.body.sectionId,
+      },
     });
     return ApiResponse.success(res, sheet, 'Marks saved');
   }),

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { GraduationCap, Plus } from 'lucide-react';
+import { Download, GraduationCap, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -9,6 +10,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { StatCard } from '@/components/ui/stat-card';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { usePermission } from '@/hooks/usePermission';
+import { buildQueryString } from '@/lib/api';
+import { downloadFile } from '@/lib/download';
 import { StudentFilters } from '../components/StudentFilters';
 import { StudentTable } from '../components/StudentTable';
 import { useDeleteStudent } from '../hooks/useDeleteStudent';
@@ -20,11 +23,31 @@ export function StudentsListPage() {
   const { can } = usePermission();
   const [filters, setFilters] = useState<Filters>({ page: 1, limit: 20 });
   const [pendingDelete, setPendingDelete] = useState<StudentListItem | null>(null);
+  const [exporting, setExporting] = useState(false);
   const studentsQuery = useStudents(filters);
   const deleteStudent = useDeleteStudent();
   const items = studentsQuery.data?.items ?? [];
   const pagination = studentsQuery.data?.pagination;
   const hasFilters = Boolean(filters.search || filters.classId || filters.status);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await downloadFile(
+        `/school/exports/students${buildQueryString({
+          search: filters.search,
+          classId: filters.classId,
+          sectionId: filters.sectionId,
+          status: filters.status,
+        })}`,
+        'students.csv',
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <AppLayout>
@@ -34,11 +57,18 @@ export function StudentsListPage() {
           title="Students"
           description="Manage admissions, class placement, and guardians."
           actions={
-            can('students.create') ? (
-              <Button onClick={() => navigate('/students/new')}>
-                <Plus className="h-4 w-4" aria-hidden="true" /> Add student
-              </Button>
-            ) : undefined
+            <>
+              {can('students.read') && (
+                <Button variant="outline" onClick={() => void handleExport()} isLoading={exporting}>
+                  <Download className="h-4 w-4" aria-hidden="true" /> Export CSV
+                </Button>
+              )}
+              {can('students.create') && (
+                <Button onClick={() => navigate('/students/new')}>
+                  <Plus className="h-4 w-4" aria-hidden="true" /> Add student
+                </Button>
+              )}
+            </>
           }
         />
 

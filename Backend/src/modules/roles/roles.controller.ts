@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { recordAuditFromRequest } from '../../lib/audit.js';
 import { BadRequestError, UnauthorizedError } from '../../lib/errors.js';
 import { asyncHandler } from '../../middleware/async-handler.js';
 import { ApiResponse } from '../../lib/response.js';
@@ -60,6 +61,14 @@ export const rolesController = {
       adminPermissions: user.permissions,
       data: req.body,
     });
+    recordAuditFromRequest(req, {
+      tenantId: user.tenantId,
+      actorId: user.id,
+      action: 'roles.create',
+      entityType: 'role',
+      entityId: role.id,
+      summary: `Created role "${role.name}"`,
+    });
 
     return ApiResponse.created(res, role, 'Role created successfully');
   }),
@@ -81,25 +90,49 @@ export const rolesController = {
       adminPermissions: user.permissions,
       data: req.body,
     });
+    recordAuditFromRequest(req, {
+      tenantId: user.tenantId,
+      actorId: user.id,
+      action: 'roles.update',
+      entityType: 'role',
+      entityId: role.id,
+      summary: `Updated role "${role.name}"`,
+    });
     return ApiResponse.success(res, role, 'Role updated successfully');
   }),
 
   delete: asyncHandler(async (req: Request, res: Response) => {
     const user = getSchoolUser(req);
-    await rolesService.deleteRole(
-      getRouteId(req.params.id),
-      user.tenantId,
-    );
+    const roleId = getRouteId(req.params.id);
+    await rolesService.deleteRole(roleId, user.tenantId);
+    recordAuditFromRequest(req, {
+      tenantId: user.tenantId,
+      actorId: user.id,
+      action: 'roles.delete',
+      entityType: 'role',
+      entityId: roleId,
+      summary: 'Deleted custom role',
+    });
     return ApiResponse.success(res, null, 'Role deleted successfully');
   }),
 
   assignRole: asyncHandler(async (req: Request, res: Response) => {
     const user = getSchoolUser(req);
+    const targetUserId = getRouteId(req.params.userId);
     const result = await rolesService.assignRoleToUser({
-      userId: getRouteId(req.params.userId),
+      userId: targetUserId,
       roleId: req.body.roleId,
       tenantId: user.tenantId,
       adminPermissions: user.permissions,
+    });
+    recordAuditFromRequest(req, {
+      tenantId: user.tenantId,
+      actorId: user.id,
+      action: 'roles.assign',
+      entityType: 'user',
+      entityId: targetUserId,
+      summary: 'Assigned role to user',
+      metadata: { roleId: req.body.roleId },
     });
     return ApiResponse.success(res, result, 'Role assigned successfully');
   }),

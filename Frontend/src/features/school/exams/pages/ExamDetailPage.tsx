@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCheck, ClipboardList, FileText, Send, Users } from 'lucide-react';
+import { ArrowLeft, CheckCheck, ClipboardList, Download, FileText, Send, Users } from 'lucide-react';
+import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
 import { useSections } from '@/features/school/classes/hooks/useSections';
 import { usePermission } from '@/hooks/usePermission';
+import { downloadFile } from '@/lib/download';
 import {
   useExam,
   useExamResults,
@@ -40,6 +42,8 @@ export function ExamDetailPage() {
   const canPublish = can('exams.result.publish');
   const canOpenMarks = can('exams.schedule.create') || canEnterMarks;
   const canReportCards = can('exams.reportcard.generate') || canPublish;
+  const canExportMarks =
+    canEnterMarks || canPublish || can('exams.reportcard.generate') || can('exams.marks.approve');
 
   const examQuery = useExam(id);
   const openMarks = useOpenMarksEntry();
@@ -57,6 +61,7 @@ export function ExamDetailPage() {
   const [draft, setDraft] = useState<Record<string, DraftMark>>({});
   const [tab, setTab] = useState<'marks' | 'results'>('marks');
   const [confirmPublish, setConfirmPublish] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const sheetQuery = useMarksSheet(id, examSubjectId, sectionId);
 
@@ -118,6 +123,18 @@ export function ExamDetailPage() {
   const records = sheetQuery.data?.records ?? [];
   const readOnly = sheetQuery.data?.readOnly || exam.status === 'published';
   const maxMarks = sheetQuery.data?.examSubject.maxMarks ?? 0;
+
+  const handleExportMarks = async () => {
+    if (!id) return;
+    setExporting(true);
+    try {
+      await downloadFile(`/school/exports/exams/${id}/marks`, 'exam-marks.csv');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleSave = () => {
     if (!id || !examSubjectId || !sectionId) return;
@@ -198,6 +215,16 @@ export function ExamDetailPage() {
                 >
                   <FileText className="h-4 w-4" aria-hidden="true" /> Report cards
                 </Link>
+              )}
+              {canExportMarks && exam.status !== 'draft' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleExportMarks()}
+                  isLoading={exporting}
+                >
+                  <Download className="h-4 w-4" aria-hidden="true" /> Export marks CSV
+                </Button>
               )}
             </>
           }
