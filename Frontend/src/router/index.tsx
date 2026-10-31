@@ -11,6 +11,9 @@ import { StaffCreatePage } from '@/features/school/staff/pages/StaffCreatePage';
 import { StaffDetailPage } from '@/features/school/staff/pages/StaffDetailPage';
 import { StaffEditPage } from '@/features/school/staff/pages/StaffEditPage';
 import { StaffListPage } from '@/features/school/staff/pages/StaffListPage';
+import { ClassesListPage } from '@/features/school/classes/pages/ClassesListPage';
+import { ClassDetailPage } from '@/features/school/classes/pages/ClassDetailPage';
+import { SubjectsListPage } from '@/features/school/subjects/pages/SubjectsListPage';
 import { usePermission } from '@/hooks/usePermission';
 import { useAppSelector } from '@/store/hooks';
 import { selectUser } from '@/store/selectors/permissions';
@@ -80,6 +83,15 @@ function CustomRolesRoute() {
   return <RolesListPage />;
 }
 
+function AcademicRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || !can('classes.read')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <Outlet />;
+}
+
 const router = createBrowserRouter([
   {
     element: <GuestRoute />,
@@ -94,12 +106,20 @@ const router = createBrowserRouter([
       { path: '/settings', element: <SectionRoute title="Settings" permission="settings.school.edit" /> },
       { path: '/students', element: <SectionRoute title="Students" permission="students.read" /> },
       { path: '/teachers', element: <SectionRoute title="Teachers" permission="teachers.read" /> },
-      { path: '/classes', element: <SectionRoute title="Classes" permission="classes.read" /> },
+      { path: '/classes', element: <Navigate to="/settings/classes" replace /> },
       { path: '/fees', element: <SectionRoute title="Fees" permission="fees.invoice.read" /> },
       { path: '/exams', element: <SectionRoute title="Exams" permission="exams.marks.enter" /> },
       { path: '/attendance', element: <SectionRoute title="Attendance" permission="attendance.read" /> },
       { path: '/notices', element: <SectionRoute title="Notices" permission="notices.read" /> },
       { path: '/settings/roles', element: <CustomRolesRoute /> },
+      {
+        element: <AcademicRoute />,
+        children: [
+          { path: '/settings/classes', element: <ClassesListPage /> },
+          { path: '/settings/classes/:id', element: <ClassDetailPage /> },
+          { path: '/settings/subjects', element: <SubjectsListPage /> },
+        ],
+      },
       {
         element: <StaffRoute />,
         children: [

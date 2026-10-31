@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  BookOpen,
   Building2,
   CalendarCheck,
   CreditCard,
@@ -46,7 +47,8 @@ const SCHOOL_MENU: MenuItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { label: 'Students', path: '/students', icon: GraduationCap, permission: 'students.read' },
   { label: 'Teachers', path: '/teachers', icon: Users, permission: 'teachers.read' },
-  { label: 'Classes', path: '/classes', icon: School, permission: 'classes.read' },
+  { label: 'Classes', path: '/settings/classes', icon: School, permission: 'classes.read' },
+  { label: 'Subjects', path: '/settings/subjects', icon: BookOpen, permission: 'classes.read' },
   { label: 'Fees', path: '/fees', icon: DollarSign, permission: 'fees.invoice.read' },
   { label: 'Exams', path: '/exams', icon: FileText, permission: 'exams.marks.enter' },
   { label: 'Attendance', path: '/attendance', icon: CalendarCheck, permission: 'attendance.read' },
