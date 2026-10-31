@@ -60,9 +60,10 @@ export interface MarksSheet {
   readOnly: boolean;
 }
 
-export function useExams(filters: ExamFilters = {}) {
+export function useExams(filters: ExamFilters = {}, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: examKeys.list(filters),
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const response = await api.get<{
         items: ExamListItem[];

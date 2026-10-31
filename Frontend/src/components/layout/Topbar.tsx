@@ -11,6 +11,7 @@ const ROUTE_TITLES: Array<{ match: RegExp; title: string }> = [
   { match: /^\/teachers/, title: 'Teachers' },
   { match: /^\/fees/, title: 'Fees' },
   { match: /^\/exams/, title: 'Exams' },
+  { match: /^\/reports/, title: 'Reports' },
   { match: /^\/attendance/, title: 'Attendance' },
   { match: /^\/notices/, title: 'Notices' },
   { match: /^\/settings\/classes/, title: 'Classes' },

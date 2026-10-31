@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCheck, ClipboardList, Send, Users } from 'lucide-react';
+import { ArrowLeft, CheckCheck, ClipboardList, FileText, Send, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ export function ExamDetailPage() {
   const canEnterMarks = can('exams.marks.enter');
   const canPublish = can('exams.result.publish');
   const canOpenMarks = can('exams.schedule.create') || canEnterMarks;
+  const canReportCards = can('exams.reportcard.generate') || canPublish;
 
   const examQuery = useExam(id);
   const openMarks = useOpenMarksEntry();
@@ -189,6 +190,14 @@ export function ExamDetailPage() {
                 <Button onClick={() => setConfirmPublish(true)} isLoading={publishExam.isPending}>
                   <Send className="h-4 w-4" aria-hidden="true" /> Publish results
                 </Button>
+              )}
+              {canReportCards && exam.status !== 'draft' && (
+                <Link
+                  to={`/exams/${exam.id}/report-cards`}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 text-sm font-semibold text-ink-800 hover:bg-ink-50"
+                >
+                  <FileText className="h-4 w-4" aria-hidden="true" /> Report cards
+                </Link>
               )}
             </>
           }

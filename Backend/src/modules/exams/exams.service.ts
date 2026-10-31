@@ -7,6 +7,7 @@ import { sections } from '../sections/sections.schema.js';
 import { students } from '../students/students.schema.js';
 import { subjects } from '../subjects/subjects.schema.js';
 import { users } from '../auth/auth.schema.js';
+import { tenants } from '../tenants/tenants.schema.js';
 import { examMarks, exams, examSubjects } from './exams.schema.js';
 import type {
   CreateExamInput,
@@ -628,4 +629,73 @@ export async function getExamResults(examId: string, tenantId: string) {
   });
 
   return { exam, results };
+}
+
+export async function getExamReportCards(examId: string, tenantId: string) {
+  const [tenant] = await db
+    .select({
+      name: tenants.name,
+      city: tenants.city,
+      address: tenants.address,
+      logoUrl: tenants.logoUrl,
+    })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+
+  const { exam, results } = await getExamResults(examId, tenantId);
+
+  const cards = results.map((result) => {
+    const graded = result.subjects.filter(
+      (subject) => !subject.isAbsent && subject.marksObtained !== null,
+    );
+    const passedAll =
+      graded.length > 0 && graded.every((subject) => subject.passed);
+    return {
+      school: {
+        name: tenant?.name ?? 'School',
+        city: tenant?.city ?? null,
+        address: tenant?.address ?? null,
+        logoUrl: tenant?.logoUrl ?? null,
+      },
+      exam: {
+        id: exam.id,
+        name: exam.name,
+        className: exam.className,
+        term: exam.term,
+        academicYear: exam.academicYear,
+        startDate: exam.startDate,
+        endDate: exam.endDate,
+        status: exam.status,
+      },
+      student: {
+        id: result.studentId,
+        fullName: result.fullName,
+        admissionNo: result.admissionNo,
+        sectionName: result.sectionName,
+      },
+      subjects: result.subjects,
+      totals: {
+        obtained: result.totalObtained,
+        max: result.totalMax,
+        percentage: result.percentage,
+        absentCount: result.absentCount,
+        result: passedAll ? 'Pass' : graded.length === 0 ? 'Incomplete' : 'Fail',
+      },
+      generatedAt: new Date().toISOString(),
+    };
+  });
+
+  return { exam, cards };
+}
+
+export async function getStudentReportCard(
+  examId: string,
+  studentId: string,
+  tenantId: string,
+) {
+  const { cards, exam } = await getExamReportCards(examId, tenantId);
+  const card = cards.find((item) => item.student.id === studentId);
+  if (!card) throw new NotFoundError('Report card');
+  return { exam, card };
 }

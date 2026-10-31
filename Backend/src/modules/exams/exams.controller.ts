@@ -116,4 +116,22 @@ export const examsController = {
     const results = await examsService.getExamResults(getId(req), context.tenantId);
     return ApiResponse.success(res, results, 'Exam results fetched');
   }),
+
+  reportCards: asyncHandler(async (req: Request, res: Response) => {
+    const context = getSchoolContext(req);
+    const data = await examsService.getExamReportCards(getId(req), context.tenantId);
+    return ApiResponse.success(res, data, 'Report cards fetched');
+  }),
+
+  reportCard: asyncHandler(async (req: Request, res: Response) => {
+    const context = getSchoolContext(req);
+    const studentId = req.params.studentId;
+    if (typeof studentId !== 'string') throw new BadRequestError('Invalid student ID');
+    const data = await examsService.getStudentReportCard(
+      getId(req),
+      studentId,
+      context.tenantId,
+    );
+    return ApiResponse.success(res, data, 'Report card fetched');
+  }),
 };

@@ -9,6 +9,7 @@ import {
   examIdSchema,
   listExamsSchema,
   marksSheetSchema,
+  reportCardSchema,
   saveMarksSchema,
   setExamSubjectsSchema,
   updateExamSchema,
@@ -66,6 +67,18 @@ router.get(
   canAny('exams.result.publish', 'exams.reportcard.generate', 'exams.marks.enter'),
   validate(examIdSchema),
   examsController.results,
+);
+router.get(
+  '/:id/report-cards',
+  canAny('exams.reportcard.generate', 'exams.result.publish'),
+  validate(examIdSchema),
+  examsController.reportCards,
+);
+router.get(
+  '/:id/report-cards/:studentId',
+  canAny('exams.reportcard.generate', 'exams.result.publish'),
+  validate(reportCardSchema),
+  examsController.reportCard,
 );
 
 export default router;

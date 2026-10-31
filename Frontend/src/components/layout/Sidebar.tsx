@@ -28,6 +28,8 @@ interface MenuItem {
   label: string;
   path: string;
   icon: LucideIcon;
+  /** Show if user has any of these permissions (overrides single `permission` when set). */
+  anyOf?: string[];
   permission?: string;
   exact?: boolean;
 }
@@ -84,6 +86,21 @@ const SCHOOL_GROUPS: MenuGroup[] = [
     label: 'Operations',
     items: [
       { label: 'Fees', path: '/fees', icon: DollarSign, permission: 'fees.invoice.read' },
+      {
+        label: 'Reports',
+        path: '/reports',
+        icon: BarChart3,
+        anyOf: [
+          'reports.fees',
+          'reports.attendance',
+          'reports.academic',
+          'fees.invoice.read',
+          'attendance.read',
+          'attendance.report',
+          'exams.result.publish',
+          'exams.reportcard.generate',
+        ],
+      },
       { label: 'Notices', path: '/notices', icon: Megaphone, permission: 'notices.read' },
     ],
   },
@@ -125,7 +142,10 @@ export function Sidebar() {
   const visibleGroups = groups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.permission || can(item.permission)),
+      items: group.items.filter((item) => {
+        if (item.anyOf?.length) return item.anyOf.some((permission) => can(permission));
+        return !item.permission || can(item.permission);
+      }),
     }))
     .filter((group) => group.items.length > 0);
 

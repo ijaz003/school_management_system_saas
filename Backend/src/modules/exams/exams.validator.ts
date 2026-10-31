@@ -67,6 +67,13 @@ export const examIdSchema = z.object({
   params: z.object({ id: z.string().uuid() }),
 });
 
+export const reportCardSchema = z.object({
+  params: z.object({
+    id: z.string().uuid(),
+    studentId: z.string().uuid(),
+  }),
+});
+
 export const setExamSubjectsSchema = z.object({
   params: z.object({ id: z.string().uuid() }),
   body: z.object({
