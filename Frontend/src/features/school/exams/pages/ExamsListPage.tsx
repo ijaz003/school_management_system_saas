@@ -2,9 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardList, Plus, Trash2 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useClass } from '@/features/school/classes/hooks/useClass';
@@ -17,14 +21,11 @@ import {
 } from '../hooks/useExams';
 import type { ExamFilters, ExamStatus } from '../hooks/keys';
 
-const selectClass =
-  'w-full rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500';
-
-const statusStyles: Record<ExamStatus, string> = {
-  draft: 'bg-ink-100 text-ink-700',
-  scheduled: 'bg-blue-100 text-blue-800',
-  marks_entry: 'bg-amber-100 text-amber-800',
-  published: 'bg-green-100 text-green-800',
+const statusTones: Record<ExamStatus, 'neutral' | 'primary' | 'warning' | 'success'> = {
+  draft: 'neutral',
+  scheduled: 'primary',
+  marks_entry: 'warning',
+  published: 'success',
 };
 
 export function ExamsListPage() {
@@ -32,6 +33,7 @@ export function ExamsListPage() {
   const canSchedule = can('exams.schedule.create');
   const [filters, setFilters] = useState<ExamFilters>({ page: 1, limit: 20 });
   const [creating, setCreating] = useState(false);
+  const [examToDelete, setExamToDelete] = useState<ExamListItem | null>(null);
   const examsQuery = useExams(filters);
   const deleteExam = useDeleteExam();
   const classesQuery = useClasses();
@@ -41,22 +43,20 @@ export function ExamsListPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-600">
-              Academic
-            </p>
-            <h1 className="page-title mt-1 text-2xl">Exams</h1>
-            <p className="page-subtitle">Schedule exams, enter marks, and publish results.</p>
-          </div>
-          {canSchedule && (
-            <Button onClick={() => setCreating(true)}>
-              <Plus className="h-4 w-4" aria-hidden="true" /> New exam
-            </Button>
-          )}
-        </header>
+        <PageHeader
+          eyebrow="Academic"
+          title="Exams"
+          description="Schedule exams, enter marks, and publish results."
+          actions={
+            canSchedule ? (
+              <Button onClick={() => setCreating(true)}>
+                <Plus className="h-4 w-4" aria-hidden="true" /> New exam
+              </Button>
+            ) : undefined
+          }
+        />
 
-        <section className="panel grid gap-3 p-4 md:grid-cols-12">
+        <section className="panel grid grid-cols-1 gap-3 p-4 md:grid-cols-12">
           <div className="md:col-span-5">
             <Input
               type="search"
@@ -74,7 +74,7 @@ export function ExamsListPage() {
           </div>
           <select
             aria-label="Filter by status"
-            className={`${selectClass} md:col-span-3`}
+            className="field-select md:col-span-3"
             value={filters.status ?? ''}
             onChange={(event) =>
               setFilters((current) => ({
@@ -92,7 +92,7 @@ export function ExamsListPage() {
           </select>
           <select
             aria-label="Filter by class"
-            className={`${selectClass} md:col-span-4`}
+            className="field-select md:col-span-4"
             value={filters.classId ?? ''}
             onChange={(event) =>
               setFilters((current) => ({
@@ -112,8 +112,8 @@ export function ExamsListPage() {
         </section>
 
         {examsQuery.isPending ? (
-          <div className="panel p-12">
-            <PageLoader />
+          <div className="panel">
+            <PageLoader compact />
           </div>
         ) : examsQuery.error ? (
           <section className="rounded-2xl border border-red-200 bg-white p-8 text-center">
@@ -121,11 +121,11 @@ export function ExamsListPage() {
             <p className="mt-2 text-sm text-ink-700">{examsQuery.error.message}</p>
           </section>
         ) : items.length === 0 ? (
-          <section className="rounded-2xl border border-dashed border-ink-200 bg-white px-6 py-14 text-center">
-            <ClipboardList className="mx-auto h-10 w-10 text-ink-200" aria-hidden="true" />
-            <h2 className="mt-3 font-semibold text-ink-950">No exams yet</h2>
-            <p className="mt-1 text-sm text-ink-700/70">Create your first exam schedule.</p>
-          </section>
+          <EmptyState
+            icon={ClipboardList}
+            title="No exams yet"
+            description="Create your first exam schedule."
+          />
         ) : (
           <div className="space-y-3">
             {items.map((exam) => (
@@ -133,11 +133,7 @@ export function ExamsListPage() {
                 key={exam.id}
                 exam={exam}
                 canSchedule={canSchedule}
-                onDelete={() => {
-                  if (window.confirm(`Delete exam "${exam.name}"?`)) {
-                    deleteExam.mutate(exam.id);
-                  }
-                }}
+                onDelete={() => setExamToDelete(exam)}
               />
             ))}
           </div>
@@ -175,6 +171,19 @@ export function ExamsListPage() {
       </div>
 
       {creating && <CreateExamModal onClose={() => setCreating(false)} />}
+
+      <ConfirmDialog
+        open={examToDelete !== null}
+        title="Delete exam?"
+        description={`Delete exam "${examToDelete?.name ?? ''}"? Its schedule will be removed.`}
+        confirmLabel="Delete"
+        loading={deleteExam.isPending}
+        onClose={() => setExamToDelete(null)}
+        onConfirm={() => {
+          if (!examToDelete) return;
+          deleteExam.mutate(examToDelete.id, { onSettled: () => setExamToDelete(null) });
+        }}
+      />
     </AppLayout>
   );
 }
@@ -193,14 +202,8 @@ function ExamRow({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <Link to={`/exams/${exam.id}`} className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap gap-2">
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${statusStyles[exam.status]}`}
-            >
-              {exam.status.replace('_', ' ')}
-            </span>
-            <span className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700">
-              {exam.className}
-            </span>
+            <Badge tone={statusTones[exam.status]}>{exam.status.replace('_', ' ')}</Badge>
+            <Badge tone="primary">{exam.className}</Badge>
           </div>
           <h2 className="font-display text-lg font-semibold text-ink-950">{exam.name}</h2>
           <p className="mt-1 text-sm text-ink-700">
@@ -212,7 +215,7 @@ function ExamRow({
         </Link>
         {canSchedule && exam.status !== 'published' && (
           <Button type="button" size="sm" variant="ghost" onClick={onDelete} aria-label="Delete">
-            <Trash2 className="h-4 w-4 text-red-600" />
+            <Trash2 className="h-4 w-4 text-danger-600" />
           </Button>
         )}
       </div>
@@ -302,7 +305,7 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
           </label>
           <select
             id="exam-class"
-            className={selectClass}
+            className="field-select"
             value={classId}
             onChange={(event) => {
               setClassId(event.target.value);
@@ -317,7 +320,7 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
             ))}
           </select>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label="Term" value={term} onChange={(event) => setTerm(event.target.value)} />
           <Input
             label="Academic year"

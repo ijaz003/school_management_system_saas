@@ -12,23 +12,29 @@ interface RoleCardProps {
 
 export function RoleCard({ role, onView, onEdit, onDelete }: RoleCardProps) {
   return (
-    <article className={`flex h-full flex-col rounded-xl border bg-white p-5 transition-shadow hover:shadow-md ${role.isSystem ? 'border-dashed border-gray-300' : 'border-gray-200'}`}>
+    <article
+      className={`panel flex h-full flex-col p-5 transition-shadow hover:shadow-lift ${role.isSystem ? 'border-dashed border-ink-300' : ''}`}
+    >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: `${role.color ?? '#2563eb'}18`, color: role.color ?? '#2563eb' }} aria-hidden="true">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: `${role.color ?? '#0f766e'}18`, color: role.color ?? '#0f766e' }} aria-hidden="true">
           {role.icon || role.displayName.slice(0, 1).toUpperCase()}
         </div>
-        {role.isSystem && <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-600"><Lock className="h-3 w-3" aria-hidden="true" />System</span>}
+        {role.isSystem && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-ink-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-ink-600">
+            <Lock className="h-3 w-3" aria-hidden="true" />System
+          </span>
+        )}
       </div>
       <div className="mt-4 flex-1">
-        <h2 className="font-semibold text-gray-900">{role.displayName}</h2>
-        <p className="mt-1 min-h-10 text-sm text-gray-500">{role.description || 'No description provided.'}</p>
+        <h2 className="font-display font-semibold text-ink-950">{role.displayName}</h2>
+        <p className="mt-1 min-h-10 text-sm text-ink-500">{role.description || 'No description provided.'}</p>
         <div className="mt-3"><RoleBadge name={role.name} color={role.color} /></div>
       </div>
-      <div className="my-4 flex gap-6 border-y border-gray-100 py-3">
-        <div><p className="text-xs text-gray-500">Permissions</p><p className="mt-1 font-semibold text-gray-900">{role.permissions.length}</p></div>
-        <div><p className="text-xs text-gray-500">Assigned users</p><p className="mt-1 font-semibold text-gray-900">{role.userCount}</p></div>
+      <div className="my-4 flex gap-6 border-y border-ink-100 py-3">
+        <div><p className="text-xs text-ink-500">Permissions</p><p className="mt-1 font-semibold text-ink-950">{role.permissions.length}</p></div>
+        <div><p className="text-xs text-ink-500">Assigned users</p><p className="mt-1 font-semibold text-ink-950">{role.userCount}</p></div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => onView(role)}><Eye className="h-4 w-4" aria-hidden="true" />View</Button>
         {!role.isSystem && (
           <>

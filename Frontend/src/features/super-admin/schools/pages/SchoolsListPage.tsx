@@ -3,8 +3,8 @@ import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { PageLoader } from '@/components/ui/spinner';
+import { PageHeader } from '@/components/ui/page-header';
+import { TableSkeleton } from '@/components/ui/skeleton';
 import { Pagination } from '../components/Pagination';
 import { SchoolFilters } from '../components/SchoolFilters';
 import { SchoolsTable } from '../components/SchoolsTable';
@@ -19,28 +19,36 @@ export function SchoolsListPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Schools management</h1>
-            <p className="mt-1 text-sm text-gray-500">Manage schools on your platform</p>
-          </div>
-          <Button onClick={() => navigate('/schools/new')}>
-            <Plus className="h-4 w-4" aria-hidden="true" /> Add school
-          </Button>
-        </header>
+        <PageHeader
+          eyebrow="Platform"
+          title="Schools management"
+          description="Manage schools on your platform"
+          actions={
+            <Button onClick={() => navigate('/schools/new')}>
+              <Plus className="h-4 w-4" aria-hidden="true" /> Add school
+            </Button>
+          }
+        />
 
         <SchoolFilters value={filters} onChange={setFilters} />
 
         {isPending ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-12"><PageLoader /></div>
+          <TableSkeleton rows={6} />
         ) : error ? (
-          <Card className="p-8 text-center">
-            <h2 className="text-lg font-semibold text-gray-900">Could not load schools</h2>
-            <p className="mt-2 text-sm text-gray-600">{error.message}</p>
-            <Button className="mt-4" variant="outline" onClick={() => void refetch()} isLoading={isFetching}>Try again</Button>
-          </Card>
+          <section className="panel border-danger-100 p-8 text-center">
+            <h2 className="font-display text-lg font-semibold text-ink-950">Could not load schools</h2>
+            <p className="mt-2 text-sm text-ink-600">{error.message}</p>
+            <Button
+              className="mt-4"
+              variant="outline"
+              onClick={() => void refetch()}
+              isLoading={isFetching}
+            >
+              Try again
+            </Button>
+          </section>
         ) : data ? (
-          <Card>
+          <section className="panel overflow-hidden p-0">
             <SchoolsTable schools={data.items} />
             {data.pagination.totalPages > 1 && (
               <Pagination
@@ -51,9 +59,9 @@ export function SchoolsListPage() {
                 onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
               />
             )}
-          </Card>
+          </section>
         ) : null}
       </div>
-    </AppLayout> 
+    </AppLayout>
   );
 }

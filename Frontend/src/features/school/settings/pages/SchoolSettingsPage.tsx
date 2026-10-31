@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
 import { useSchoolSettings, useUpdateSchoolSettings } from '../hooks/useSchoolSettings';
 
@@ -53,7 +54,9 @@ export function SchoolSettingsPage() {
   if (settingsQuery.isPending) {
     return (
       <AppLayout>
-        <PageLoader />
+        <div className="panel">
+          <PageLoader compact />
+        </div>
       </AppLayout>
     );
   }
@@ -61,9 +64,9 @@ export function SchoolSettingsPage() {
   if (settingsQuery.error || !settingsQuery.data) {
     return (
       <AppLayout>
-        <section className="py-12 text-center">
-          <h1 className="text-lg font-semibold text-ink-950">Could not load settings</h1>
-          <p className="mt-2 text-sm text-ink-700">{settingsQuery.error?.message}</p>
+        <section className="panel p-8 text-center">
+          <h1 className="font-display text-lg font-semibold text-ink-950">Could not load settings</h1>
+          <p className="mt-2 text-sm text-ink-600">{settingsQuery.error?.message}</p>
         </section>
       </AppLayout>
     );
@@ -89,21 +92,17 @@ export function SchoolSettingsPage() {
   return (
     <AppLayout>
       <div className="mx-auto max-w-3xl space-y-6">
-        <header>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-600">
-            Settings
-          </p>
-          <h1 className="page-title mt-1 text-2xl">School settings</h1>
-          <p className="page-subtitle">
-            Update school profile and academic defaults. Slug: {settingsQuery.data.slug}
-          </p>
-        </header>
+        <PageHeader
+          eyebrow="Settings"
+          title="School settings"
+          description={`Update school profile and academic defaults. Slug: ${settingsQuery.data.slug}`}
+        />
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          <section className="panel space-y-4 p-5">
+          <section className="panel space-y-4 p-4 sm:p-5">
             <h2 className="font-display text-base font-semibold text-ink-950">School profile</h2>
             <Input label="School name *" error={errors.name?.message} {...register('name')} />
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input label="City" {...register('city')} />
               <Input label="Logo URL" error={errors.logoUrl?.message} {...register('logoUrl')} />
             </div>
@@ -114,24 +113,24 @@ export function SchoolSettingsPage() {
               <textarea
                 id="school-address"
                 rows={2}
-                className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="field-select"
                 {...register('address')}
               />
             </div>
           </section>
 
-          <section className="panel space-y-4 p-5">
+          <section className="panel space-y-4 p-4 sm:p-5">
             <h2 className="font-display text-base font-semibold text-ink-950">Owner contact</h2>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input label="Owner name *" error={errors.ownerName?.message} {...register('ownerName')} />
               <Input label="Owner phone *" error={errors.ownerPhone?.message} {...register('ownerPhone')} />
             </div>
             <Input label="Owner email" value={settingsQuery.data.ownerEmail} disabled />
           </section>
 
-          <section className="panel space-y-4 p-5">
+          <section className="panel space-y-4 p-4 sm:p-5">
             <h2 className="font-display text-base font-semibold text-ink-950">Academic defaults</h2>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input label="Academic year" placeholder="2025-2026" {...register('academicYear')} />
               <Input label="Grading system" placeholder="Percentage" {...register('gradingSystem')} />
               <Input label="Timezone" placeholder="Asia/Karachi" {...register('timezone')} />
@@ -139,8 +138,8 @@ export function SchoolSettingsPage() {
             </div>
           </section>
 
-          <footer className="flex justify-end">
-            <Button type="submit" isLoading={updateSettings.isPending}>
+          <footer className="flex justify-stretch sm:justify-end">
+            <Button type="submit" className="w-full sm:w-auto" isLoading={updateSettings.isPending}>
               Save settings
             </Button>
           </footer>

@@ -72,13 +72,13 @@ export function SchoolForm() {
       <Card className="max-w-2xl">
         <CardHeader><CardTitle>School created successfully</CardTitle></CardHeader>
         <CardContent className="space-y-6">
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <p className="mb-2 text-sm font-medium text-amber-900">Temporary password — shown only once</p>
+          <div className="rounded-xl border border-warning-100 bg-warning-50 p-4">
+            <p className="mb-2 text-sm font-medium text-warning-700">Temporary password — shown only once</p>
             <div className="flex flex-col gap-2 sm:flex-row">
               <code className="flex-1 break-all rounded border bg-white px-3 py-2 text-sm">{created.admin.tempPassword}</code>
               <Button type="button" variant="outline" size="sm" onClick={copyTemporaryPassword}>Copy</Button>
             </div>
-            <p className="mt-2 text-xs text-amber-800">
+            <p className="mt-2 text-xs text-warning-700">
               Admin account: {created.admin.email}. Share these credentials securely.
             </p>
           </div>
@@ -108,7 +108,7 @@ export function SchoolForm() {
                 void slugRegistration.onChange(event);
               }}
             />
-            {slugValue && <p className="mt-1 text-xs text-gray-500">School URL slug: <code>{slugValue}</code></p>}
+            {slugValue && <p className="mt-1 text-xs text-ink-500">School URL slug: <code>{slugValue}</code></p>}
           </div>
           <Input label="City" placeholder="e.g. Lahore" error={errors.city?.message} {...register('city')} />
           <Input label="Address" placeholder="Full address (optional)" error={errors.address?.message} {...register('address')} />
@@ -126,11 +126,11 @@ export function SchoolForm() {
         <CardHeader><CardTitle>Subscription plan</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {plans.map((plan) => (
-            <label key={plan.value} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${selectedPlan === plan.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-              <input type="radio" value={plan.value} className="mt-1 text-blue-600 focus:ring-blue-500" {...register('plan')} />
+            <label key={plan.value} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${selectedPlan === plan.value ? 'border-primary-600 bg-primary-50' : 'border-ink-200 hover:border-ink-300'}`}>
+              <input type="radio" value={plan.value} className="mt-1 text-primary-700 focus:ring-primary-500" {...register('plan')} />
               <span>
-                <span className="block font-medium text-gray-900">{plan.label}</span>
-                <span className="mt-1 block text-xs text-gray-500">{plan.description}</span>
+                <span className="block font-medium text-ink-950">{plan.label}</span>
+                <span className="mt-1 block text-xs text-ink-500">{plan.description}</span>
               </span>
             </label>
           ))}

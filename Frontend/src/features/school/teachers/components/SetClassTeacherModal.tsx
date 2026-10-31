@@ -6,7 +6,7 @@ import { useSections } from '@/features/school/classes/hooks/useSections';
 import { useSetClassTeacher } from '../hooks/useAssignments';
 
 const selectClass =
-  'w-full rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500';
+  'field-select';
 
 export function SetClassTeacherModal({
   teacherId,
@@ -96,7 +96,7 @@ export function SetClassTeacherModal({
           </select>
         </div>
         {formError && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger-600">
             {formError}
           </p>
         )}

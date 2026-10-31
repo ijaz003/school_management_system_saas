@@ -7,23 +7,30 @@ interface SidebarItemProps {
   path: string;
   icon: LucideIcon;
   onNavigate?: () => void;
+  exact?: boolean;
 }
 
-export function SidebarItem({ label, path, icon: Icon, onNavigate }: SidebarItemProps) {
+export function SidebarItem({
+  label,
+  path,
+  icon: Icon,
+  onNavigate,
+  exact = false,
+}: SidebarItemProps) {
   const location = useLocation();
-  const isActive = location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const isActive = exact
+    ? location.pathname === path
+    : location.pathname === path || location.pathname.startsWith(`${path}/`);
 
   return (
     <Link
       to={path}
       onClick={onNavigate}
       aria-current={isActive ? 'page' : undefined}
-      className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-        isActive ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-100',
-      )}
+      title={label}
+      className={cn('nav-link', isActive && 'nav-link-active')}
     >
-      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden="true" strokeWidth={1.75} />
       <span className="truncate">{label}</span>
     </Link>
   );

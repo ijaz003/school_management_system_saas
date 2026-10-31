@@ -14,10 +14,10 @@ export function StaffFilters({
   const rolesQuery = useAvailableRoles();
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
+    <div className="panel p-4">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
         <div className="relative md:col-span-6">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
           <Input
             type="search"
             aria-label="Search staff"
@@ -29,7 +29,7 @@ export function StaffFilters({
         </div>
         <select
           aria-label="Filter staff by role"
-          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-3"
+          className="field-select md:col-span-3"
           value={value.role ?? ''}
           disabled={rolesQuery.isPending || Boolean(rolesQuery.error)}
           onChange={(event) => onChange({ ...value, role: event.target.value || undefined, page: 1 })}
@@ -41,7 +41,7 @@ export function StaffFilters({
         </select>
         <select
           aria-label="Filter staff by active status"
-          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
+          className="field-select md:col-span-2"
           value={value.isActive === undefined ? '' : String(value.isActive)}
           onChange={(event) => onChange({
             ...value,
@@ -56,7 +56,7 @@ export function StaffFilters({
         <Button
           type="button"
           variant="outline"
-          className="md:col-span-1"
+          className="w-full md:col-span-1"
           aria-label="Reset staff filters"
           title="Reset filters"
           onClick={() => onChange({ page: 1, limit: value.limit ?? 20 })}

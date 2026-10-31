@@ -21,8 +21,15 @@ export function UserMenu() {
         setIsOpen(false);
       }
     }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsOpen(false);
+    }
     document.addEventListener('mousedown', closeOnOutsideClick);
-    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -40,32 +47,72 @@ export function UserMenu() {
   };
 
   if (!user) return null;
-  const initials = user.fullName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+  const initials = user.fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
 
   return (
     <div className="relative" ref={menuRef}>
-      <button type="button" onClick={() => setIsOpen((open) => !open)} aria-expanded={isOpen} className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-gray-100">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">{initials}</span>
-        <span className="hidden text-left md:block">
-          <span className="block text-xs font-medium text-gray-900">{user.fullName}</span>
-          <span className="block text-xs capitalize text-gray-500">{user.role.replaceAll('_', ' ')}</span>
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        className="flex items-center gap-2 rounded-xl p-1.5 transition hover:bg-ink-100"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-700 text-xs font-semibold text-white">
+          {initials}
         </span>
-        <ChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
+        <span className="hidden text-left md:block">
+          <span className="block text-xs font-semibold text-ink-950">{user.fullName}</span>
+          <span className="block text-[11px] capitalize text-ink-500">
+            {user.role.replaceAll('_', ' ')}
+          </span>
+        </span>
+        <ChevronDown className="hidden h-4 w-4 text-ink-400 md:block" aria-hidden="true" />
       </button>
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-          <div className="border-b border-gray-100 px-3 py-2">
-            <div className="truncate text-sm font-medium text-gray-900">{user.fullName}</div>
-            <div className="truncate text-xs text-gray-500">{user.email}</div>
+        <div
+          role="menu"
+          className="absolute right-0 z-50 mt-2 w-60 origin-top-right rounded-2xl border border-ink-200 bg-surface py-1 shadow-[var(--shadow-lift)]"
+        >
+          <div className="border-b border-ink-100 px-3 py-2.5">
+            <div className="truncate text-sm font-semibold text-ink-950">{user.fullName}</div>
+            <div className="truncate text-xs text-ink-500">{user.email}</div>
           </div>
-          <button type="button" onClick={() => { setIsOpen(false); navigate('/profile'); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setIsOpen(false);
+              navigate('/profile');
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-ink-700 hover:bg-ink-50"
+          >
             <UserIcon className="h-4 w-4" /> My profile
           </button>
-          <button type="button" onClick={() => { setIsOpen(false); navigate('/settings'); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setIsOpen(false);
+              navigate('/settings');
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-ink-700 hover:bg-ink-50"
+          >
             <Settings className="h-4 w-4" /> Settings
           </button>
-          <div className="my-1 border-t border-gray-100" />
-          <button type="button" onClick={handleLogout} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+          <div className="my-1 border-t border-ink-100" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-danger-600 hover:bg-danger-50"
+          >
             <LogOut className="h-4 w-4" /> Logout
           </button>
         </div>

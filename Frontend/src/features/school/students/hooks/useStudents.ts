@@ -26,7 +26,10 @@ export interface StudentsListResponse {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
-export function useStudents(filters: StudentFilters = {}) {
+export function useStudents(
+  filters: StudentFilters = {},
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: studentKeys.list(filters),
     queryFn: async () => {
@@ -37,5 +40,6 @@ export function useStudents(filters: StudentFilters = {}) {
       return response.data;
     },
     staleTime: 30_000,
+    enabled: options.enabled ?? true,
   });
 }

@@ -46,22 +46,22 @@ export function SubjectForm({ onSuccess, onCancel }: { onSuccess?: () => void; o
         />
       </div>
       <div>
-        <label htmlFor="subject-description" className="mb-1.5 block text-sm font-medium text-gray-700">Description</label>
+        <label htmlFor="subject-description" className="mb-1.5 block text-sm font-medium text-ink-700">Description</label>
         <textarea
           id="subject-description"
           rows={3}
           maxLength={500}
           placeholder="Optional description..."
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="field-select resize-y"
           {...register('description')}
         />
-        {errors.description?.message && <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>}
+        {errors.description?.message && <p className="mt-1 text-xs text-danger-600">{errors.description.message}</p>}
       </div>
-      <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <input type="checkbox" className="mt-1 h-4 w-4 rounded text-blue-600" {...register('isElective')} />
-        <span><span className="block text-sm font-medium text-gray-900">Elective subject</span><span className="block text-xs text-gray-500">Students may choose whether to take this subject.</span></span>
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink-200 bg-surface-muted p-4">
+        <input type="checkbox" className="mt-1 h-4 w-4 rounded text-primary-700" {...register('isElective')} />
+        <span><span className="block text-sm font-medium text-ink-950">Elective subject</span><span className="block text-xs text-ink-500">Students may choose whether to take this subject.</span></span>
       </label>
-      <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+      <div className="flex justify-end gap-3 border-t border-ink-200 pt-4">
         {onCancel && <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>}
         <Button type="submit" isLoading={createSubject.isPending} disabled={createSubject.isPending}>Create subject</Button>
       </div>

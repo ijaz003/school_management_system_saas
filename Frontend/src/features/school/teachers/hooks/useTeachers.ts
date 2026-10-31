@@ -20,7 +20,10 @@ export interface TeachersListResponse {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
-export function useTeachers(filters: TeacherFilters = {}) {
+export function useTeachers(
+  filters: TeacherFilters = {},
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: teacherKeys.list(filters),
     queryFn: async () => {
@@ -31,5 +34,6 @@ export function useTeachers(filters: TeacherFilters = {}) {
       return response.data;
     },
     staleTime: 30_000,
+    enabled: options.enabled ?? true,
   });
 }

@@ -1,9 +1,13 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Banknote, Plus, Receipt, Trash2, Wallet } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
@@ -19,6 +23,7 @@ import {
   useRecordPayment,
   useVoidPayment,
   type FeeInvoice,
+  type FeeStructure,
 } from '../hooks/useFees';
 import type {
   FeeFrequency,
@@ -27,9 +32,6 @@ import type {
   PaymentMethod,
 } from '../hooks/keys';
 
-const selectClass =
-  'w-full rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500';
-
 function formatMoney(amount: number) {
   return new Intl.NumberFormat(undefined, {
     style: 'decimal',
@@ -37,12 +39,12 @@ function formatMoney(amount: number) {
   }).format(amount);
 }
 
-const statusStyles: Record<InvoiceStatus, string> = {
-  draft: 'bg-ink-100 text-ink-700',
-  issued: 'bg-amber-100 text-amber-800',
-  partial: 'bg-blue-100 text-blue-800',
-  paid: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+const statusTone: Record<InvoiceStatus, 'neutral' | 'warning' | 'primary' | 'success' | 'danger'> = {
+  draft: 'neutral',
+  issued: 'warning',
+  partial: 'primary',
+  paid: 'success',
+  cancelled: 'danger',
 };
 
 type Tab = 'invoices' | 'structures';
@@ -61,10 +63,13 @@ export function FeesPage() {
   const [creatingStructure, setCreatingStructure] = useState(false);
   const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null);
   const [detailInvoiceId, setDetailInvoiceId] = useState<string | null>(null);
+  const [pendingStructureDelete, setPendingStructureDelete] = useState<FeeStructure | null>(null);
+  const [pendingVoidPaymentId, setPendingVoidPaymentId] = useState<string | null>(null);
 
   const invoicesQuery = useInvoices(filters);
   const structuresQuery = useFeeStructures();
   const deleteStructure = useDeleteFeeStructure();
+  const voidPayment = useVoidPayment();
   const classesQuery = useClasses();
 
   const items = invoicesQuery.data?.items ?? [];
@@ -74,32 +79,30 @@ export function FeesPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-600">
-              Finance
-            </p>
-            <h1 className="page-title mt-1 text-2xl">Fees</h1>
-            <p className="page-subtitle">Structures, invoices, and payments.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {tab === 'invoices' && canCreateInvoice && (
-              <>
-                <Button variant="outline" onClick={() => setGenerating(true)}>
-                  Generate for class
+        <PageHeader
+          eyebrow="Finance"
+          title="Fees"
+          description="Structures, invoices, and payments."
+          actions={
+            <>
+              {tab === 'invoices' && canCreateInvoice && (
+                <>
+                  <Button variant="outline" onClick={() => setGenerating(true)}>
+                    Generate for class
+                  </Button>
+                  <Button onClick={() => setCreatingInvoice(true)}>
+                    <Plus className="h-4 w-4" aria-hidden="true" /> New invoice
+                  </Button>
+                </>
+              )}
+              {tab === 'structures' && canEditStructure && (
+                <Button onClick={() => setCreatingStructure(true)}>
+                  <Plus className="h-4 w-4" aria-hidden="true" /> New structure
                 </Button>
-                <Button onClick={() => setCreatingInvoice(true)}>
-                  <Plus className="h-4 w-4" aria-hidden="true" /> New invoice
-                </Button>
-              </>
-            )}
-            {tab === 'structures' && canEditStructure && (
-              <Button onClick={() => setCreatingStructure(true)}>
-                <Plus className="h-4 w-4" aria-hidden="true" /> New structure
-              </Button>
-            )}
-          </div>
-        </header>
+              )}
+            </>
+          }
+        />
 
         <div className="flex gap-2 border-b border-ink-200">
           <TabButton active={tab === 'invoices'} onClick={() => setTab('invoices')}>
@@ -130,7 +133,7 @@ export function FeesPage() {
               </div>
               <select
                 aria-label="Filter by status"
-                className={`${selectClass} md:col-span-3`}
+                className={`field-select md:col-span-3`}
                 value={filters.status ?? ''}
                 onChange={(event) =>
                   setFilters((current) => ({
@@ -149,7 +152,7 @@ export function FeesPage() {
               </select>
               <select
                 aria-label="Filter by class"
-                className={`${selectClass} md:col-span-4`}
+                className={`field-select md:col-span-4`}
                 value={filters.classId ?? ''}
                 onChange={(event) =>
                   setFilters((current) => ({
@@ -169,19 +172,19 @@ export function FeesPage() {
             </section>
 
             {invoicesQuery.isPending ? (
-              <div className="panel p-12">
-                <PageLoader />
+              <div className="panel">
+                <PageLoader compact />
               </div>
             ) : invoicesQuery.error ? (
-              <section className="rounded-2xl border border-red-200 bg-white p-8 text-center">
+              <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center">
                 <h2 className="font-semibold text-ink-950">Failed to load invoices</h2>
-                <p className="mt-2 text-sm text-ink-700">{invoicesQuery.error.message}</p>
+                <p className="mt-2 text-sm text-ink-600">{invoicesQuery.error.message}</p>
               </section>
             ) : items.length === 0 ? (
               <EmptyState
-                icon={<Receipt className="mx-auto h-10 w-10 text-ink-200" />}
+                icon={Receipt}
                 title="No invoices yet"
-                subtitle="Create an invoice or generate from a fee structure."
+                description="Create an invoice or generate from a fee structure."
               />
             ) : (
               <div className="space-y-3">
@@ -228,42 +231,39 @@ export function FeesPage() {
             )}
           </>
         ) : structuresQuery.isPending ? (
-          <div className="panel p-12">
-            <PageLoader />
+          <div className="panel">
+            <PageLoader compact />
           </div>
         ) : structures.length === 0 ? (
           <EmptyState
-            icon={<Banknote className="mx-auto h-10 w-10 text-ink-200" />}
+            icon={Banknote}
             title="No fee structures"
-            subtitle="Define tuition or other recurring fees by class."
+            description="Define tuition or other recurring fees by class."
           />
         ) : (
           <div className="space-y-3">
             {structures.map((structure) => (
-              <article key={structure.id} className="panel flex flex-wrap items-start justify-between gap-3 p-5">
+              <article
+                key={structure.id}
+                className="panel flex flex-wrap items-start justify-between gap-3 p-5"
+              >
                 <div>
                   <div className="mb-2 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium capitalize text-primary-700">
+                    <Badge tone="primary" className="capitalize">
                       {structure.frequency.replace('_', ' ')}
-                    </span>
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                        structure.isActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-ink-100 text-ink-600'
-                      }`}
-                    >
+                    </Badge>
+                    <Badge tone={structure.isActive ? 'success' : 'neutral'}>
                       {structure.isActive ? 'Active' : 'Inactive'}
-                    </span>
+                    </Badge>
                   </div>
                   <h2 className="font-display text-lg font-semibold text-ink-950">
                     {structure.name}
                   </h2>
-                  <p className="mt-1 text-sm text-ink-700">
+                  <p className="mt-1 text-sm text-ink-600">
                     {structure.className ?? 'All classes'} · {formatMoney(structure.amount)}
                   </p>
                   {structure.description && (
-                    <p className="mt-2 text-sm text-ink-700/70">{structure.description}</p>
+                    <p className="mt-2 text-sm text-ink-500">{structure.description}</p>
                   )}
                 </div>
                 {canEditStructure && (
@@ -272,13 +272,9 @@ export function FeesPage() {
                     size="sm"
                     variant="ghost"
                     aria-label="Delete structure"
-                    onClick={() => {
-                      if (window.confirm(`Delete "${structure.name}"?`)) {
-                        deleteStructure.mutate(structure.id);
-                      }
-                    }}
+                    onClick={() => setPendingStructureDelete(structure)}
                   >
-                    <Trash2 className="h-4 w-4 text-red-600" />
+                    <Trash2 className="h-4 w-4 text-danger-600" />
                   </Button>
                 )}
               </article>
@@ -300,8 +296,43 @@ export function FeesPage() {
           invoiceId={detailInvoiceId}
           canRefund={canRefund}
           onClose={() => setDetailInvoiceId(null)}
+          onRequestVoid={(paymentId) => setPendingVoidPaymentId(paymentId)}
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(pendingStructureDelete)}
+        title="Delete fee structure?"
+        description={
+          pendingStructureDelete
+            ? `“${pendingStructureDelete.name}” will be removed from active structures.`
+            : ''
+        }
+        confirmLabel="Delete structure"
+        loading={deleteStructure.isPending}
+        onClose={() => setPendingStructureDelete(null)}
+        onConfirm={() => {
+          if (!pendingStructureDelete) return;
+          deleteStructure.mutate(pendingStructureDelete.id, {
+            onSuccess: () => setPendingStructureDelete(null),
+          });
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingVoidPaymentId)}
+        title="Void payment?"
+        description="This payment will be voided and the invoice balance recalculated."
+        confirmLabel="Void payment"
+        loading={voidPayment.isPending}
+        onClose={() => setPendingVoidPaymentId(null)}
+        onConfirm={() => {
+          if (!pendingVoidPaymentId) return;
+          voidPayment.mutate(pendingVoidPaymentId, {
+            onSuccess: () => setPendingVoidPaymentId(null),
+          });
+        }}
+      />
     </AppLayout>
   );
 }
@@ -330,24 +361,6 @@ function TabButton({
   );
 }
 
-function EmptyState({
-  icon,
-  title,
-  subtitle,
-}: {
-  icon: ReactNode;
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <section className="rounded-2xl border border-dashed border-ink-200 bg-white px-6 py-14 text-center">
-      {icon}
-      <h2 className="mt-3 font-semibold text-ink-950">{title}</h2>
-      <p className="mt-1 text-sm text-ink-700/70">{subtitle}</p>
-    </section>
-  );
-}
-
 function InvoiceRow({
   invoice,
   canRecordPayment,
@@ -369,16 +382,8 @@ function InvoiceRow({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <button type="button" className="min-w-0 flex-1 text-left" onClick={onOpen}>
           <div className="mb-2 flex flex-wrap gap-2">
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${statusStyles[invoice.status]}`}
-            >
-              {invoice.status}
-            </span>
-            {invoice.periodLabel && (
-              <span className="rounded-full bg-ink-50 px-2.5 py-1 text-xs font-medium text-ink-700">
-                {invoice.periodLabel}
-              </span>
-            )}
+            <Badge tone={statusTone[invoice.status]}>{invoice.status}</Badge>
+            {invoice.periodLabel && <Badge tone="neutral">{invoice.periodLabel}</Badge>}
           </div>
           <h2 className="font-display text-lg font-semibold text-ink-950">{invoice.title}</h2>
           <p className="mt-1 text-sm text-ink-700">
@@ -470,7 +475,7 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
           </label>
           <select
             id="invoice-student"
-            className={selectClass}
+            className="field-select"
             value={studentId}
             onChange={(event) => setStudentId(event.target.value)}
           >
@@ -488,7 +493,7 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
           </label>
           <select
             id="invoice-structure"
-            className={selectClass}
+            className="field-select"
             value={feeStructureId}
             onChange={(event) => onStructureChange(event.target.value)}
           >
@@ -582,7 +587,7 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
           </label>
           <select
             id="gen-structure"
-            className={selectClass}
+            className="field-select"
             value={feeStructureId}
             onChange={(event) => {
               setFeeStructureId(event.target.value);
@@ -604,7 +609,7 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
           </label>
           <select
             id="gen-class"
-            className={selectClass}
+            className="field-select"
             value={classId}
             onChange={(event) => setClassId(event.target.value)}
           >
@@ -684,7 +689,7 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
           </label>
           <select
             id="structure-class"
-            className={selectClass}
+            className="field-select"
             value={classId}
             onChange={(event) => setClassId(event.target.value)}
           >
@@ -710,7 +715,7 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
             </label>
             <select
               id="structure-freq"
-              className={selectClass}
+              className="field-select"
               value={frequency}
               onChange={(event) => setFrequency(event.target.value as FeeFrequency)}
             >
@@ -801,7 +806,7 @@ function PaymentModal({ invoiceId, onClose }: { invoiceId: string; onClose: () =
             </label>
             <select
               id="pay-method"
-              className={selectClass}
+              className="field-select"
               value={method}
               onChange={(event) => setMethod(event.target.value as PaymentMethod)}
             >
@@ -828,13 +833,14 @@ function InvoiceDetailModal({
   invoiceId,
   canRefund,
   onClose,
+  onRequestVoid,
 }: {
   invoiceId: string;
   canRefund: boolean;
   onClose: () => void;
+  onRequestVoid: (paymentId: string) => void;
 }) {
   const invoiceQuery = useInvoice(invoiceId);
-  const voidPayment = useVoidPayment();
   const invoice = invoiceQuery.data;
 
   return (
@@ -903,11 +909,7 @@ function InvoiceDetailModal({
                         type="button"
                         size="sm"
                         variant="ghost"
-                        onClick={() => {
-                          if (window.confirm('Void this payment?')) {
-                            voidPayment.mutate(payment.id);
-                          }
-                        }}
+                        onClick={() => onRequestVoid(payment.id)}
                       >
                         Void
                       </Button>

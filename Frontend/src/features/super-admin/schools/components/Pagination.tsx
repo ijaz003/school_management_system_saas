@@ -14,15 +14,15 @@ export function Pagination({ page, totalPages, total, limit, onPageChange }: Pag
   const end = Math.min(page * limit, total);
 
   return (
-    <nav aria-label="School list pagination" className="flex flex-col items-center justify-between gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row">
-      <p className="text-sm text-gray-500">
+    <nav aria-label="School list pagination" className="flex flex-col items-center justify-between gap-3 border-t border-ink-100 bg-ink-50 px-4 py-3 sm:flex-row">
+      <p className="text-sm text-ink-500">
         Showing <span className="font-medium">{start}</span> to <span className="font-medium">{end}</span> of <span className="font-medium">{total}</span>
       </p>
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
           <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Previous
         </Button>
-        <span className="px-2 text-sm text-gray-600">Page {page} of {Math.max(totalPages, 1)}</span>
+        <span className="px-2 text-sm text-ink-600">Page {page} of {Math.max(totalPages, 1)}</span>
         <Button variant="outline" size="sm" onClick={() => onPageChange(page + 1)} disabled={page >= totalPages}>
           Next <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Button>

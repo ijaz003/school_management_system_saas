@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, CheckCheck } from 'lucide-react';
+﻿import { useEffect, useMemo, useState } from 'react';
+import { CalendarCheck, CheckCheck, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
+import { StatCard } from '@/components/ui/stat-card';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useSections } from '@/features/school/classes/hooks/useSections';
 import { usePermission } from '@/hooks/usePermission';
@@ -15,14 +18,11 @@ import {
 import type { AttendanceStatus } from '../hooks/keys';
 
 const STATUSES: { value: AttendanceStatus; label: string; className: string }[] = [
-  { value: 'present', label: 'Present', className: 'bg-green-100 text-green-800 border-green-200' },
-  { value: 'absent', label: 'Absent', className: 'bg-red-100 text-red-800 border-red-200' },
-  { value: 'late', label: 'Late', className: 'bg-amber-100 text-amber-800 border-amber-200' },
+  { value: 'present', label: 'Present', className: 'bg-success-100 text-success-700 border-success-100' },
+  { value: 'absent', label: 'Absent', className: 'bg-danger-100 text-danger-700 border-danger-100' },
+  { value: 'late', label: 'Late', className: 'bg-warning-100 text-warning-700 border-warning-100' },
   { value: 'leave', label: 'Leave', className: 'bg-primary-100 text-primary-800 border-primary-200' },
 ];
-
-const selectClass =
-  'w-full rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500';
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -105,29 +105,27 @@ export function AttendancePage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-600">
-              Academic
-            </p>
-            <h1 className="page-title mt-1 text-2xl">Attendance</h1>
-            <p className="page-subtitle">Mark daily attendance by class section.</p>
-          </div>
-          {canMark && sectionId && records.length > 0 && (
-            <Button onClick={handleSave} isLoading={saveSheet.isPending} disabled={unmarkedInDraft}>
-              <CheckCheck className="h-4 w-4" aria-hidden="true" /> Save attendance
-            </Button>
-          )}
-        </header>
+        <PageHeader
+          eyebrow="Academic"
+          title="Attendance"
+          description="Mark daily attendance by class section."
+          actions={
+            canMark && sectionId && records.length > 0 ? (
+              <Button onClick={handleSave} isLoading={saveSheet.isPending} disabled={unmarkedInDraft}>
+                <CheckCheck className="h-4 w-4" aria-hidden="true" /> Save attendance
+              </Button>
+            ) : undefined
+          }
+        />
 
-        <section className="panel grid gap-3 p-4 md:grid-cols-12">
+        <section className="panel grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 md:grid-cols-12">
           <div className="md:col-span-4">
             <label htmlFor="att-class" className="mb-1.5 block text-sm font-medium text-ink-800">
               Class
             </label>
             <select
               id="att-class"
-              className={selectClass}
+              className="field-select"
               value={classId}
               onChange={(event) => setClassId(event.target.value)}
             >
@@ -145,7 +143,7 @@ export function AttendancePage() {
             </label>
             <select
               id="att-section"
-              className={selectClass}
+              className="field-select"
               value={sectionId}
               disabled={!classId || sectionsQuery.isPending}
               onChange={(event) => setSectionId(event.target.value)}
@@ -158,7 +156,7 @@ export function AttendancePage() {
               ))}
             </select>
           </div>
-          <div className="md:col-span-4">
+          <div className="sm:col-span-2 md:col-span-4">
             <Input
               id="att-date"
               label="Date"
@@ -170,21 +168,19 @@ export function AttendancePage() {
         </section>
 
         {!sectionId ? (
-          <section className="rounded-2xl border border-dashed border-ink-200 bg-white px-6 py-14 text-center">
-            <CalendarCheck className="mx-auto h-10 w-10 text-ink-200" aria-hidden="true" />
-            <h2 className="mt-3 font-semibold text-ink-950">Choose a section</h2>
-            <p className="mt-1 text-sm text-ink-700/70">
-              Select class and section to load the attendance sheet.
-            </p>
-          </section>
+          <EmptyState
+            icon={CalendarCheck}
+            title="Choose a section"
+            description="Select class and section to load the attendance sheet."
+          />
         ) : sheetQuery.isPending ? (
-          <div className="panel p-12">
-            <PageLoader />
+          <div className="panel">
+            <PageLoader compact />
           </div>
         ) : sheetQuery.error ? (
-          <section className="rounded-2xl border border-red-200 bg-white p-8 text-center">
-            <h2 className="font-semibold text-ink-950">Failed to load attendance</h2>
-            <p className="mt-2 text-sm text-ink-700">{sheetQuery.error.message}</p>
+          <section className="panel border-danger-100 p-8 text-center">
+            <h2 className="font-display font-semibold text-ink-950">Failed to load attendance</h2>
+            <p className="mt-2 text-sm text-ink-600">{sheetQuery.error.message}</p>
             <Button
               className="mt-4"
               variant="outline"
@@ -195,25 +191,24 @@ export function AttendancePage() {
             </Button>
           </section>
         ) : records.length === 0 ? (
-          <section className="rounded-2xl border border-dashed border-ink-200 bg-white px-6 py-14 text-center">
-            <h2 className="font-semibold text-ink-950">No active students</h2>
-            <p className="mt-1 text-sm text-ink-700/70">
-              Add students to this section before marking attendance.
-            </p>
-          </section>
+          <EmptyState
+            icon={Users}
+            title="No active students"
+            description="Add students to this section before marking attendance."
+          />
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-              <Stat label="Present" value={counts.present} />
-              <Stat label="Absent" value={counts.absent} />
-              <Stat label="Late" value={counts.late} />
-              <Stat label="Leave" value={counts.leave} />
-              <Stat label="Unmarked" value={counts.unmarked} />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <StatCard label="Present" value={counts.present} />
+              <StatCard label="Absent" value={counts.absent} />
+              <StatCard label="Late" value={counts.late} />
+              <StatCard label="Leave" value={counts.leave} />
+              <StatCard label="Unmarked" value={counts.unmarked} className="col-span-2 sm:col-span-1" />
             </div>
 
             {canMark && (
-              <div className="flex flex-wrap gap-2">
-                <span className="self-center text-sm text-ink-700/70">Mark all:</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-ink-500">Mark all:</span>
                 {STATUSES.map((status) => (
                   <Button
                     key={status.value}
@@ -231,39 +226,43 @@ export function AttendancePage() {
             <div className="panel overflow-hidden p-0">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-ink-100 bg-surface/80 text-xs uppercase tracking-wide text-ink-700/70">
+                  <thead className="sticky top-0 border-b border-ink-100 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
                     <tr>
-                      <th className="px-5 py-3 font-semibold">Student</th>
-                      <th className="px-5 py-3 font-semibold">Admission</th>
-                      <th className="px-5 py-3 font-semibold">Status</th>
+                      <th className="px-4 py-3 font-semibold sm:px-5">Student</th>
+                      <th className="hidden px-4 py-3 font-semibold sm:table-cell sm:px-5">
+                        Admission
+                      </th>
+                      <th className="px-4 py-3 font-semibold sm:px-5">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ink-100">
                     {records.map((record) => {
                       const current = draft[record.studentId] ?? null;
                       return (
-                        <tr key={record.studentId} className="hover:bg-surface/60">
-                          <td className="px-5 py-4">
+                        <tr key={record.studentId} className="hover:bg-ink-50">
+                          <td className="px-4 py-3 sm:px-5 sm:py-4">
                             <span className="block font-semibold text-ink-950">{record.fullName}</span>
-                            <span className="block text-xs capitalize text-ink-700/65">
+                            <span className="block text-xs capitalize text-ink-500">
                               {record.gender}
+                              <span className="font-mono sm:hidden"> · {record.admissionNo}</span>
                             </span>
                           </td>
-                          <td className="px-5 py-4 font-mono text-xs text-ink-800">
+                          <td className="hidden px-4 py-4 font-mono text-xs text-ink-800 sm:table-cell sm:px-5">
                             {record.admissionNo}
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-3 sm:px-5 sm:py-4">
                             {canMark ? (
-                              <div className="flex flex-wrap gap-2">
+                              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                 {STATUSES.map((status) => (
                                   <button
                                     key={status.value}
                                     type="button"
                                     onClick={() => setOne(record.studentId, status.value)}
-                                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                                    aria-pressed={current === status.value}
+                                    className={`rounded-full border px-2.5 py-1 text-xs font-medium transition sm:px-3 ${
                                       current === status.value
                                         ? status.className
-                                        : 'border-ink-100 bg-white text-ink-700 hover:bg-surface'
+                                        : 'border-ink-200 bg-white text-ink-600 hover:bg-ink-50'
                                     }`}
                                   >
                                     {status.label}
@@ -274,7 +273,7 @@ export function AttendancePage() {
                               <span
                                 className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium capitalize ${
                                   STATUSES.find((s) => s.value === current)?.className ??
-                                  'border-ink-100 bg-ink-100 text-ink-700'
+                                  'border-ink-200 bg-ink-100 text-ink-700'
                                 }`}
                               >
                                 {current ?? 'Unmarked'}
@@ -290,7 +289,7 @@ export function AttendancePage() {
             </div>
 
             {canMark && unmarkedInDraft && (
-              <p className="text-sm text-amber-700">
+              <p className="text-sm text-warning-700">
                 Mark every student before saving. Use “Mark all Present” for a quick start.
               </p>
             )}
@@ -298,14 +297,5 @@ export function AttendancePage() {
         )}
       </div>
     </AppLayout>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <section className="panel p-4">
-      <p className="text-xs text-ink-700/70">{label}</p>
-      <p className="mt-1 font-display text-xl font-semibold text-ink-950">{value}</p>
-    </section>
   );
 }

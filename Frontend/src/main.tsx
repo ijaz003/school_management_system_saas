@@ -16,7 +16,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ReduxProvider store={store}>
       <QueryClientProvider client={queryClient}>
         <App />
-        <Toaster position="top-right" richColors closeButton />
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          toastOptions={{
+            className: 'font-sans',
+          }}
+        />
         {import.meta.env.DEV && (
           <ReactQueryDevtools initialIsOpen={false} position="bottom" />
         )}

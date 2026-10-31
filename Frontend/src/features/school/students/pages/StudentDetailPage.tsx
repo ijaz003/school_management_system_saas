@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   CalendarDays,
@@ -9,18 +9,20 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { useDeleteStudent } from '../hooks/useDeleteStudent';
 import { useStudent } from '../hooks/useStudent';
 
-const STATUS_STYLES: Record<string, string> = {
-  active: 'bg-green-100 text-green-800',
-  inactive: 'bg-ink-100 text-ink-800',
-  transferred: 'bg-amber-100 text-amber-800',
-  alumni: 'bg-primary-100 text-primary-800',
+const STATUS_TONES: Record<string, 'success' | 'neutral' | 'warning' | 'primary'> = {
+  active: 'success',
+  inactive: 'neutral',
+  transferred: 'warning',
+  alumni: 'primary',
 };
 
 export function StudentDetailPage() {
@@ -29,12 +31,15 @@ export function StudentDetailPage() {
   const { can } = usePermission();
   const studentQuery = useStudent(id);
   const deleteStudent = useDeleteStudent();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const student = studentQuery.data;
 
   if (studentQuery.isPending) {
     return (
       <AppLayout>
-        <PageLoader />
+        <div className="panel">
+          <PageLoader compact />
+        </div>
       </AppLayout>
     );
   }
@@ -42,12 +47,12 @@ export function StudentDetailPage() {
   if (studentQuery.error || !student) {
     return (
       <AppLayout>
-        <section className="py-12 text-center">
-          <h1 className="text-lg font-semibold text-ink-950">Could not load student</h1>
-          <p className="mt-2 text-sm text-ink-700">
+        <section className="panel p-8 text-center">
+          <h1 className="font-display text-lg font-semibold text-ink-950">Could not load student</h1>
+          <p className="mt-2 text-sm text-ink-600">
             {studentQuery.error?.message ?? 'Student details were not returned.'}
           </p>
-          <div className="mt-4 flex justify-center gap-3">
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
             <Button variant="outline" onClick={() => navigate('/students')}>
               Back to students
             </Button>
@@ -61,9 +66,9 @@ export function StudentDetailPage() {
   }
 
   const handleDelete = () => {
-    if (!window.confirm(`Delete student "${student.fullName}"?`)) return;
     deleteStudent.mutate(student.id, {
       onSuccess: () => navigate('/students', { replace: true }),
+      onSettled: () => setConfirmDelete(false),
     });
   };
 
@@ -74,8 +79,8 @@ export function StudentDetailPage() {
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to students
         </Button>
 
-        <header className="flex flex-wrap items-start gap-5">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-600 text-xl font-bold text-white shadow-soft">
+        <section className="panel flex flex-wrap items-start gap-4 p-4 sm:gap-5 sm:p-6">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary-700 text-xl font-bold text-white shadow-sm">
             {student.fullName
               .split(/\s+/)
               .map((part) => part[0])
@@ -84,50 +89,43 @@ export function StudentDetailPage() {
               .toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="page-title text-2xl">{student.fullName}</h1>
-            <p className="mt-1 font-mono text-sm text-ink-700/70">{student.admissionNo}</p>
+            <PageHeader
+              eyebrow="Student"
+              title={student.fullName}
+              description={student.admissionNo}
+              actions={
+                <>
+                  {can('students.update') && (
+                    <Button variant="outline" onClick={() => navigate(`/students/${student.id}/edit`)}>
+                      Edit student
+                    </Button>
+                  )}
+                  {can('students.delete') && (
+                    <Button
+                      variant="danger"
+                      onClick={() => setConfirmDelete(true)}
+                      isLoading={deleteStudent.isPending}
+                    >
+                      Delete
+                    </Button>
+                  )}
+                </>
+              }
+            />
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700">
+              <Badge tone="primary" className="normal-case">
                 {student.className} · {student.sectionName}
-              </span>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${
-                  STATUS_STYLES[student.status] ?? STATUS_STYLES.inactive
-                }`}
-              >
-                {student.status}
-              </span>
+              </Badge>
+              <Badge tone={STATUS_TONES[student.status] ?? 'neutral'}>{student.status}</Badge>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {can('students.update') && (
-              <Button variant="outline" onClick={() => navigate(`/students/${student.id}/edit`)}>
-                Edit student
-              </Button>
-            )}
-            {can('students.delete') && (
-              <Button
-                variant="danger"
-                onClick={handleDelete}
-                isLoading={deleteStudent.isPending}
-              >
-                Delete
-              </Button>
-            )}
-          </div>
-        </header>
+        </section>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <InfoRow
-                icon={<UserRound className="h-4 w-4" />}
-                label="Gender"
-                value={student.gender}
-              />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <section className="panel p-4 sm:p-5">
+            <h2 className="font-display text-base font-semibold text-ink-950">Personal</h2>
+            <div className="mt-4 space-y-4">
+              <InfoRow icon={<UserRound className="h-4 w-4" />} label="Gender" value={student.gender} />
               <InfoRow
                 icon={<CalendarDays className="h-4 w-4" />}
                 label="Date of birth"
@@ -138,34 +136,16 @@ export function StudentDetailPage() {
                 label="Blood group"
                 value={student.bloodGroup || '—'}
               />
-              <InfoRow
-                icon={<Mail className="h-4 w-4" />}
-                label="Email"
-                value={student.email || '—'}
-              />
-              <InfoRow
-                icon={<Phone className="h-4 w-4" />}
-                label="Phone"
-                value={student.phone || '—'}
-              />
-            </CardContent>
-          </Card>
+              <InfoRow icon={<Mail className="h-4 w-4" />} label="Email" value={student.email || '—'} />
+              <InfoRow icon={<Phone className="h-4 w-4" />} label="Phone" value={student.phone || '—'} />
+            </div>
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Guardian</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <InfoRow
-                icon={<UserRound className="h-4 w-4" />}
-                label="Name"
-                value={student.guardianName}
-              />
-              <InfoRow
-                icon={<Phone className="h-4 w-4" />}
-                label="Phone"
-                value={student.guardianPhone}
-              />
+          <section className="panel p-4 sm:p-5">
+            <h2 className="font-display text-base font-semibold text-ink-950">Guardian</h2>
+            <div className="mt-4 space-y-4">
+              <InfoRow icon={<UserRound className="h-4 w-4" />} label="Name" value={student.guardianName} />
+              <InfoRow icon={<Phone className="h-4 w-4" />} label="Phone" value={student.guardianPhone} />
               <InfoRow
                 icon={<Mail className="h-4 w-4" />}
                 label="Email"
@@ -181,32 +161,42 @@ export function StudentDetailPage() {
                 label="Admission date"
                 value={new Date(student.admissionDate).toLocaleDateString()}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </section>
         </div>
 
         {(student.address || student.notes) && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Additional information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <section className="panel p-4 sm:p-5">
+            <h2 className="font-display text-base font-semibold text-ink-950">
+              Additional information
+            </h2>
+            <div className="mt-4 space-y-4">
               {student.address && (
                 <div>
-                  <p className="text-xs text-ink-700/65">Address</p>
-                  <p className="mt-1 text-sm text-ink-900">{student.address}</p>
+                  <p className="text-xs text-ink-500">Address</p>
+                  <p className="mt-1 break-words text-sm text-ink-900">{student.address}</p>
                 </div>
               )}
               {student.notes && (
                 <div>
-                  <p className="text-xs text-ink-700/65">Notes</p>
-                  <p className="mt-1 text-sm text-ink-900">{student.notes}</p>
+                  <p className="text-xs text-ink-500">Notes</p>
+                  <p className="mt-1 break-words text-sm text-ink-900">{student.notes}</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </section>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete student"
+        description={`Delete student "${student.fullName}"?`}
+        confirmLabel="Delete"
+        loading={deleteStudent.isPending}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
+      />
     </AppLayout>
   );
 }
@@ -214,10 +204,10 @@ export function StudentDetailPage() {
 function InfoRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="mt-0.5 text-ink-700/45">{icon}</span>
-      <div>
-        <p className="text-xs text-ink-700/65">{label}</p>
-        <p className="text-sm capitalize text-ink-950">{value}</p>
+      <span className="mt-0.5 text-ink-400">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-xs text-ink-500">{label}</p>
+        <p className="break-words text-sm capitalize text-ink-950">{value}</p>
       </div>
     </div>
   );

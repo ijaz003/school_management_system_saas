@@ -5,7 +5,9 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -105,15 +107,15 @@ export function ProfilePage() {
   return (
     <AppLayout>
       <div className="mx-auto max-w-2xl space-y-6">
-        <header>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-600">Account</p>
-          <h1 className="page-title mt-1 text-2xl">My profile</h1>
-          <p className="page-subtitle">Update your personal details and password.</p>
-        </header>
+        <PageHeader
+          eyebrow="Account"
+          title="My profile"
+          description="Update your personal details and password."
+        />
 
-        <section className="panel p-5">
+        <section className="panel p-4 sm:p-5">
           <div className="mb-5 flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600 text-lg font-bold text-white">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary-700 text-lg font-bold text-white">
               {user.fullName
                 .split(/\s+/)
                 .map((part) => part[0])
@@ -121,10 +123,10 @@ export function ProfilePage() {
                 .join('')
                 .toUpperCase()}
             </div>
-            <div>
-              <p className="font-semibold text-ink-950">{user.fullName}</p>
-              <p className="text-sm text-ink-700/70">{user.email}</p>
-              <p className="mt-1 text-xs capitalize text-ink-700/55">{user.role.replaceAll('_', ' ')}</p>
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-ink-950">{user.fullName}</p>
+              <p className="truncate text-sm text-ink-500">{user.email}</p>
+              <Badge tone="primary" className="mt-1.5">{user.role.replaceAll('_', ' ')}</Badge>
             </div>
           </div>
 
@@ -151,7 +153,7 @@ export function ProfilePage() {
           </form>
         </section>
 
-        <section className="panel space-y-4 p-5">
+        <section className="panel space-y-4 p-4 sm:p-5">
           <h2 className="font-display text-base font-semibold text-ink-950">Change password</h2>
           <form
             className="space-y-4"

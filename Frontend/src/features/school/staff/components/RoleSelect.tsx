@@ -14,22 +14,22 @@ export function RoleSelect({ value, onChange, error }: RoleSelectProps) {
   if (rolesQuery.error) {
     return (
       <div>
-        <label htmlFor="staff-role" className="mb-1.5 block text-sm font-medium text-gray-700">Role *</label>
-        <p className="text-sm text-red-600">Could not load roles: {rolesQuery.error.message}</p>
+        <label htmlFor="staff-role" className="mb-1.5 block text-sm font-medium text-ink-700">Role *</label>
+        <p className="text-sm text-danger-600">Could not load roles: {rolesQuery.error.message}</p>
       </div>
     );
   }
 
   return (
     <div>
-      <label htmlFor="staff-role" className="mb-1.5 block text-sm font-medium text-gray-700">
-        Role <span className="text-red-500">*</span>
+      <label htmlFor="staff-role" className="mb-1.5 block text-sm font-medium text-ink-700">
+        Role <span className="text-danger-600">*</span>
       </label>
       <select
         id="staff-role"
         aria-invalid={Boolean(error)}
         aria-describedby={error ? 'staff-role-error' : undefined}
-        className={`w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${error ? 'border-red-500' : 'border-gray-300'}`}
+        className={`field-select ${error ? 'border-danger-600' : ''}`}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={rolesQuery.isPending}
@@ -46,8 +46,8 @@ export function RoleSelect({ value, onChange, error }: RoleSelectProps) {
           </optgroup>
         )}
       </select>
-      {error && <p id="staff-role-error" className="mt-1 text-xs text-red-600">{error}</p>}
-      <p className="mt-1 text-xs text-gray-500">Role determines permissions and access level.</p>
+      {error && <p id="staff-role-error" className="mt-1 text-xs text-danger-600">{error}</p>}
+      <p className="mt-1 text-xs text-ink-500">Role determines permissions and access level.</p>
     </div>
   );
 }

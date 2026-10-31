@@ -1,13 +1,81 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+@theme {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #f3f5f7;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafb;
+
+  --color-ink-50: #f8fafc;
+  --color-ink-100: #f1f5f9;
+  --color-ink-200: #e2e8f0;
+  --color-ink-300: #cbd5e1;
+  --color-ink-400: #94a3b8;
+  --color-ink-500: #64748b;
+  --color-ink-600: #475569;
+  --color-ink-700: #334155;
+  --color-ink-800: #1e293b;
+  --color-ink-900: #0f172a;
+  --color-ink-950: #020617;
+
+  --color-primary-50: #f0fdfa;
+  --color-primary-100: #ccfbf1;
+  --color-primary-200: #99f6e4;
+  --color-primary-500: #14b8a6;
+  --color-primary-600: #0d9488;
+  --color-primary-700: #0f766e;
+  --color-primary-800: #115e59;
+
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-700: #047857;
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-700: #b45309;
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+  --shadow-lift: 0 8px 24px rgb(15 23 42 / 0.08);
+  --radius-panel: 1rem;
+}
+
 @layer base {
   * {
-    @apply border-gray-200;
+    @apply border-ink-200;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 font-sans antialiased;
+    @apply bg-canvas font-sans text-ink-900 antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Avoid accidental horizontal scroll on mobile shells */
+  #root {
+    @apply overflow-x-hidden;
   }
 
   html,
@@ -15,26 +83,84 @@
   #root {
     @apply h-full;
   }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-600;
+  }
 }
 
 @layer components {
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  .panel {
+    @apply rounded-[var(--radius-panel)] border border-ink-200/80 bg-surface shadow-[var(--shadow-soft)];
   }
 
-  .btn-primary {
-    @apply bg-blue-600 text-white hover:bg-blue-700;
+  .page-title {
+    @apply font-display text-2xl font-semibold tracking-tight text-ink-950 sm:text-[1.75rem];
   }
 
-  .btn-secondary {
-    @apply bg-gray-100 text-gray-900 hover:bg-gray-200;
+  .page-subtitle {
+    @apply mt-1 max-w-2xl text-sm text-ink-500;
   }
 
-  .card {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200;
+  .eyebrow {
+    @apply text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary-700;
   }
 
-  .input {
-    @apply w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  .field-select {
+    @apply w-full rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-900 transition;
+    @apply hover:border-ink-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500/40;
+    @apply disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-400;
   }
+
+  .nav-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-ink-600 transition;
+    @apply hover:bg-ink-100/80 hover:text-ink-950;
+  }
+
+  .nav-link-active {
+    @apply bg-primary-50 text-primary-800 shadow-none ring-1 ring-primary-100;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@utility animate-fade-in {
+  animation: fade-in 160ms ease-out;
+}
+
+@utility animate-fade-up {
+  animation: fade-up 180ms ease-out;
+}
+
+@utility shadow-lift {
+  box-shadow: var(--shadow-lift);
 }

@@ -29,33 +29,88 @@ interface MenuItem {
   path: string;
   icon: LucideIcon;
   permission?: string;
+  exact?: boolean;
 }
 
-const SUPER_ADMIN_MENU: MenuItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { label: 'Schools', path: '/schools', icon: Building2 },
-  { label: 'Subscriptions', path: '/subscriptions', icon: CreditCard },
-  { label: 'Billing', path: '/billing', icon: DollarSign },
-  { label: 'Permissions', path: '/permissions', icon: Shield },
-  { label: 'System roles', path: '/system-roles', icon: UserCog },
-  { label: 'Analytics', path: '/analytics', icon: BarChart3 },
-  { label: 'Support', path: '/support', icon: LifeBuoy },
-  { label: 'Settings', path: '/settings', icon: Settings },
+interface MenuGroup {
+  label: string;
+  items: MenuItem[];
+}
+
+const SUPER_ADMIN_GROUPS: MenuGroup[] = [
+  {
+    label: 'Overview',
+    items: [
+      { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, exact: true },
+      { label: 'Schools', path: '/schools', icon: Building2 },
+      { label: 'Analytics', path: '/analytics', icon: BarChart3 },
+    ],
+  },
+  {
+    label: 'Platform',
+    items: [
+      { label: 'Subscriptions', path: '/subscriptions', icon: CreditCard },
+      { label: 'Billing', path: '/billing', icon: DollarSign },
+      { label: 'Permissions', path: '/permissions', icon: Shield },
+      { label: 'System roles', path: '/system-roles', icon: UserCog },
+      { label: 'Support', path: '/support', icon: LifeBuoy },
+      { label: 'Settings', path: '/settings', icon: Settings, exact: true },
+    ],
+  },
 ];
 
-const SCHOOL_MENU: MenuItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { label: 'Students', path: '/students', icon: GraduationCap, permission: 'students.read' },
-  { label: 'Teachers', path: '/teachers', icon: Users, permission: 'teachers.read' },
-  { label: 'Classes', path: '/settings/classes', icon: School, permission: 'classes.read' },
-  { label: 'Subjects', path: '/settings/subjects', icon: BookOpen, permission: 'classes.read' },
-  { label: 'Fees', path: '/fees', icon: DollarSign, permission: 'fees.invoice.read' },
-  { label: 'Exams', path: '/exams', icon: FileText, permission: 'exams.marks.enter' },
-  { label: 'Attendance', path: '/attendance', icon: CalendarCheck, permission: 'attendance.read' },
-  { label: 'Notices', path: '/notices', icon: Megaphone, permission: 'notices.read' },
-  { label: 'Custom roles', path: '/settings/roles', icon: Shield, permission: 'settings.roles.manage' },
-  { label: 'Staff', path: '/settings/staff', icon: UserCog, permission: 'settings.users.manage' },
-  { label: 'Settings', path: '/settings', icon: Settings, permission: 'settings.school.edit' },
+const SCHOOL_GROUPS: MenuGroup[] = [
+  {
+    label: 'Overview',
+    items: [{ label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, exact: true }],
+  },
+  {
+    label: 'Academic',
+    items: [
+      { label: 'Students', path: '/students', icon: GraduationCap, permission: 'students.read' },
+      { label: 'Teachers', path: '/teachers', icon: Users, permission: 'teachers.read' },
+      { label: 'Classes', path: '/settings/classes', icon: School, permission: 'classes.read' },
+      { label: 'Subjects', path: '/settings/subjects', icon: BookOpen, permission: 'classes.read' },
+      {
+        label: 'Attendance',
+        path: '/attendance',
+        icon: CalendarCheck,
+        permission: 'attendance.read',
+      },
+      { label: 'Exams', path: '/exams', icon: FileText, permission: 'exams.marks.enter' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { label: 'Fees', path: '/fees', icon: DollarSign, permission: 'fees.invoice.read' },
+      { label: 'Notices', path: '/notices', icon: Megaphone, permission: 'notices.read' },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      {
+        label: 'Custom roles',
+        path: '/settings/roles',
+        icon: Shield,
+        permission: 'settings.roles.manage',
+      },
+      {
+        label: 'Staff',
+        path: '/settings/staff',
+        icon: UserCog,
+        permission: 'settings.users.manage',
+      },
+      {
+        label: 'Settings',
+        path: '/settings',
+        icon: Settings,
+        permission: 'settings.school.edit',
+        exact: true,
+      },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -64,46 +119,72 @@ export function Sidebar() {
   const dispatch = useAppDispatch();
   const { can } = usePermission();
   const isSuperAdmin = user?.role === 'super_admin';
-  const menuItems = isSuperAdmin ? SUPER_ADMIN_MENU : SCHOOL_MENU;
-  const visibleItems = menuItems.filter(
-    (item) => !item.permission || can(item.permission),
-  );
+  const groups = isSuperAdmin ? SUPER_ADMIN_GROUPS : SCHOOL_GROUPS;
   const closeSidebar = () => dispatch(setSidebar(false));
+
+  const visibleGroups = groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.permission || can(item.permission)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   const contents = (
     <>
-      <div className="flex items-center justify-between border-b border-gray-200 p-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600">
-            <GraduationCap className="h-5 w-5 text-white" aria-hidden="true" />
+      <div className="flex items-center justify-between border-b border-ink-100 px-4 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-700 text-white shadow-sm">
+            <GraduationCap className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-gray-900">SchoolSaaS</h2>
-            <p className="text-xs text-gray-500">{isSuperAdmin ? 'Admin panel' : 'Management'}</p>
+            <h2 className="font-display text-sm font-semibold text-ink-950">SchoolSaaS</h2>
+            <p className="text-xs text-ink-500">
+              {isSuperAdmin ? 'Admin panel' : 'School workspace'}
+            </p>
           </div>
         </div>
-        <button type="button" onClick={closeSidebar} className="rounded p-2 hover:bg-gray-100 lg:hidden" aria-label="Close navigation">
+        <button
+          type="button"
+          onClick={closeSidebar}
+          className="rounded-lg p-2 text-ink-500 hover:bg-ink-100 lg:hidden"
+          aria-label="Close navigation"
+        >
           <X className="h-5 w-5" />
         </button>
       </div>
-      <nav aria-label="Main navigation" className="flex-1 space-y-1 overflow-y-auto p-3">
-        {visibleItems.map((item) => (
-          <SidebarItem key={item.path} {...item} onNavigate={closeSidebar} />
+
+      <nav aria-label="Main navigation" className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+        {visibleGroups.map((group) => (
+          <div key={group.label}>
+            <p className="mb-1.5 px-3 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-ink-400">
+              {group.label}
+            </p>
+            <div className="space-y-0.5">
+              {group.items.map((item) => (
+                <SidebarItem key={item.path} {...item} onNavigate={closeSidebar} />
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
-      <div className="border-t border-gray-200 p-3 text-center text-xs text-gray-400">v1.0.0</div>
+
+      <div className="border-t border-ink-100 px-4 py-3 text-xs text-ink-400">v1.0.0</div>
     </>
   );
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-gray-200 bg-white lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-ink-200/80 bg-surface lg:flex">
         {contents}
       </aside>
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
-          <button className="absolute inset-0 bg-black/40" onClick={closeSidebar} aria-label="Close navigation overlay" />
-          <aside className="relative flex w-72 max-w-[85vw] flex-col bg-white shadow-xl">
+          <button
+            className="absolute inset-0 bg-ink-950/40 backdrop-blur-[2px]"
+            onClick={closeSidebar}
+            aria-label="Close navigation overlay"
+          />
+          <aside className="relative flex w-72 max-w-[85vw] flex-col bg-surface shadow-[var(--shadow-lift)]">
             {contents}
           </aside>
         </div>

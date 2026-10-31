@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { X } from 'lucide-react';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/ui/modal';
 import { useUpdateSchool } from '../hooks/useUpdateSchool';
 import type { School } from '../hooks/useSchools';
 
@@ -35,6 +35,7 @@ export function EditSchoolModal({ school, isOpen, onClose }: EditSchoolModalProp
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(editSchoolSchema),
@@ -45,6 +46,7 @@ export function EditSchoolModal({ school, isOpen, onClose }: EditSchoolModalProp
       plan: school.plan,
     },
   });
+  const selectedPlan = watch('plan');
 
   useEffect(() => {
     reset({
@@ -54,17 +56,6 @@ export function EditSchoolModal({ school, isOpen, onClose }: EditSchoolModalProp
       plan: school.plan,
     });
   }, [reset, school]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !updateSchool.isPending) onClose();
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, updateSchool.isPending]);
 
   if (!isOpen) return null;
 
@@ -84,79 +75,52 @@ export function EditSchoolModal({ school, isOpen, onClose }: EditSchoolModalProp
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !updateSchool.isPending) onClose();
-      }}
+    <Modal
+      title="Edit school"
+      size="md"
+      onClose={onClose}
+      closeDisabled={updateSchool.isPending}
+      footer={(
+        <>
+          <Button type="button" variant="outline" onClick={onClose} disabled={updateSchool.isPending}>
+            Cancel
+          </Button>
+          <Button type="submit" form="edit-school-form" isLoading={updateSchool.isPending}>
+            Save changes
+          </Button>
+        </>
+      )}
     >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-school-title"
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-xl"
-      >
-        <header className="flex items-center justify-between border-b border-gray-200 p-6">
-          <h2 id="edit-school-title" className="text-lg font-semibold text-gray-900">
-            Edit school
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={updateSchool.isPending}
-            className="rounded-lg p-1 hover:bg-gray-100 disabled:opacity-50"
-            aria-label="Close edit school dialog"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        </header>
+      <form id="edit-school-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <Input label="School name" error={errors.name?.message} {...register('name')} />
+        <Input label="City" error={errors.city?.message} {...register('city')} />
+        <Input label="Address" error={errors.address?.message} {...register('address')} />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 p-6">
-          <Input label="School name" error={errors.name?.message} {...register('name')} />
-          <Input label="City" error={errors.city?.message} {...register('city')} />
-          <Input label="Address" error={errors.address?.message} {...register('address')} />
+        <fieldset>
+          <legend className="mb-2 text-sm font-medium text-ink-800">Plan</legend>
+          <div className="space-y-2">
+            {plans.map((plan) => (
+              <label
+                key={plan.value}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${selectedPlan === plan.value ? 'border-primary-600 bg-primary-50' : 'border-ink-200 hover:border-ink-300'}`}
+              >
+                <input
+                  type="radio"
+                  value={plan.value}
+                  className="text-primary-700 focus:ring-primary-500"
+                  {...register('plan')}
+                />
+                <span className="text-sm font-medium text-ink-950">{plan.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium text-gray-700">Plan</legend>
-            <div className="space-y-2">
-              {plans.map((plan) => (
-                <label
-                  key={plan.value}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 p-3"
-                >
-                  <input
-                    type="radio"
-                    value={plan.value}
-                    className="text-blue-600"
-                    {...register('plan')}
-                  />
-                  <span className="text-sm font-medium text-gray-900">{plan.label}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-            Slug and owner information cannot be changed here. Changing the plan updates
-            the school&apos;s plan limits and permissions.
-          </p>
-
-          <footer className="flex gap-3 border-t border-gray-200 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={updateSchool.isPending}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={updateSchool.isPending} className="flex-1">
-              Save changes
-            </Button>
-          </footer>
-        </form>
-      </section>
-    </div>
+        <p className="rounded-xl border border-primary-200 bg-primary-50 p-3 text-xs text-primary-800">
+          Slug and owner information cannot be changed here. Changing the plan updates
+          the school&apos;s plan limits and permissions.
+        </p>
+      </form>
+    </Modal>
   );
 }

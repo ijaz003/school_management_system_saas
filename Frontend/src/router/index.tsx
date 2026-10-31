@@ -45,9 +45,9 @@ function DashboardRouter() {
 function PlaceholderPage({ title }: { title: string }) {
   return (
     <AppLayout>
-      <section className="rounded-xl border border-gray-200 bg-white p-8">
-        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-        <p className="mt-2 text-sm text-gray-500">This section is not available yet.</p>
+      <section className="panel p-8">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink-950">{title}</h1>
+        <p className="mt-2 text-sm text-ink-500">This section is not available yet.</p>
       </section>
     </AppLayout>
   );

@@ -36,21 +36,60 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="relative">
-        <label htmlFor="email" className="sr-only">Email address</label>
-        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-        <Input id="email" type="email" autoComplete="username" placeholder="Email address" className="pl-10" error={errors.email?.message} {...register('email')} />
+        <label htmlFor="email" className="sr-only">
+          Email address
+        </label>
+        <Mail
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+          aria-hidden="true"
+        />
+        <Input
+          id="email"
+          type="email"
+          autoComplete="username"
+          placeholder="Email address"
+          className="pl-10"
+          error={errors.email?.message}
+          {...register('email')}
+        />
       </div>
       <div className="relative">
-        <label htmlFor="password" className="sr-only">Password</label>
-        <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-        <Input id="password" type="password" autoComplete="current-password" placeholder="Password" className="pl-10" error={errors.password?.message} {...register('password')} />
+        <label htmlFor="password" className="sr-only">
+          Password
+        </label>
+        <Lock
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+          aria-hidden="true"
+        />
+        <Input
+          id="password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="Password"
+          className="pl-10"
+          error={errors.password?.message}
+          {...register('password')}
+        />
       </div>
       <div className="relative">
-        <label htmlFor="tenantSlug" className="sr-only">School slug</label>
-        <School className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-        <Input id="tenantSlug" autoComplete="organization" placeholder="School slug (school accounts)" className="pl-10" error={errors.tenantSlug?.message} {...register('tenantSlug')} />
+        <label htmlFor="tenantSlug" className="sr-only">
+          School slug
+        </label>
+        <School
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
+          aria-hidden="true"
+        />
+        <Input
+          id="tenantSlug"
+          autoComplete="organization"
+          placeholder="School slug (school accounts)"
+          className="pl-10"
+          hint="Leave empty for super admin"
+          error={errors.tenantSlug?.message}
+          {...register('tenantSlug')}
+        />
       </div>
       <Button type="submit" size="lg" className="w-full" isLoading={login.isPending}>
         Sign in

@@ -16,7 +16,10 @@ export interface Notice {
   updatedAt: string;
 }
 
-export function useNotices(filters: NoticeFilters = {}) {
+export function useNotices(
+  filters: NoticeFilters = {},
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: noticeKeys.list(filters),
     queryFn: async () => {
@@ -27,6 +30,7 @@ export function useNotices(filters: NoticeFilters = {}) {
       if (!response.data) throw new Error('The server returned no notices');
       return response.data;
     },
+    enabled: options.enabled ?? true,
   });
 }
 

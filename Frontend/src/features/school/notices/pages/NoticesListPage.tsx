@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { Megaphone, Plus, Send, Trash2 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import {
@@ -15,14 +19,12 @@ import {
 } from '../hooks/useNotices';
 import type { NoticeAudience, NoticeFilters, NoticeStatus } from '../hooks/keys';
 
-const selectClass =
-  'w-full rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500';
-
 export function NoticesListPage() {
   const { can } = usePermission();
   const canSend = can('notices.send');
   const [filters, setFilters] = useState<NoticeFilters>({ page: 1, limit: 20 });
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<Notice | null>(null);
   const noticesQuery = useNotices(filters);
   const publishNotice = usePublishNotice();
   const deleteNotice = useDeleteNotice();
@@ -32,22 +34,20 @@ export function NoticesListPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-600">
-              Communication
-            </p>
-            <h1 className="page-title mt-1 text-2xl">Notices</h1>
-            <p className="page-subtitle">Create drafts and publish school announcements.</p>
-          </div>
-          {canSend && (
-            <Button onClick={() => setCreating(true)}>
-              <Plus className="h-4 w-4" aria-hidden="true" /> New notice
-            </Button>
-          )}
-        </header>
+        <PageHeader
+          eyebrow="Communication"
+          title="Notices"
+          description="Create drafts and publish school announcements."
+          actions={
+            canSend ? (
+              <Button onClick={() => setCreating(true)}>
+                <Plus className="h-4 w-4" aria-hidden="true" /> New notice
+              </Button>
+            ) : undefined
+          }
+        />
 
-        <section className="panel grid gap-3 p-4 md:grid-cols-12">
+        <section className="panel grid grid-cols-1 gap-3 p-4 md:grid-cols-12">
           <div className="md:col-span-6">
             <Input
               type="search"
@@ -65,7 +65,7 @@ export function NoticesListPage() {
           </div>
           <select
             aria-label="Filter by status"
-            className={`${selectClass} md:col-span-3`}
+            className="field-select md:col-span-3"
             value={filters.status ?? ''}
             onChange={(event) =>
               setFilters((current) => ({
@@ -81,7 +81,7 @@ export function NoticesListPage() {
           </select>
           <select
             aria-label="Filter by audience"
-            className={`${selectClass} md:col-span-3`}
+            className="field-select md:col-span-3"
             value={filters.audience ?? ''}
             onChange={(event) =>
               setFilters((current) => ({
@@ -100,20 +100,27 @@ export function NoticesListPage() {
         </section>
 
         {noticesQuery.isPending ? (
-          <div className="panel p-12">
-            <PageLoader />
+          <div className="panel">
+            <PageLoader compact />
           </div>
         ) : noticesQuery.error ? (
-          <section className="rounded-2xl border border-red-200 bg-white p-8 text-center">
-            <h2 className="font-semibold text-ink-950">Failed to load notices</h2>
-            <p className="mt-2 text-sm text-ink-700">{noticesQuery.error.message}</p>
+          <section className="panel border-danger-100 p-8 text-center">
+            <h2 className="font-display font-semibold text-ink-950">Failed to load notices</h2>
+            <p className="mt-2 text-sm text-ink-600">{noticesQuery.error.message}</p>
           </section>
         ) : items.length === 0 ? (
-          <section className="rounded-2xl border border-dashed border-ink-200 bg-white px-6 py-14 text-center">
-            <Megaphone className="mx-auto h-10 w-10 text-ink-200" aria-hidden="true" />
-            <h2 className="mt-3 font-semibold text-ink-950">No notices yet</h2>
-            <p className="mt-1 text-sm text-ink-700/70">Publish your first school announcement.</p>
-          </section>
+          <EmptyState
+            icon={Megaphone}
+            title="No notices yet"
+            description="Publish your first school announcement."
+            action={
+              canSend ? (
+                <Button onClick={() => setCreating(true)}>
+                  <Plus className="h-4 w-4" aria-hidden="true" /> New notice
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           <div className="space-y-4">
             {items.map((notice) => (
@@ -122,19 +129,15 @@ export function NoticesListPage() {
                 notice={notice}
                 canSend={canSend}
                 onPublish={() => publishNotice.mutate(notice.id)}
-                onDelete={() => {
-                  if (window.confirm(`Delete notice "${notice.title}"?`)) {
-                    deleteNotice.mutate(notice.id);
-                  }
-                }}
+                onDelete={() => setDeleting(notice)}
               />
             ))}
           </div>
         )}
 
         {pagination && pagination.totalPages > 1 && (
-          <footer className="flex justify-between gap-3">
-            <p className="text-sm text-ink-700/70">
+          <footer className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-ink-500">
               Page {pagination.page} of {pagination.totalPages}
             </p>
             <div className="flex gap-2">
@@ -164,6 +167,19 @@ export function NoticesListPage() {
       </div>
 
       {creating && <CreateNoticeModal onClose={() => setCreating(false)} />}
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete notice"
+        description={deleting ? `Delete notice "${deleting.title}"?` : ''}
+        confirmLabel="Delete"
+        loading={deleteNotice.isPending}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => {
+          if (!deleting) return;
+          deleteNotice.mutate(deleting.id, { onSettled: () => setDeleting(null) });
+        }}
+      />
     </AppLayout>
   );
 }
@@ -180,26 +196,18 @@ function NoticeCard({
   onDelete: () => void;
 }) {
   return (
-    <article className="panel p-5">
+    <article className="panel p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap gap-2">
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                notice.status === 'published'
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-amber-100 text-amber-800'
-              }`}
-            >
+            <Badge tone={notice.status === 'published' ? 'success' : 'warning'}>
               {notice.status}
-            </span>
-            <span className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium capitalize text-primary-700">
-              {notice.audience}
-            </span>
+            </Badge>
+            <Badge tone="primary">{notice.audience}</Badge>
           </div>
           <h2 className="font-display text-lg font-semibold text-ink-950">{notice.title}</h2>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-ink-700">{notice.body}</p>
-          <p className="mt-3 text-xs text-ink-700/55">
+          <p className="mt-2 whitespace-pre-wrap break-words text-sm text-ink-700">{notice.body}</p>
+          <p className="mt-3 text-xs text-ink-400">
             {notice.createdByName ? `By ${notice.createdByName} · ` : ''}
             {notice.publishedAt
               ? `Published ${new Date(notice.publishedAt).toLocaleString()}`
@@ -214,7 +222,7 @@ function NoticeCard({
               </Button>
             )}
             <Button type="button" size="sm" variant="ghost" onClick={onDelete} aria-label="Delete">
-              <Trash2 className="h-4 w-4 text-red-600" />
+              <Trash2 className="h-4 w-4 text-danger-600" aria-hidden="true" />
             </Button>
           </div>
         )}
@@ -283,7 +291,7 @@ function CreateNoticeModal({ onClose }: { onClose: () => void }) {
           <textarea
             id="notice-body"
             rows={6}
-            className={selectClass}
+            className="field-select"
             value={body}
             onChange={(event) => setBody(event.target.value)}
           />
@@ -294,7 +302,7 @@ function CreateNoticeModal({ onClose }: { onClose: () => void }) {
           </label>
           <select
             id="notice-audience"
-            className={selectClass}
+            className="field-select"
             value={audience}
             onChange={(event) => setAudience(event.target.value as NoticeAudience)}
           >

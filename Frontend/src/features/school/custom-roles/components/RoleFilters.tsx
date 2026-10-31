@@ -8,10 +8,10 @@ interface RoleFiltersProps {
 
 export function RoleFilters({ value, onChange }: RoleFiltersProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
+    <div className="panel p-4">
       <label htmlFor="role-search" className="sr-only">Search roles</label>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
         <Input
           id="role-search"
           type="search"

@@ -138,7 +138,10 @@ export function useDeleteFeeStructure() {
   });
 }
 
-export function useInvoices(filters: InvoiceFilters = {}) {
+export function useInvoices(
+  filters: InvoiceFilters = {},
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: feeKeys.invoiceList(filters),
     queryFn: async () => {
@@ -149,6 +152,7 @@ export function useInvoices(filters: InvoiceFilters = {}) {
       if (!response.data) throw new Error('The server returned no invoices');
       return response.data;
     },
+    enabled: options.enabled ?? true,
   });
 }
 

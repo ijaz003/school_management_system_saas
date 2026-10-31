@@ -53,12 +53,12 @@ export function PermissionPicker({ value, onChange, disabled }: PermissionPicker
   };
 
   if (permissionsQuery.isPending) {
-    return <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">Loading permissions...</div>;
+    return <div className="rounded-xl border border-ink-200 bg-white p-8 text-center text-sm text-ink-500">Loading permissions...</div>;
   }
 
   if (permissionsQuery.error) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <div className="rounded-xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">
         Could not load permissions: {permissionsQuery.error.message}
         <Button type="button" variant="outline" size="sm" className="ml-3" onClick={() => void permissionsQuery.refetch()} isLoading={permissionsQuery.isFetching}>
           Try again
@@ -68,11 +68,11 @@ export function PermissionPicker({ value, onChange, disabled }: PermissionPicker
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 p-4">
+    <section className="overflow-hidden rounded-xl border border-ink-200 bg-white">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-200 bg-ink-50 p-4">
         <div>
-          <p className="text-2xl font-bold text-blue-700">{value.length}</p>
-          <p className="text-xs text-gray-500">permissions selected</p>
+          <p className="text-2xl font-bold text-primary-700">{value.length}</p>
+          <p className="text-xs text-ink-500">permissions selected</p>
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" size="sm" onClick={() => onChange(allKeys)} disabled={disabled || allKeys.length === 0}>
@@ -83,16 +83,16 @@ export function PermissionPicker({ value, onChange, disabled }: PermissionPicker
           </Button>
         </div>
       </header>
-      <div className="border-b border-gray-200 p-3">
+      <div className="border-b border-ink-200 p-3">
         <label htmlFor="permission-search" className="sr-only">Search permissions</label>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
           <Input id="permission-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search permissions..." className="pl-10" disabled={disabled} />
         </div>
       </div>
       <div className="max-h-[500px] overflow-y-auto">
         {Object.keys(filtered).length === 0 ? (
-          <p className="p-8 text-center text-sm text-gray-500">No permissions match your search.</p>
+          <p className="p-8 text-center text-sm text-ink-500">No permissions match your search.</p>
         ) : Object.entries(filtered).map(([key, group]) => {
           const selectedCount = group.permissions.filter((permission) => value.includes(permission.key)).length;
           const modulePermissions = groups?.[key]?.permissions ?? [];
@@ -101,11 +101,11 @@ export function PermissionPicker({ value, onChange, disabled }: PermissionPicker
           const allSelected = modulePermissions.length > 0 && moduleSelectedCount === modulePermissions.length;
 
           return (
-            <section key={key} className="border-b border-gray-100 last:border-b-0">
+            <section key={key} className="border-b border-ink-100 last:border-b-0">
               <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
                 <button
                   type="button"
-                  className="inline-flex min-w-0 items-center gap-2 text-left text-sm font-semibold text-gray-900"
+                  className="inline-flex min-w-0 items-center gap-2 text-left text-sm font-semibold text-ink-950"
                   aria-expanded={!isCollapsed}
                   onClick={() => setCollapsed((current) => ({ ...current, [key]: !isCollapsed }))}
                 >
@@ -113,7 +113,7 @@ export function PermissionPicker({ value, onChange, disabled }: PermissionPicker
                   {group.displayName}
                 </button>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">{selectedCount}/{group.permissions.length}</span>
+                  <span className="rounded-full bg-ink-100 px-2 py-1 text-xs text-ink-600">{selectedCount}/{group.permissions.length}</span>
                   <Button type="button" variant="outline" size="sm" onClick={() => toggleModule(key)} disabled={disabled}>
                     {allSelected ? 'Deselect module' : 'Select module'}
                   </Button>
@@ -122,18 +122,18 @@ export function PermissionPicker({ value, onChange, disabled }: PermissionPicker
               {!isCollapsed && (
                 <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2">
                   {group.permissions.map((permission) => (
-                    <label key={permission.id} className={`flex cursor-pointer items-start gap-2 rounded-lg border p-3 ${value.includes(permission.key) ? 'border-blue-200 bg-blue-50' : 'border-gray-100 hover:bg-gray-50'}`}>
+                    <label key={permission.id} className={`flex cursor-pointer items-start gap-2 rounded-xl border p-3 ${value.includes(permission.key) ? 'border-primary-200 bg-primary-50' : 'border-ink-100 hover:bg-ink-50'}`}>
                       <input
                         type="checkbox"
-                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="mt-0.5 h-4 w-4 rounded border-ink-300 text-primary-700 focus:ring-primary-500"
                         checked={value.includes(permission.key)}
                         disabled={disabled}
                         onChange={() => togglePermission(permission.key)}
                       />
                       <span className="min-w-0">
-                        <span className="block text-sm font-medium text-gray-800">{permission.displayName}</span>
-                        <span className="block break-all font-mono text-xs text-gray-500">{permission.key}</span>
-                        {permission.description && <span className="mt-1 block text-xs text-gray-500">{permission.description}</span>}
+                        <span className="block text-sm font-medium text-ink-800">{permission.displayName}</span>
+                        <span className="block break-all font-mono text-xs text-ink-500">{permission.key}</span>
+                        {permission.description && <span className="mt-1 block text-xs text-ink-500">{permission.description}</span>}
                       </span>
                     </label>
                   ))}

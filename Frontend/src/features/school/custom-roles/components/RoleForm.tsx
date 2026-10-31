@@ -93,8 +93,8 @@ export function RoleForm({ role, onSuccess, onCancel }: RoleFormProps) {
 
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-6">
-      <section className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-5">
-        <h3 className="text-sm font-semibold text-gray-900">Role information</h3>
+      <section className="space-y-4 rounded-xl border border-ink-200 bg-surface-muted p-5">
+        <h3 className="text-sm font-semibold text-ink-950">Role information</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <Input
@@ -104,7 +104,7 @@ export function RoleForm({ role, onSuccess, onCancel }: RoleFormProps) {
               error={errors.name?.message}
               {...register('name')}
             />
-            <p className="mt-1 text-xs text-gray-500">Lowercase letters and underscores only.</p>
+            <p className="mt-1 text-xs text-ink-500">Lowercase letters and underscores only.</p>
           </div>
           <Input
             label="Display name *"
@@ -118,19 +118,19 @@ export function RoleForm({ role, onSuccess, onCancel }: RoleFormProps) {
           />
         </div>
         <div>
-          <label htmlFor="role-description" className="mb-1.5 block text-sm font-medium text-gray-700">Description</label>
+          <label htmlFor="role-description" className="mb-1.5 block text-sm font-medium text-ink-700">Description</label>
           <textarea
             id="role-description"
             rows={3}
             maxLength={500}
             placeholder="Describe this role's responsibilities..."
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="field-select resize-y"
             {...register('description')}
           />
-          {errors.description?.message && <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>}
+          {errors.description?.message && <p className="mt-1 text-xs text-danger-600">{errors.description.message}</p>}
         </div>
         <fieldset>
-          <legend className="mb-2 text-sm font-medium text-gray-700">Role color</legend>
+          <legend className="mb-2 text-sm font-medium text-ink-700">Role color</legend>
           <div className="flex flex-wrap gap-3">
             {COLORS.map((color) => (
               <button
@@ -140,7 +140,7 @@ export function RoleForm({ role, onSuccess, onCancel }: RoleFormProps) {
                 aria-pressed={selectedColor === color.value}
                 title={color.label}
                 onClick={() => setSelectedColor(color.value)}
-                className={`h-9 w-9 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 ${selectedColor === color.value ? 'ring-2 ring-offset-2 ring-gray-900' : ''}`}
+                className={`h-9 w-9 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink-900 ${selectedColor === color.value ? 'ring-2 ring-offset-2 ring-ink-900' : ''}`}
                 style={{ backgroundColor: color.value }}
               />
             ))}
@@ -150,8 +150,8 @@ export function RoleForm({ role, onSuccess, onCancel }: RoleFormProps) {
 
       <section className="space-y-3">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Permissions</h3>
-          <p className="mt-1 text-xs text-gray-500">Only permissions you are allowed to grant are shown.</p>
+          <h3 className="text-sm font-semibold text-ink-950">Permissions</h3>
+          <p className="mt-1 text-xs text-ink-500">Only permissions you are allowed to grant are shown.</p>
         </div>
         <PermissionPicker
           value={permissions}
@@ -161,10 +161,10 @@ export function RoleForm({ role, onSuccess, onCancel }: RoleFormProps) {
           }}
           disabled={isPending}
         />
-        {permissionError && <p className="text-sm text-red-600">{permissionError}</p>}
+        {permissionError && <p className="text-sm text-danger-600">{permissionError}</p>}
       </section>
 
-      <footer className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+      <footer className="flex justify-end gap-3 border-t border-ink-200 pt-4">
         {onCancel && <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>}
         <Button type="submit" isLoading={isPending} disabled={isPending}>
           {role ? 'Save changes' : 'Create role'}

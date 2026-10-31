@@ -87,8 +87,8 @@ export function StaffForm({
 
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-5">
-      <section className="space-y-4 rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="text-base font-semibold text-gray-900">Personal information</h2>
+      <section className="space-y-4 rounded-xl border border-ink-200 bg-white p-5">
+        <h2 className="text-base font-semibold text-ink-950">Personal information</h2>
         <Input label="Full name *" placeholder="e.g. Sir Zaid Ahmed" error={errors.fullName?.message} {...register('fullName')} />
         <div className="grid gap-4 md:grid-cols-2">
           <Input
@@ -104,8 +104,8 @@ export function StaffForm({
         </div>
       </section>
 
-      <section className="space-y-4 rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="text-base font-semibold text-gray-900">Role and position</h2>
+      <section className="space-y-4 rounded-xl border border-ink-200 bg-white p-5">
+        <h2 className="text-base font-semibold text-ink-950">Role and position</h2>
         <RoleSelect
           value={roleId ?? ''}
           onChange={(value) => setValue('roleId', value, { shouldValidate: true })}
@@ -120,18 +120,18 @@ export function StaffForm({
       </section>
 
       {!isEdit && (
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white p-4">
-          <input type="checkbox" className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" {...register('sendEmail')} />
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink-200 bg-white p-4">
+          <input type="checkbox" className="mt-1 h-4 w-4 rounded border-ink-300 text-primary-700 focus:ring-primary-500" {...register('sendEmail')} />
           <span>
-            <span className="block text-sm font-medium text-gray-900">Send welcome email</span>
-            <span className="mt-0.5 block text-xs text-gray-500">
+            <span className="block text-sm font-medium text-ink-950">Send welcome email</span>
+            <span className="mt-0.5 block text-xs text-ink-500">
               Email delivery is not configured yet; a temporary password will be displayed after creation.
             </span>
           </span>
         </label>
       )}
 
-      <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+      <div className="flex justify-end gap-3 border-t border-ink-200 pt-4">
         {onCancel && <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>}
         <Button
           type="submit"
