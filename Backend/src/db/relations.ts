@@ -16,6 +16,7 @@ import {
   feePayments,
   feeStructures,
 } from '../modules/fees/fees.schema.js';
+import { examMarks, exams, examSubjects } from '../modules/exams/exams.schema.js';
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
@@ -32,6 +33,9 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   feeStructures: many(feeStructures),
   feeInvoices: many(feeInvoices),
   feePayments: many(feePayments),
+  exams: many(exams),
+  examSubjects: many(examSubjects),
+  examMarks: many(examMarks),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -49,6 +53,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   notices: many(notices),
   feeInvoicesCreated: many(feeInvoices),
   feePaymentsRecorded: many(feePayments),
+  examsCreated: many(exams),
+  examMarksEntered: many(examMarks),
 }));
 
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
@@ -75,6 +81,7 @@ export const classesRelations = relations(classes, ({ one, many }) => ({
   classSubjects: many(classSubjects),
   students: many(students),
   feeStructures: many(feeStructures),
+  exams: many(exams),
 }));
 
 export const subjectsRelations = relations(subjects, ({ one, many }) => ({
@@ -85,6 +92,7 @@ export const subjectsRelations = relations(subjects, ({ one, many }) => ({
   classSubjects: many(classSubjects),
   sectionSubjects: many(sectionSubjects),
   teacherAssignments: many(teacherAssignments),
+  examSubjects: many(examSubjects),
 }));
 
 export const sectionsRelations = relations(sections, ({ one, many }) => ({
@@ -121,6 +129,58 @@ export const studentsRelations = relations(students, ({ one, many }) => ({
   }),
   attendanceRecords: many(attendanceRecords),
   feeInvoices: many(feeInvoices),
+  examMarks: many(examMarks),
+}));
+
+export const examsRelations = relations(exams, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [exams.tenantId],
+    references: [tenants.id],
+  }),
+  class: one(classes, {
+    fields: [exams.classId],
+    references: [classes.id],
+  }),
+  createdByUser: one(users, {
+    fields: [exams.createdBy],
+    references: [users.id],
+  }),
+  subjects: many(examSubjects),
+}));
+
+export const examSubjectsRelations = relations(examSubjects, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [examSubjects.tenantId],
+    references: [tenants.id],
+  }),
+  exam: one(exams, {
+    fields: [examSubjects.examId],
+    references: [exams.id],
+  }),
+  subject: one(subjects, {
+    fields: [examSubjects.subjectId],
+    references: [subjects.id],
+  }),
+  marks: many(examMarks),
+}));
+
+export const examMarksRelations = relations(examMarks, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [examMarks.tenantId],
+    references: [tenants.id],
+  }),
+  examSubject: one(examSubjects, {
+    fields: [examMarks.examSubjectId],
+    references: [examSubjects.id],
+  }),
+  student: one(students, {
+    fields: [examMarks.studentId],
+    references: [students.id],
+  }),
+  enteredByUser: one(users, {
+    fields: [examMarks.enteredBy],
+    references: [users.id],
+  }),
 }));
 
 export const attendanceRecordsRelations = relations(attendanceRecords, ({ one }) => ({

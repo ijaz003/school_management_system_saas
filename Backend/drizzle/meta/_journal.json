@@ -43,6 +43,13 @@
       "when": 1793443377084,
       "tag": "0005_reflective_impossible_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793444330791,
+      "tag": "0006_sudden_zarek",
+      "breakpoints": true
     }
   ]
 }

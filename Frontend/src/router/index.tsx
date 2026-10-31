@@ -24,6 +24,8 @@ import { TeacherDetailPage } from '@/features/school/teachers/pages/TeacherDetai
 import { AttendancePage } from '@/features/school/attendance/pages/AttendancePage';
 import { NoticesListPage } from '@/features/school/notices/pages/NoticesListPage';
 import { FeesPage } from '@/features/school/fees/pages/FeesPage';
+import { ExamsListPage } from '@/features/school/exams/pages/ExamsListPage';
+import { ExamDetailPage } from '@/features/school/exams/pages/ExamDetailPage';
 import { SchoolSettingsPage } from '@/features/school/settings/pages/SchoolSettingsPage';
 import { ProfilePage } from '@/features/auth/pages/ProfilePage';
 import { usePermission } from '@/hooks/usePermission';
@@ -173,6 +175,20 @@ function FeesRoute() {
   return <FeesPage />;
 }
 
+function ExamsRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  const allowed =
+    can('exams.marks.enter') ||
+    can('exams.schedule.create') ||
+    can('exams.result.publish') ||
+    can('exams.reportcard.generate');
+  if (user?.role === 'super_admin' || !allowed) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <Outlet />;
+}
+
 const router = createBrowserRouter([
   {
     element: <GuestRoute />,
@@ -217,7 +233,13 @@ const router = createBrowserRouter([
       },
       { path: '/classes', element: <Navigate to="/settings/classes" replace /> },
       { path: '/fees', element: <FeesRoute /> },
-      { path: '/exams', element: <SectionRoute title="Exams" permission="exams.marks.enter" /> },
+      {
+        element: <ExamsRoute />,
+        children: [
+          { path: '/exams', element: <ExamsListPage /> },
+          { path: '/exams/:id', element: <ExamDetailPage /> },
+        ],
+      },
       { path: '/attendance', element: <AttendanceRoute /> },
       { path: '/notices', element: <NoticesRoute /> },
       { path: '/settings/roles', element: <CustomRolesRoute /> },

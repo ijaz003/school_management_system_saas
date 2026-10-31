@@ -24,6 +24,7 @@ import teachersRoutes from './modules/teachers/teachers.routes.js';
 import attendanceRoutes from './modules/attendance/attendance.routes.js';
 import noticesRoutes from './modules/notices/notices.routes.js';
 import feesRoutes from './modules/fees/fees.routes.js';
+import examsRoutes from './modules/exams/exams.routes.js';
 import settingsRoutes from './modules/school/settings/settings.routes.js';
 
 export function createApp() {
@@ -71,6 +72,7 @@ export function createApp() {
   app.use('/api/school/attendance', attendanceRoutes);
   app.use('/api/school/notices', noticesRoutes);
   app.use('/api/school/fees', feesRoutes);
+  app.use('/api/school/exams', examsRoutes);
   app.use('/api/school/settings', settingsRoutes);
   app.use('/api/school', sectionsRoutes);
 
