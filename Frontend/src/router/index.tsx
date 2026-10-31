@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
@@ -14,6 +15,17 @@ import { StaffListPage } from '@/features/school/staff/pages/StaffListPage';
 import { ClassesListPage } from '@/features/school/classes/pages/ClassesListPage';
 import { ClassDetailPage } from '@/features/school/classes/pages/ClassDetailPage';
 import { SubjectsListPage } from '@/features/school/subjects/pages/SubjectsListPage';
+import { StudentsListPage } from '@/features/school/students/pages/StudentsListPage';
+import { StudentCreatePage } from '@/features/school/students/pages/StudentCreatePage';
+import { StudentDetailPage } from '@/features/school/students/pages/StudentDetailPage';
+import { StudentEditPage } from '@/features/school/students/pages/StudentEditPage';
+import { TeachersListPage } from '@/features/school/teachers/pages/TeachersListPage';
+import { TeacherDetailPage } from '@/features/school/teachers/pages/TeacherDetailPage';
+import { AttendancePage } from '@/features/school/attendance/pages/AttendancePage';
+import { NoticesListPage } from '@/features/school/notices/pages/NoticesListPage';
+import { FeesPage } from '@/features/school/fees/pages/FeesPage';
+import { SchoolSettingsPage } from '@/features/school/settings/pages/SchoolSettingsPage';
+import { ProfilePage } from '@/features/auth/pages/ProfilePage';
 import { usePermission } from '@/hooks/usePermission';
 import { useAppSelector } from '@/store/hooks';
 import { selectUser } from '@/store/selectors/permissions';
@@ -92,6 +104,75 @@ function AcademicRoute() {
   return <Outlet />;
 }
 
+function StudentsRoute({ permission }: { permission?: string }) {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin') {
+    return <Navigate to="/forbidden" replace />;
+  }
+  if (permission && !can(permission)) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <Outlet />;
+}
+
+function RequireStudentPermission({
+  permission,
+  children,
+}: {
+  permission: string;
+  children: ReactNode;
+}) {
+  const { can } = usePermission();
+  if (!can(permission)) return <Navigate to="/forbidden" replace />;
+  return children;
+}
+
+function TeachersRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || !can('teachers.read')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <Outlet />;
+}
+
+function AttendanceRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || !can('attendance.read')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <AttendancePage />;
+}
+
+function NoticesRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || !can('notices.read')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <NoticesListPage />;
+}
+
+function SchoolSettingsRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || !can('settings.school.edit')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <SchoolSettingsPage />;
+}
+
+function FeesRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || !can('fees.invoice.read')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <FeesPage />;
+}
+
 const router = createBrowserRouter([
   {
     element: <GuestRoute />,
@@ -102,15 +183,43 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Navigate to="/dashboard" replace /> },
       { path: '/dashboard', element: <DashboardRouter /> },
-      { path: '/profile', element: <PlaceholderPage title="My profile" /> },
-      { path: '/settings', element: <SectionRoute title="Settings" permission="settings.school.edit" /> },
-      { path: '/students', element: <SectionRoute title="Students" permission="students.read" /> },
-      { path: '/teachers', element: <SectionRoute title="Teachers" permission="teachers.read" /> },
+      { path: '/profile', element: <ProfilePage /> },
+      { path: '/settings', element: <SchoolSettingsRoute /> },
+      {
+        element: <StudentsRoute permission="students.read" />,
+        children: [
+          { path: '/students', element: <StudentsListPage /> },
+          {
+            path: '/students/new',
+            element: (
+              <RequireStudentPermission permission="students.create">
+                <StudentCreatePage />
+              </RequireStudentPermission>
+            ),
+          },
+          { path: '/students/:id', element: <StudentDetailPage /> },
+          {
+            path: '/students/:id/edit',
+            element: (
+              <RequireStudentPermission permission="students.update">
+                <StudentEditPage />
+              </RequireStudentPermission>
+            ),
+          },
+        ],
+      },
+      {
+        element: <TeachersRoute />,
+        children: [
+          { path: '/teachers', element: <TeachersListPage /> },
+          { path: '/teachers/:id', element: <TeacherDetailPage /> },
+        ],
+      },
       { path: '/classes', element: <Navigate to="/settings/classes" replace /> },
-      { path: '/fees', element: <SectionRoute title="Fees" permission="fees.invoice.read" /> },
+      { path: '/fees', element: <FeesRoute /> },
       { path: '/exams', element: <SectionRoute title="Exams" permission="exams.marks.enter" /> },
-      { path: '/attendance', element: <SectionRoute title="Attendance" permission="attendance.read" /> },
-      { path: '/notices', element: <SectionRoute title="Notices" permission="notices.read" /> },
+      { path: '/attendance', element: <AttendanceRoute /> },
+      { path: '/notices', element: <NoticesRoute /> },
       { path: '/settings/roles', element: <CustomRolesRoute /> },
       {
         element: <AcademicRoute />,

@@ -8,6 +8,14 @@ import { sections } from '../modules/sections/sections.schema.js';
 import { classSubjects } from '../modules/class-subjects/class-subjects.schema.js';
 import { sectionSubjects } from '../modules/section-subjects/section-subjects.schema.js';
 import { teacherAssignments } from '../modules/teacher-assignments/teacher-assignments.schema.js';
+import { students } from '../modules/students/students.schema.js';
+import { attendanceRecords } from '../modules/attendance/attendance.schema.js';
+import { notices } from '../modules/notices/notices.schema.js';
+import {
+  feeInvoices,
+  feePayments,
+  feeStructures,
+} from '../modules/fees/fees.schema.js';
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
@@ -18,6 +26,12 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   classSubjects: many(classSubjects),
   sectionSubjects: many(sectionSubjects),
   teacherAssignments: many(teacherAssignments),
+  students: many(students),
+  attendanceRecords: many(attendanceRecords),
+  notices: many(notices),
+  feeStructures: many(feeStructures),
+  feeInvoices: many(feeInvoices),
+  feePayments: many(feePayments),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -32,6 +46,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   refreshTokens: many(refreshTokens),
   classTeacherSections: many(sections),
   teacherAssignments: many(teacherAssignments),
+  notices: many(notices),
+  feeInvoicesCreated: many(feeInvoices),
+  feePaymentsRecorded: many(feePayments),
 }));
 
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
@@ -56,6 +73,8 @@ export const classesRelations = relations(classes, ({ one, many }) => ({
   }),
   sections: many(sections),
   classSubjects: many(classSubjects),
+  students: many(students),
+  feeStructures: many(feeStructures),
 }));
 
 export const subjectsRelations = relations(subjects, ({ one, many }) => ({
@@ -83,6 +102,102 @@ export const sectionsRelations = relations(sections, ({ one, many }) => ({
   }),
   sectionSubjects: many(sectionSubjects),
   teacherAssignments: many(teacherAssignments),
+  students: many(students),
+  attendanceRecords: many(attendanceRecords),
+}));
+
+export const studentsRelations = relations(students, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [students.tenantId],
+    references: [tenants.id],
+  }),
+  class: one(classes, {
+    fields: [students.classId],
+    references: [classes.id],
+  }),
+  section: one(sections, {
+    fields: [students.sectionId],
+    references: [sections.id],
+  }),
+  attendanceRecords: many(attendanceRecords),
+  feeInvoices: many(feeInvoices),
+}));
+
+export const attendanceRecordsRelations = relations(attendanceRecords, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [attendanceRecords.tenantId],
+    references: [tenants.id],
+  }),
+  section: one(sections, {
+    fields: [attendanceRecords.sectionId],
+    references: [sections.id],
+  }),
+  student: one(students, {
+    fields: [attendanceRecords.studentId],
+    references: [students.id],
+  }),
+  markedByUser: one(users, {
+    fields: [attendanceRecords.markedBy],
+    references: [users.id],
+  }),
+}));
+
+export const noticesRelations = relations(notices, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notices.tenantId],
+    references: [tenants.id],
+  }),
+  author: one(users, {
+    fields: [notices.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const feeStructuresRelations = relations(feeStructures, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [feeStructures.tenantId],
+    references: [tenants.id],
+  }),
+  class: one(classes, {
+    fields: [feeStructures.classId],
+    references: [classes.id],
+  }),
+  invoices: many(feeInvoices),
+}));
+
+export const feeInvoicesRelations = relations(feeInvoices, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [feeInvoices.tenantId],
+    references: [tenants.id],
+  }),
+  student: one(students, {
+    fields: [feeInvoices.studentId],
+    references: [students.id],
+  }),
+  feeStructure: one(feeStructures, {
+    fields: [feeInvoices.feeStructureId],
+    references: [feeStructures.id],
+  }),
+  createdByUser: one(users, {
+    fields: [feeInvoices.createdBy],
+    references: [users.id],
+  }),
+  payments: many(feePayments),
+}));
+
+export const feePaymentsRelations = relations(feePayments, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [feePayments.tenantId],
+    references: [tenants.id],
+  }),
+  invoice: one(feeInvoices, {
+    fields: [feePayments.invoiceId],
+    references: [feeInvoices.id],
+  }),
+  recordedByUser: one(users, {
+    fields: [feePayments.recordedBy],
+    references: [users.id],
+  }),
 }));
 
 export const classSubjectsRelations = relations(

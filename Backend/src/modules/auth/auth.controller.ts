@@ -4,10 +4,12 @@ import { asyncHandler } from '../../middleware/async-handler.js';
 import { ApiResponse } from '../../lib/response.js';
 import { UnauthorizedError } from '../../lib/errors.js';
 import {
+  changeCurrentUserPassword,
   getCurrentUser,
   loginUser,
   logoutUser,
   refreshUserToken,
+  updateCurrentUserProfile,
 } from './auth.service.js';
 
 const REFRESH_COOKIE_OPTIONS = {
@@ -82,5 +84,21 @@ export const authController = {
 
     const user = await getCurrentUser(req.user.id);
     return ApiResponse.success(res, user, 'User fetched');
+  }),
+
+  updateProfile: asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new UnauthorizedError();
+    const user = await updateCurrentUserProfile(req.user.id, req.body);
+    return ApiResponse.success(res, user, 'Profile updated');
+  }),
+
+  changePassword: asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw new UnauthorizedError();
+    await changeCurrentUserPassword(
+      req.user.id,
+      req.body.currentPassword,
+      req.body.newPassword,
+    );
+    return ApiResponse.success(res, null, 'Password changed');
   }),
 };

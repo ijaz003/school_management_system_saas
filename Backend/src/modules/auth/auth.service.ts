@@ -269,6 +269,53 @@ export async function getCurrentUser(userId: string): Promise<SafeUser> {
   return toSafeUser(user);
 }
 
+export async function updateCurrentUserProfile(
+  userId: string,
+  data: { fullName?: string; phone?: string | null },
+): Promise<SafeUser> {
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.id, userId), eq(users.isActive, true), isNull(users.deletedAt)))
+    .limit(1);
+  if (!existing) throw new NotFoundError('User');
+
+  const [updated] = await db
+    .update(users)
+    .set({
+      ...(data.fullName !== undefined ? { fullName: data.fullName.trim() } : {}),
+      ...(data.phone !== undefined ? { phone: data.phone || null } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning();
+
+  if (!updated) throw new NotFoundError('User');
+  return toSafeUser(updated);
+}
+
+export async function changeCurrentUserPassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.id, userId), eq(users.isActive, true), isNull(users.deletedAt)))
+    .limit(1);
+  if (!existing) throw new NotFoundError('User');
+
+  const valid = await verifyPassword(existing.passwordHash, currentPassword);
+  if (!valid) throw new UnauthorizedError('Current password is incorrect');
+
+  const passwordHash = await hashPassword(newPassword);
+  await db
+    .update(users)
+    .set({ passwordHash, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+}
+
 export async function createSuperAdmin(
   input: CreateSuperAdminInput,
 ): Promise<SafeUser> {

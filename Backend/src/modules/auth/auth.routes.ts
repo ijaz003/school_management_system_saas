@@ -4,9 +4,11 @@ import { authenticate } from '../../middleware/authenticate.js';
 import { validate } from '../../middleware/validate.js';
 import { authController } from './auth.controller.js';
 import {
+  changePasswordSchema,
   loginSchema,
   logoutSchema,
   refreshSchema,
+  updateProfileSchema,
 } from './auth.validator.js';
 
 const router = Router();
@@ -48,5 +50,12 @@ router.post(
 );
 router.post('/logout', validate(logoutSchema), authController.logout);
 router.get('/me', authenticate, authController.me);
+router.patch('/profile', authenticate, validate(updateProfileSchema), authController.updateProfile);
+router.post(
+  '/change-password',
+  authenticate,
+  validate(changePasswordSchema),
+  authController.changePassword,
+);
 
 export default router;

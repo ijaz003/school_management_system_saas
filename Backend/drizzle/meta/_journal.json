@@ -15,6 +15,34 @@
       "when": 1791878884586,
       "tag": "0001_dry_tarot",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793436191753,
+      "tag": "0002_whole_shaman",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793441478476,
+      "tag": "0003_sparkling_praxagora",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793442145297,
+      "tag": "0004_low_dazzler",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793443377084,
+      "tag": "0005_reflective_impossible_man",
+      "breakpoints": true
     }
   ]
 }

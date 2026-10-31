@@ -19,6 +19,12 @@ import systemRolesRoutes from './modules/roles/roles.routes.js';
 import classesRoutes from './modules/classes/classes.routes.js';
 import subjectsRoutes from './modules/subjects/subjects.routes.js';
 import sectionsRoutes from './modules/sections/sections.routes.js';
+import studentsRoutes from './modules/students/students.routes.js';
+import teachersRoutes from './modules/teachers/teachers.routes.js';
+import attendanceRoutes from './modules/attendance/attendance.routes.js';
+import noticesRoutes from './modules/notices/notices.routes.js';
+import feesRoutes from './modules/fees/fees.routes.js';
+import settingsRoutes from './modules/school/settings/settings.routes.js';
 
 export function createApp() {
   const app = express();
@@ -60,6 +66,12 @@ export function createApp() {
   app.use('/api/school/staff', staffRoutes);
   app.use('/api/school/subjects', subjectsRoutes);
   app.use('/api/school/classes', classesRoutes);
+  app.use('/api/school/students', studentsRoutes);
+  app.use('/api/school/teachers', teachersRoutes);
+  app.use('/api/school/attendance', attendanceRoutes);
+  app.use('/api/school/notices', noticesRoutes);
+  app.use('/api/school/fees', feesRoutes);
+  app.use('/api/school/settings', settingsRoutes);
   app.use('/api/school', sectionsRoutes);
 
   app.use(notFound);
