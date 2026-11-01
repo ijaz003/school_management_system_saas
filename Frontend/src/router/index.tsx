@@ -34,6 +34,8 @@ import { ExamReportCardsPage } from '@/features/school/exams/pages/ExamReportCar
 import { ReportsPage } from '@/features/school/reports/pages/ReportsPage';
 import { AuditLogPage } from '@/features/school/audit/pages/AuditLogPage';
 import { SchoolSettingsPage } from '@/features/school/settings/pages/SchoolSettingsPage';
+import { SessionYearsPage } from '@/features/school/session-years/pages/SessionYearsPage';
+import { PromoteStudentsPage } from '@/features/school/session-years/pages/PromoteStudentsPage';
 import { ProfilePage } from '@/features/auth/pages/ProfilePage';
 import { usePermission } from '@/hooks/usePermission';
 import { useAppSelector } from '@/store/hooks';
@@ -200,6 +202,29 @@ function DiaryRoute() {
   return <DiaryListPage />;
 }
 
+function SessionYearsRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  const allowed =
+    can('session_years.read') ||
+    can('session_years.write') ||
+    can('settings.school.edit');
+  if (user?.role === 'super_admin' || !allowed) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <SessionYearsPage />;
+}
+
+function PromoteStudentsRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  const allowed = can('students.promote') || can('students.update');
+  if (user?.role === 'super_admin' || !allowed) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <PromoteStudentsPage />;
+}
+
 function ExamsRoute() {
   const user = useAppSelector(selectUser);
   const { can } = usePermission();
@@ -260,6 +285,7 @@ const router = createBrowserRouter([
         children: [
           { path: '/students', element: <StudentsListPage /> },
           { path: '/students/id-cards', element: <StudentIdCardsPage /> },
+          { path: '/students/promote', element: <PromoteStudentsRoute /> },
           {
             path: '/students/new',
             element: (
@@ -313,6 +339,7 @@ const router = createBrowserRouter([
       },
       { path: '/notices', element: <NoticesRoute /> },
       { path: '/diary', element: <DiaryRoute /> },
+      { path: '/session-years', element: <SessionYearsRoute /> },
       { path: '/settings/roles', element: <CustomRolesRoute /> },
       {
         element: <AcademicRoute />,

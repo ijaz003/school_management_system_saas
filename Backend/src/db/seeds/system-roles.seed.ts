@@ -18,7 +18,7 @@ export const SYSTEM_ROLES = [
     displayName: 'School Admin',
     description: 'School owner — full school access',
     permissions: [
-      'students.*', 'teachers.*', 'classes.*', 'attendance.*', 'fees.*',
+      'students.*', 'teachers.*', 'classes.*', 'attendance.*', 'session_years.*', 'fees.*',
       'exams.*', 'notices.*', 'diary.*', 'sms.send', 'reports.*', 'settings.*',
       'subscription.view', 'audit.read',
     ],

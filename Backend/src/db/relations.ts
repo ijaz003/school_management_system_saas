@@ -9,6 +9,10 @@ import { classSubjects } from '../modules/class-subjects/class-subjects.schema.j
 import { sectionSubjects } from '../modules/section-subjects/section-subjects.schema.js';
 import { teacherAssignments } from '../modules/teacher-assignments/teacher-assignments.schema.js';
 import { students } from '../modules/students/students.schema.js';
+import {
+  sessionYears,
+  studentPlacements,
+} from '../modules/session-years/session-years.schema.js';
 import { attendanceRecords } from '../modules/attendance/attendance.schema.js';
 import { notices } from '../modules/notices/notices.schema.js';
 import { diaryEntries } from '../modules/diary/diary.schema.js';
@@ -30,6 +34,8 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   sectionSubjects: many(sectionSubjects),
   teacherAssignments: many(teacherAssignments),
   students: many(students),
+  sessionYears: many(sessionYears),
+  studentPlacements: many(studentPlacements),
   attendanceRecords: many(attendanceRecords),
   notices: many(notices),
   feeStructures: many(feeStructures),
@@ -133,6 +139,38 @@ export const studentsRelations = relations(students, ({ one, many }) => ({
   attendanceRecords: many(attendanceRecords),
   feeInvoices: many(feeInvoices),
   examMarks: many(examMarks),
+  placements: many(studentPlacements),
+}));
+
+export const sessionYearsRelations = relations(sessionYears, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [sessionYears.tenantId],
+    references: [tenants.id],
+  }),
+  placements: many(studentPlacements),
+}));
+
+export const studentPlacementsRelations = relations(studentPlacements, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [studentPlacements.tenantId],
+    references: [tenants.id],
+  }),
+  student: one(students, {
+    fields: [studentPlacements.studentId],
+    references: [students.id],
+  }),
+  sessionYear: one(sessionYears, {
+    fields: [studentPlacements.sessionYearId],
+    references: [sessionYears.id],
+  }),
+  class: one(classes, {
+    fields: [studentPlacements.classId],
+    references: [classes.id],
+  }),
+  section: one(sections, {
+    fields: [studentPlacements.sectionId],
+    references: [sections.id],
+  }),
 }));
 
 export const examsRelations = relations(exams, ({ one, many }) => ({

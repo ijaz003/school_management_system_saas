@@ -13,7 +13,6 @@ import {
   CopyX,
   CircleDot,
   Keyboard,
-  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';

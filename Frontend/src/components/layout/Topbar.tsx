@@ -7,7 +7,10 @@ import { UserMenu } from './UserMenu';
 
 const ROUTE_TITLES: Array<{ match: RegExp; title: string }> = [
   { match: /^\/dashboard$/, title: 'Dashboard' },
+  { match: /^\/students\/promote/, title: 'Promote students' },
+  { match: /^\/students\/id-cards/, title: 'ID cards' },
   { match: /^\/students/, title: 'Students' },
+  { match: /^\/session-years/, title: 'Session years' },
   { match: /^\/teachers/, title: 'Teachers' },
   { match: /^\/fees\/vouchers/, title: 'Fee voucher' },
   { match: /^\/fees/, title: 'Fees' },
@@ -16,7 +19,6 @@ const ROUTE_TITLES: Array<{ match: RegExp; title: string }> = [
   { match: /^\/audit/, title: 'Audit log' },
   { match: /^\/attendance\/scan/, title: 'Scan station' },
   { match: /^\/attendance/, title: 'Attendance' },
-  { match: /^\/students\/id-cards/, title: 'ID cards' },
   { match: /^\/notices/, title: 'Notices' },
   { match: /^\/diary/, title: 'Daily diary' },
   { match: /^\/settings\/classes/, title: 'Classes' },

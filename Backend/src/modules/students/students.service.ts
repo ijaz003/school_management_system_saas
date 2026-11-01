@@ -8,6 +8,11 @@ import {
 } from '../../lib/errors.js';
 import { classes } from '../classes/classes.schema.js';
 import { sections } from '../sections/sections.schema.js';
+import {
+  ensurePlacementForCurrentYear,
+  getCurrentSessionYear,
+} from '../session-years/session-years.service.js';
+import { studentPlacements } from '../session-years/session-years.schema.js';
 import { tenants } from '../tenants/tenants.schema.js';
 import { students } from './students.schema.js';
 import type {
@@ -340,6 +345,13 @@ export async function createStudent(input: CreateStudentInput): Promise<StudentD
     return created;
   });
 
+  await ensurePlacementForCurrentYear({
+    tenantId: input.tenantId,
+    studentId: student.id,
+    classId: data.classId,
+    sectionId: data.sectionId,
+  });
+
   return getStudentById(student.id, input.tenantId);
 }
 
@@ -400,6 +412,40 @@ export async function updateStudent(input: UpdateStudentInput): Promise<StudentD
     .returning({ id: students.id });
 
   if (!updated) throw new NotFoundError('Student');
+
+  if (data.classId !== undefined || data.sectionId !== undefined) {
+    const current = await getCurrentSessionYear(input.tenantId);
+    if (current) {
+      const [placement] = await db
+        .select({ id: studentPlacements.id })
+        .from(studentPlacements)
+        .where(
+          and(
+            eq(studentPlacements.studentId, existing.id),
+            eq(studentPlacements.sessionYearId, current.id),
+          ),
+        )
+        .limit(1);
+      if (placement) {
+        await db
+          .update(studentPlacements)
+          .set({
+            classId: nextClassId,
+            sectionId: nextSectionId,
+            updatedAt: new Date(),
+          })
+          .where(eq(studentPlacements.id, placement.id));
+      } else {
+        await ensurePlacementForCurrentYear({
+          tenantId: input.tenantId,
+          studentId: existing.id,
+          classId: nextClassId,
+          sectionId: nextSectionId,
+        });
+      }
+    }
+  }
+
   return getStudentById(updated.id, input.tenantId);
 }
 

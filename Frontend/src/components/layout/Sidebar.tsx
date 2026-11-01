@@ -9,7 +9,9 @@ import {
   GraduationCap,
   LayoutDashboard,
   LifeBuoy,
+  ArrowRightLeft,
   BookMarked,
+  CalendarRange,
   Megaphone,
   School,
   ScrollText,
@@ -72,9 +74,21 @@ const SCHOOL_GROUPS: MenuGroup[] = [
     label: 'Academic',
     items: [
       { label: 'Students', path: '/students', icon: GraduationCap, permission: 'students.read' },
+      {
+        label: 'Promote',
+        path: '/students/promote',
+        icon: ArrowRightLeft,
+        anyOf: ['students.promote', 'students.update'],
+      },
       { label: 'Teachers', path: '/teachers', icon: Users, permission: 'teachers.read' },
       { label: 'Classes', path: '/settings/classes', icon: School, permission: 'classes.read' },
       { label: 'Subjects', path: '/settings/subjects', icon: BookOpen, permission: 'classes.read' },
+      {
+        label: 'Session years',
+        path: '/session-years',
+        icon: CalendarRange,
+        anyOf: ['session_years.read', 'session_years.write', 'settings.school.edit'],
+      },
       {
         label: 'Attendance',
         path: '/attendance',

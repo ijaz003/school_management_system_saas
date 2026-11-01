@@ -8,6 +8,7 @@ export * from '../modules/class-subjects/class-subjects.schema.js';
 export * from '../modules/section-subjects/section-subjects.schema.js';
 export * from '../modules/teacher-assignments/teacher-assignments.schema.js';
 export * from '../modules/students/students.schema.js';
+export * from '../modules/session-years/session-years.schema.js';
 export * from '../modules/attendance/attendance.schema.js';
 export * from '../modules/notices/notices.schema.js';
 export * from '../modules/diary/diary.schema.js';

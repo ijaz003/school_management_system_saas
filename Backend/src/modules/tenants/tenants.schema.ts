@@ -51,6 +51,8 @@ export const tenants = pgTable('tenants', {
     .notNull(),
   settings: jsonb('settings').$type<{
     academicYear?: string;
+    /** Active academic/session year id (FK to session_years). */
+    currentSessionYearId?: string;
     gradingSystem?: string;
     timezone?: string;
     currency?: string;

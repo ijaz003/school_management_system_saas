@@ -12,6 +12,7 @@ export interface SchoolSettingsUpdate {
   ownerPhone?: string;
   settings?: {
     academicYear?: string;
+    currentSessionYearId?: string;
     gradingSystem?: string;
     timezone?: string;
     currency?: string;
