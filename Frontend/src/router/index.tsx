@@ -36,6 +36,8 @@ import { AuditLogPage } from '@/features/school/audit/pages/AuditLogPage';
 import { SchoolSettingsPage } from '@/features/school/settings/pages/SchoolSettingsPage';
 import { SessionYearsPage } from '@/features/school/session-years/pages/SessionYearsPage';
 import { PromoteStudentsPage } from '@/features/school/session-years/pages/PromoteStudentsPage';
+import { SupportTicketsPage } from '@/features/school/support/pages/SupportTicketsPage';
+import { SupportTicketDetailPage } from '@/features/school/support/pages/SupportTicketDetailPage';
 import { ProfilePage } from '@/features/auth/pages/ProfilePage';
 import { usePermission } from '@/hooks/usePermission';
 import { useAppSelector } from '@/store/hooks';
@@ -215,6 +217,32 @@ function SessionYearsRoute() {
   return <SessionYearsPage />;
 }
 
+function SupportRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin') {
+    return <Outlet />;
+  }
+  if (!can('support.read')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <Outlet />;
+}
+
+function SupportListRoute() {
+  const user = useAppSelector(selectUser);
+  return (
+    <SupportTicketsPage scope={user?.role === 'super_admin' ? 'platform' : 'school'} />
+  );
+}
+
+function SupportDetailRoute() {
+  const user = useAppSelector(selectUser);
+  return (
+    <SupportTicketDetailPage scope={user?.role === 'super_admin' ? 'platform' : 'school'} />
+  );
+}
+
 function PromoteStudentsRoute() {
   const user = useAppSelector(selectUser);
   const { can } = usePermission();
@@ -363,7 +391,13 @@ const router = createBrowserRouter([
       { path: '/permissions', element: <SectionRoute title="Permissions" superAdminOnly /> },
       { path: '/system-roles', element: <SectionRoute title="System roles" superAdminOnly /> },
       { path: '/analytics', element: <SectionRoute title="Analytics" superAdminOnly /> },
-      { path: '/support', element: <SectionRoute title="Support" superAdminOnly /> },
+      {
+        element: <SupportRoute />,
+        children: [
+          { path: '/support', element: <SupportListRoute /> },
+          { path: '/support/:id', element: <SupportDetailRoute /> },
+        ],
+      },
       {
         element: <SuperAdminRoute />,
         children: [

@@ -32,6 +32,8 @@ import auditRoutes from './modules/audit/audit.routes.js';
 import exportsRoutes from './modules/exports/exports.routes.js';
 import settingsRoutes from './modules/school/settings/settings.routes.js';
 import sessionYearsRoutes from './modules/session-years/session-years.routes.js';
+import schoolSupportRoutes from './modules/support/school-support.routes.js';
+import platformSupportRoutes from './modules/support/platform-support.routes.js';
 
 export function createApp() {
   const app = express();
@@ -86,6 +88,8 @@ export function createApp() {
   app.use('/api/school/exports', exportsRoutes);
   app.use('/api/school/settings', settingsRoutes);
   app.use('/api/school/session-years', sessionYearsRoutes);
+  app.use('/api/school/support', schoolSupportRoutes);
+  app.use('/api/super-admin/support', platformSupportRoutes);
   app.use('/api/school', sectionsRoutes);
 
   app.use(notFound);

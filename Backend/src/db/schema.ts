@@ -15,4 +15,5 @@ export * from '../modules/diary/diary.schema.js';
 export * from '../modules/fees/fees.schema.js';
 export * from '../modules/exams/exams.schema.js';
 export * from '../modules/audit/audit.schema.js';
+export * from '../modules/support/support.schema.js';
 export * from './relations.js';

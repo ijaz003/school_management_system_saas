@@ -23,6 +23,10 @@ import {
 } from '../modules/fees/fees.schema.js';
 import { examMarks, exams, examSubjects } from '../modules/exams/exams.schema.js';
 import { auditLogs } from '../modules/audit/audit.schema.js';
+import {
+  supportMessages,
+  supportTickets,
+} from '../modules/support/support.schema.js';
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
@@ -385,6 +389,38 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
   actor: one(users, {
     fields: [auditLogs.actorId],
+    references: [users.id],
+  }),
+}));
+
+export const supportTicketsRelations = relations(
+  supportTickets,
+  ({ one, many }) => ({
+    tenant: one(tenants, {
+      fields: [supportTickets.tenantId],
+      references: [tenants.id],
+    }),
+    creator: one(users, {
+      fields: [supportTickets.createdBy],
+      references: [users.id],
+      relationName: 'supportTicketCreator',
+    }),
+    assignee: one(users, {
+      fields: [supportTickets.assignedTo],
+      references: [users.id],
+      relationName: 'supportTicketAssignee',
+    }),
+    messages: many(supportMessages),
+  }),
+);
+
+export const supportMessagesRelations = relations(supportMessages, ({ one }) => ({
+  ticket: one(supportTickets, {
+    fields: [supportMessages.ticketId],
+    references: [supportTickets.id],
+  }),
+  author: one(users, {
+    fields: [supportMessages.authorId],
     references: [users.id],
   }),
 }));

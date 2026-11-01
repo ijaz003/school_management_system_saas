@@ -119,6 +119,7 @@ const SCHOOL_GROUPS: MenuGroup[] = [
       },
       { label: 'Notices', path: '/notices', icon: Megaphone, permission: 'notices.read' },
       { label: 'Daily diary', path: '/diary', icon: BookMarked, permission: 'diary.read' },
+      { label: 'Support', path: '/support', icon: LifeBuoy, permission: 'support.read' },
     ],
   },
   {

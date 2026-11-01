@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
-type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
+export type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
 
 const tones: Record<BadgeTone, string> = {
   neutral: 'bg-ink-100 text-ink-700',

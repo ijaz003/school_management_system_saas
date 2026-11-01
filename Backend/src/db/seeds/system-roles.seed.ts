@@ -19,7 +19,7 @@ export const SYSTEM_ROLES = [
     description: 'School owner — full school access',
     permissions: [
       'students.*', 'teachers.*', 'classes.*', 'attendance.*', 'session_years.*', 'fees.*',
-      'exams.*', 'notices.*', 'diary.*', 'sms.send', 'reports.*', 'settings.*',
+      'exams.*', 'notices.*', 'diary.*', 'support.*', 'sms.send', 'reports.*', 'settings.*',
       'subscription.view', 'audit.read',
     ],
     isSystem: true,
@@ -34,7 +34,7 @@ export const SYSTEM_ROLES = [
     permissions: [
       'students.read', 'fees.invoice.read', 'fees.payment.record',
       'attendance.*', 'exams.marks.approve', 'exams.result.publish',
-      'notices.*', 'diary.*', 'reports.*',
+      'notices.*', 'diary.*', 'support.*', 'reports.*',
     ],
     isSystem: true,
     isSuperAdmin: false,
