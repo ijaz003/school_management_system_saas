@@ -120,6 +120,17 @@
   .nav-link-active {
     @apply bg-primary-50 text-primary-800 shadow-none ring-1 ring-primary-100;
   }
+
+  .login-card {
+    border: 1px solid rgb(255 255 255 / 0.45);
+    background:
+      linear-gradient(165deg, rgb(255 255 255 / 0.97) 0%, rgb(248 250 251 / 0.94) 100%);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.7) inset,
+      0 28px 80px rgb(2 6 23 / 0.38),
+      0 8px 24px rgb(15 118 110 / 0.12);
+    backdrop-filter: blur(18px);
+  }
 }
 
 @keyframes fadeIn {
@@ -150,6 +161,27 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes login-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate(-12px, 10px) scale(1.08);
+  }
+}
+
+@keyframes login-kenburns {
+  from {
+    transform: scale(1.05) translate(0, 0);
+  }
+  to {
+    transform: scale(1.12) translate(-1.5%, -1%);
   }
 }
 
