@@ -54,6 +54,8 @@ export const tenants = pgTable('tenants', {
     gradingSystem?: string;
     timezone?: string;
     currency?: string;
+    /** Optional QR/card scan attendance (keyboard wedge / barcode scanner). */
+    cardAttendanceEnabled?: boolean;
   }>(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),

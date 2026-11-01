@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, GraduationCap, Plus } from 'lucide-react';
+import { CreditCard, Download, GraduationCap, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -61,6 +61,11 @@ export function StudentsListPage() {
               {can('students.read') && (
                 <Button variant="outline" onClick={() => void handleExport()} isLoading={exporting}>
                   <Download className="h-4 w-4" aria-hidden="true" /> Export CSV
+                </Button>
+              )}
+              {can('students.read') && (
+                <Button variant="outline" onClick={() => navigate('/students/id-cards')}>
+                  <CreditCard className="h-4 w-4" aria-hidden="true" /> ID cards
                 </Button>
               )}
               {can('students.create') && (

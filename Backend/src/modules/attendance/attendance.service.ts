@@ -1,11 +1,13 @@
-import { and, asc, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { db } from '../../config/database.js';
-import { BadRequestError, NotFoundError } from '../../lib/errors.js';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../../lib/errors.js';
 import { classes } from '../classes/classes.schema.js';
 import { sections } from '../sections/sections.schema.js';
 import { students } from '../students/students.schema.js';
+import { tenants } from '../tenants/tenants.schema.js';
 import { attendanceRecords } from './attendance.schema.js';
 import type {
+  AttendanceStatus,
   GetSheetInput,
   SaveSheetInput,
   SummaryInput,
@@ -185,6 +187,136 @@ export async function saveAttendanceSheet(input: SaveSheetInput) {
     sectionId: input.sectionId,
     date: input.date,
   });
+}
+
+export async function ensureStudentCardCodes(tenantId: string) {
+  await db.execute(sql`
+    UPDATE students
+    SET card_code = admission_no, updated_at = NOW()
+    WHERE tenant_id = ${tenantId}
+      AND deleted_at IS NULL
+      AND (card_code IS NULL OR card_code = '')
+  `);
+}
+
+export async function scanCardAttendance(input: {
+  tenantId: string;
+  markedBy: string;
+  code: string;
+  date?: string;
+  status?: AttendanceStatus;
+}) {
+  const [tenant] = await db
+    .select({ settings: tenants.settings, status: tenants.status })
+    .from(tenants)
+    .where(and(eq(tenants.id, input.tenantId), isNull(tenants.deletedAt)))
+    .limit(1);
+  if (!tenant) throw new NotFoundError('School');
+  if (tenant.status === 'suspended' || tenant.status === 'cancelled') {
+    throw new ForbiddenError('School is not active');
+  }
+  if (!tenant.settings?.cardAttendanceEnabled) {
+    throw new ForbiddenError(
+      'Card attendance is disabled. Enable it in School Settings first.',
+    );
+  }
+
+  const code = input.code.trim().toUpperCase();
+  if (!code) throw new BadRequestError('Scan code is required');
+
+  await ensureStudentCardCodes(input.tenantId);
+
+  const [student] = await db
+    .select({
+      id: students.id,
+      fullName: students.fullName,
+      admissionNo: students.admissionNo,
+      cardCode: students.cardCode,
+      sectionId: students.sectionId,
+      classId: students.classId,
+      status: students.status,
+      className: classes.name,
+      sectionName: sections.name,
+    })
+    .from(students)
+    .innerJoin(classes, eq(students.classId, classes.id))
+    .innerJoin(sections, eq(students.sectionId, sections.id))
+    .where(
+      and(
+        eq(students.tenantId, input.tenantId),
+        isNull(students.deletedAt),
+        or(eq(students.cardCode, code), eq(students.admissionNo, code)),
+      ),
+    )
+    .limit(1);
+
+  if (!student) throw new NotFoundError('Student for this card');
+  if (student.status !== 'active') {
+    throw new BadRequestError('Student is not active');
+  }
+
+  const date = input.date ?? new Date().toISOString().slice(0, 10);
+  const status = input.status ?? 'present';
+  const now = new Date();
+
+  const [existing] = await db
+    .select({
+      id: attendanceRecords.id,
+      status: attendanceRecords.status,
+    })
+    .from(attendanceRecords)
+    .where(
+      and(
+        eq(attendanceRecords.tenantId, input.tenantId),
+        eq(attendanceRecords.studentId, student.id),
+        eq(attendanceRecords.date, date),
+      ),
+    )
+    .limit(1);
+
+  if (existing) {
+    return {
+      alreadyMarked: true,
+      created: false,
+      date,
+      status: existing.status,
+      scannedAt: now.toISOString(),
+      student: {
+        id: student.id,
+        fullName: student.fullName,
+        admissionNo: student.admissionNo,
+        cardCode: student.cardCode ?? student.admissionNo,
+        className: student.className,
+        sectionName: student.sectionName,
+      },
+    };
+  }
+
+  await db.insert(attendanceRecords).values({
+    tenantId: input.tenantId,
+    sectionId: student.sectionId,
+    studentId: student.id,
+    date,
+    status,
+    notes: 'Card scan',
+    markedBy: input.markedBy,
+  });
+
+  return {
+    alreadyMarked: false,
+    created: true,
+    date,
+    status,
+    scannedAt: now.toISOString(),
+    student: {
+      id: student.id,
+      fullName: student.fullName,
+      admissionNo: student.admissionNo,
+      cardCode: student.cardCode ?? student.admissionNo,
+      className: student.className,
+      sectionName: student.sectionName,
+    },
+  };
 }
 
 export async function getAttendanceSummary(input: SummaryInput) {

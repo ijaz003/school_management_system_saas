@@ -15,6 +15,7 @@ export interface SchoolSettingsUpdate {
     gradingSystem?: string;
     timezone?: string;
     currency?: string;
+    cardAttendanceEnabled?: boolean;
   };
 }
 

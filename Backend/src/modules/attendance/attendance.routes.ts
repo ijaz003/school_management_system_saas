@@ -7,6 +7,7 @@ import { attendanceController } from './attendance.controller.js';
 import {
   getSheetSchema,
   saveSheetSchema,
+  scanAttendanceSchema,
   summarySchema,
 } from './attendance.validator.js';
 
@@ -31,6 +32,17 @@ router.get(
   can('attendance.read'),
   validate(summarySchema),
   attendanceController.summary,
+);
+router.get(
+  '/scan-config',
+  can('attendance.mark'),
+  attendanceController.scanConfig,
+);
+router.post(
+  '/scan',
+  can('attendance.mark'),
+  validate(scanAttendanceSchema),
+  attendanceController.scan,
 );
 
 export default router;

@@ -22,6 +22,8 @@ import { StudentEditPage } from '@/features/school/students/pages/StudentEditPag
 import { TeachersListPage } from '@/features/school/teachers/pages/TeachersListPage';
 import { TeacherDetailPage } from '@/features/school/teachers/pages/TeacherDetailPage';
 import { AttendancePage } from '@/features/school/attendance/pages/AttendancePage';
+import { AttendanceScanPage } from '@/features/school/attendance/pages/AttendanceScanPage';
+import { StudentIdCardsPage } from '@/features/school/students/pages/StudentIdCardsPage';
 import { NoticesListPage } from '@/features/school/notices/pages/NoticesListPage';
 import { FeesPage } from '@/features/school/fees/pages/FeesPage';
 import { ExamsListPage } from '@/features/school/exams/pages/ExamsListPage';
@@ -148,7 +150,16 @@ function AttendanceRoute() {
   if (user?.role === 'super_admin' || !can('attendance.read')) {
     return <Navigate to="/forbidden" replace />;
   }
-  return <AttendancePage />;
+  return <Outlet />;
+}
+
+function AttendanceScanRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || !can('attendance.mark')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <AttendanceScanPage />;
 }
 
 function NoticesRoute() {
@@ -237,6 +248,7 @@ const router = createBrowserRouter([
         element: <StudentsRoute permission="students.read" />,
         children: [
           { path: '/students', element: <StudentsListPage /> },
+          { path: '/students/id-cards', element: <StudentIdCardsPage /> },
           {
             path: '/students/new',
             element: (
@@ -275,7 +287,13 @@ const router = createBrowserRouter([
       },
       { path: '/reports', element: <ReportsRoute /> },
       { path: '/audit', element: <AuditRoute /> },
-      { path: '/attendance', element: <AttendanceRoute /> },
+      {
+        element: <AttendanceRoute />,
+        children: [
+          { path: '/attendance', element: <AttendancePage /> },
+          { path: '/attendance/scan', element: <AttendanceScanRoute /> },
+        ],
+      },
       { path: '/notices', element: <NoticesRoute /> },
       { path: '/settings/roles', element: <CustomRolesRoute /> },
       {

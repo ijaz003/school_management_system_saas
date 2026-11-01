@@ -20,6 +20,7 @@ const schema = z.object({
   gradingSystem: z.string().trim().max(50).optional(),
   timezone: z.string().trim().max(80).optional(),
   currency: z.string().trim().max(10).optional(),
+  cardAttendanceEnabled: z.boolean().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -31,8 +32,11 @@ export function SchoolSettingsPage() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
+  const cardAttendanceEnabled = watch('cardAttendanceEnabled');
 
   useEffect(() => {
     if (!settingsQuery.data) return;
@@ -48,6 +52,7 @@ export function SchoolSettingsPage() {
       gradingSystem: data.settings.gradingSystem ?? '',
       timezone: data.settings.timezone ?? '',
       currency: data.settings.currency ?? '',
+      cardAttendanceEnabled: Boolean(data.settings.cardAttendanceEnabled),
     });
   }, [reset, settingsQuery.data]);
 
@@ -85,6 +90,7 @@ export function SchoolSettingsPage() {
         gradingSystem: data.gradingSystem || undefined,
         timezone: data.timezone || undefined,
         currency: data.currency || undefined,
+        cardAttendanceEnabled: Boolean(data.cardAttendanceEnabled),
       },
     });
   };
@@ -136,6 +142,29 @@ export function SchoolSettingsPage() {
               <Input label="Timezone" placeholder="Asia/Karachi" {...register('timezone')} />
               <Input label="Currency" placeholder="PKR" {...register('currency')} />
             </div>
+          </section>
+
+          <section className="panel space-y-3 p-4 sm:p-5">
+            <h2 className="font-display text-base font-semibold text-ink-950">Card attendance</h2>
+            <p className="text-sm text-ink-500">
+              Optional QR/barcode scan station. Print student ID cards, then scan with a USB scanner.
+            </p>
+            <label className="flex items-start gap-3 rounded-xl border border-ink-100 bg-ink-50/50 px-4 py-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={Boolean(cardAttendanceEnabled)}
+                onChange={(event) =>
+                  setValue('cardAttendanceEnabled', event.target.checked, { shouldDirty: true })
+                }
+              />
+              <span>
+                <span className="block font-medium text-ink-900">Enable card scan attendance</span>
+                <span className="mt-0.5 block text-ink-500">
+                  When on, staff can open Attendance → Scan station and mark present via card QR.
+                </span>
+              </span>
+            </label>
           </section>
 
           <footer className="flex justify-stretch sm:justify-end">

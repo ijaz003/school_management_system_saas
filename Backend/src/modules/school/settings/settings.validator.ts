@@ -15,6 +15,7 @@ export const updateSchoolSettingsSchema = z.object({
           gradingSystem: z.string().trim().max(50).optional(),
           timezone: z.string().trim().max(80).optional(),
           currency: z.string().trim().max(10).optional(),
+          cardAttendanceEnabled: z.boolean().optional(),
         })
         .optional(),
     })

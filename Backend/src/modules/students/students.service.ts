@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { db } from '../../config/database.js';
 import {
   BadRequestError,
@@ -26,6 +26,7 @@ function asDateString(value: string | Date): string {
 function toListItem(row: {
   id: string;
   admissionNo: string;
+  cardCode?: string | null;
   fullName: string;
   gender: string;
   dateOfBirth: string;
@@ -44,6 +45,7 @@ function toListItem(row: {
   return {
     id: row.id,
     admissionNo: row.admissionNo,
+    cardCode: row.cardCode ?? row.admissionNo,
     fullName: row.fullName,
     gender: row.gender,
     dateOfBirth: asDateString(row.dateOfBirth),
@@ -169,6 +171,7 @@ export async function listStudents(filters: ListStudentsFilters) {
       .select({
         id: students.id,
         admissionNo: students.admissionNo,
+        cardCode: students.cardCode,
         fullName: students.fullName,
         gender: students.gender,
         dateOfBirth: students.dateOfBirth,
@@ -209,6 +212,7 @@ export async function getStudentById(
     .select({
       id: students.id,
       admissionNo: students.admissionNo,
+      cardCode: students.cardCode,
       fullName: students.fullName,
       gender: students.gender,
       dateOfBirth: students.dateOfBirth,
@@ -246,6 +250,7 @@ export async function getStudentById(
 
   return {
     ...toListItem(row),
+    cardCode: row.cardCode ?? row.admissionNo,
     bloodGroup: row.bloodGroup,
     address: row.address,
     guardianEmail: row.guardianEmail,
@@ -311,6 +316,7 @@ export async function createStudent(input: CreateStudentInput): Promise<StudentD
       .values({
         tenantId: input.tenantId,
         admissionNo,
+        cardCode: admissionNo,
         fullName: data.fullName.trim(),
         gender: data.gender,
         dateOfBirth: data.dateOfBirth,
@@ -355,12 +361,19 @@ export async function updateStudent(input: UpdateStudentInput): Promise<StudentD
     );
   }
 
+  const nextAdmission =
+    data.admissionNo !== undefined
+      ? data.admissionNo.trim().toUpperCase()
+      : existing.admissionNo;
+  const shouldSyncCardCode =
+    data.admissionNo !== undefined &&
+    (!existing.cardCode || existing.cardCode === existing.admissionNo);
+
   const [updated] = await db
     .update(students)
     .set({
-      ...(data.admissionNo !== undefined
-        ? { admissionNo: data.admissionNo.trim().toUpperCase() }
-        : {}),
+      ...(data.admissionNo !== undefined ? { admissionNo: nextAdmission } : {}),
+      ...(shouldSyncCardCode ? { cardCode: nextAdmission } : {}),
       ...(data.fullName !== undefined ? { fullName: data.fullName.trim() } : {}),
       ...(data.gender !== undefined ? { gender: data.gender } : {}),
       ...(data.dateOfBirth !== undefined ? { dateOfBirth: data.dateOfBirth } : {}),
@@ -396,4 +409,76 @@ export async function deleteStudent(studentId: string, tenantId: string) {
     .update(students)
     .set({ deletedAt: new Date(), status: 'inactive', updatedAt: new Date() })
     .where(and(eq(students.id, existing.id), eq(students.tenantId, tenantId)));
+}
+
+export async function listIdCardStudents(input: {
+  tenantId: string;
+  classId?: string;
+  sectionId?: string;
+}) {
+  await db.execute(sql`
+    UPDATE students
+    SET card_code = admission_no, updated_at = NOW()
+    WHERE tenant_id = ${input.tenantId}
+      AND deleted_at IS NULL
+      AND (card_code IS NULL OR card_code = '')
+  `);
+
+  const conditions = [
+    eq(students.tenantId, input.tenantId),
+    isNull(students.deletedAt),
+    eq(students.status, 'active'),
+  ];
+  if (input.classId) conditions.push(eq(students.classId, input.classId));
+  if (input.sectionId) conditions.push(eq(students.sectionId, input.sectionId));
+
+  const [tenant] = await db
+    .select({
+      name: tenants.name,
+      city: tenants.city,
+      address: tenants.address,
+      logoUrl: tenants.logoUrl,
+    })
+    .from(tenants)
+    .where(eq(tenants.id, input.tenantId))
+    .limit(1);
+
+  const rows = await db
+    .select({
+      id: students.id,
+      fullName: students.fullName,
+      admissionNo: students.admissionNo,
+      cardCode: students.cardCode,
+      gender: students.gender,
+      dateOfBirth: students.dateOfBirth,
+      className: classes.name,
+      sectionName: sections.name,
+      guardianName: students.guardianName,
+    })
+    .from(students)
+    .innerJoin(classes, eq(students.classId, classes.id))
+    .innerJoin(sections, eq(students.sectionId, sections.id))
+    .where(and(...conditions))
+    .orderBy(asc(classes.name), asc(sections.name), asc(students.fullName))
+    .limit(500);
+
+  return {
+    school: {
+      name: tenant?.name ?? 'School',
+      city: tenant?.city ?? null,
+      address: tenant?.address ?? null,
+      logoUrl: tenant?.logoUrl ?? null,
+    },
+    cards: rows.map((row) => ({
+      id: row.id,
+      fullName: row.fullName,
+      admissionNo: row.admissionNo,
+      cardCode: row.cardCode ?? row.admissionNo,
+      gender: row.gender,
+      dateOfBirth: String(row.dateOfBirth).slice(0, 10),
+      className: row.className,
+      sectionName: row.sectionName,
+      guardianName: row.guardianName,
+    })),
+  };
 }

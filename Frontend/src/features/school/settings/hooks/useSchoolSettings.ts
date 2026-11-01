@@ -19,6 +19,7 @@ export interface SchoolSettings {
     gradingSystem?: string;
     timezone?: string;
     currency?: string;
+    cardAttendanceEnabled?: boolean;
   };
   maxStudents: number;
   maxTeachers: number;

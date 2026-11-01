@@ -7,6 +7,7 @@ export type StudentGender = (typeof STUDENT_GENDERS)[number];
 export interface StudentListItem {
   id: string;
   admissionNo: string;
+  cardCode?: string | null;
   fullName: string;
   gender: string;
   dateOfBirth: string;
@@ -24,6 +25,7 @@ export interface StudentListItem {
 }
 
 export interface StudentDetail extends StudentListItem {
+  cardCode: string | null;
   bloodGroup: string | null;
   address: string | null;
   guardianEmail: string | null;

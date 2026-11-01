@@ -32,3 +32,11 @@ export const summarySchema = z.object({
     to: z.string().date('Invalid to date'),
   }),
 });
+
+export const scanAttendanceSchema = z.object({
+  body: z.object({
+    code: z.string().trim().min(1).max(64),
+    date: z.string().date('Invalid date').optional(),
+    status: z.enum(ATTENDANCE_STATUSES).optional(),
+  }),
+});

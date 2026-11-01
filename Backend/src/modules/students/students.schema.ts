@@ -21,6 +21,8 @@ export const students = pgTable(
       .notNull()
       .references(() => tenants.id, { onDelete: 'cascade' }),
     admissionNo: varchar('admission_no', { length: 50 }).notNull(),
+    /** Unique scan code for QR/barcode card attendance (defaults to admission no). */
+    cardCode: varchar('card_code', { length: 64 }),
     fullName: varchar('full_name', { length: 200 }).notNull(),
     gender: varchar('gender', { length: 20 }).notNull(),
     dateOfBirth: date('date_of_birth').notNull(),
@@ -53,6 +55,9 @@ export const students = pgTable(
     admissionNoIdx: uniqueIndex('students_tenant_admission_no_idx')
       .on(table.tenantId, table.admissionNo)
       .where(sql`deleted_at IS NULL`),
+    cardCodeIdx: uniqueIndex('students_tenant_card_code_idx')
+      .on(table.tenantId, table.cardCode)
+      .where(sql`deleted_at IS NULL AND card_code IS NOT NULL`),
   }),
 );
 

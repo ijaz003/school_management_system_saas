@@ -9,7 +9,7 @@ function getSchoolContext(req: Request) {
   const user = req.user;
   if (!user) throw new UnauthorizedError();
   if (!user.tenantId) throw new BadRequestError('A school account is required');
-  return { tenantId: user.tenantId };
+  return { tenantId: user.tenantId, userId: user.id };
 }
 
 function getStudentId(req: Request): string {
@@ -27,6 +27,20 @@ export const studentsController = {
       ...query,
     });
     return ApiResponse.paginated(res, result.items, result.pagination, 'Students fetched');
+  }),
+
+  idCards: asyncHandler(async (req: Request, res: Response) => {
+    const context = getSchoolContext(req);
+    const classId =
+      typeof req.query.classId === 'string' ? req.query.classId : undefined;
+    const sectionId =
+      typeof req.query.sectionId === 'string' ? req.query.sectionId : undefined;
+    const data = await studentsService.listIdCardStudents({
+      tenantId: context.tenantId,
+      classId,
+      sectionId,
+    });
+    return ApiResponse.success(res, data, 'ID cards fetched');
   }),
 
   getById: asyncHandler(async (req: Request, res: Response) => {

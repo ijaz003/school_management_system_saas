@@ -1,0 +1,2 @@
+ALTER TABLE "students" ADD COLUMN "card_code" varchar(64);--> statement-breakpoint
+CREATE UNIQUE INDEX "students_tenant_card_code_idx" ON "students" USING btree ("tenant_id","card_code") WHERE deleted_at IS NULL AND card_code IS NOT NULL;

@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, CheckCheck, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CalendarCheck, CheckCheck, ScanLine, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -110,11 +111,21 @@ export function AttendancePage() {
           title="Attendance"
           description="Mark daily attendance by class section."
           actions={
-            canMark && sectionId && records.length > 0 ? (
-              <Button onClick={handleSave} isLoading={saveSheet.isPending} disabled={unmarkedInDraft}>
-                <CheckCheck className="h-4 w-4" aria-hidden="true" /> Save attendance
-              </Button>
-            ) : undefined
+            <>
+              {canMark && (
+                <Link
+                  to="/attendance/scan"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 text-sm font-semibold text-ink-800 hover:bg-ink-50"
+                >
+                  <ScanLine className="h-4 w-4" aria-hidden="true" /> Scan station
+                </Link>
+              )}
+              {canMark && sectionId && records.length > 0 && (
+                <Button onClick={handleSave} isLoading={saveSheet.isPending} disabled={unmarkedInDraft}>
+                  <CheckCheck className="h-4 w-4" aria-hidden="true" /> Save attendance
+                </Button>
+              )}
+            </>
           }
         />
 

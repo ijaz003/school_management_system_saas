@@ -10,12 +10,26 @@ import {
   studentIdSchema,
   updateStudentSchema,
 } from './students.validator.js';
+import { z } from 'zod';
+
+const listIdCardsSchema = z.object({
+  query: z.object({
+    classId: z.string().uuid().optional(),
+    sectionId: z.string().uuid().optional(),
+  }),
+});
 
 const router = Router();
 
 router.use(authenticate, enforceTenantScope);
 
 router.get('/', can('students.read'), validate(listStudentsSchema), studentsController.list);
+router.get(
+  '/id-cards',
+  can('students.read'),
+  validate(listIdCardsSchema),
+  studentsController.idCards,
+);
 router.post('/', can('students.create'), validate(createStudentSchema), studentsController.create);
 router.get('/:id', can('students.read'), validate(studentIdSchema), studentsController.getById);
 router.patch('/:id', can('students.update'), validate(updateStudentSchema), studentsController.update);
