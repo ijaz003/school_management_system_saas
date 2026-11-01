@@ -58,6 +58,7 @@ async function getAssignableRole(roleId: string, tenantId: string) {
 function isReservedRole(role: { name: string; permissions: string[] }): boolean {
   return (
     role.name === 'super_admin' ||
+    role.name === 'parent' ||
     role.permissions.includes('*') ||
     role.permissions.some(isReservedPermission)
   );
@@ -116,6 +117,7 @@ export async function listStaff(filters: ListStaffFilters) {
     eq(users.tenantId, tenantId),
     isNull(users.deletedAt),
     ne(users.role, 'school_admin'),
+    ne(users.role, 'parent'),
   ];
 
   if (role) conditions.push(eq(users.role, role));
@@ -153,6 +155,7 @@ export async function getStaffById(staffId: string, tenantId: string): Promise<S
         eq(users.id, staffId),
         eq(users.tenantId, tenantId),
         ne(users.role, 'school_admin'),
+        ne(users.role, 'parent'),
         isNull(users.deletedAt),
       ),
     )
@@ -194,6 +197,7 @@ export async function createStaff(input: CreateStaffInput): Promise<CreateStaffO
         and(
           eq(users.tenantId, input.tenantId),
           ne(users.role, 'school_admin'),
+          ne(users.role, 'parent'),
           isNull(users.deletedAt),
         ),
       );
@@ -247,6 +251,7 @@ export async function updateStaff(input: UpdateStaffInput): Promise<SafeStaff> {
         eq(users.id, input.staffId),
         eq(users.tenantId, input.tenantId),
         ne(users.role, 'school_admin'),
+        ne(users.role, 'parent'),
         isNull(users.deletedAt),
       ),
     )
@@ -345,6 +350,7 @@ export async function resetStaffPassword(staffId: string, tenantId: string) {
         eq(users.tenantId, tenantId),
         isNull(users.deletedAt),
         ne(users.role, 'school_admin'),
+        ne(users.role, 'parent'),
       ),
     )
     .limit(1);

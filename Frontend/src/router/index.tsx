@@ -41,6 +41,14 @@ import { PromoteStudentsPage } from '@/features/school/session-years/pages/Promo
 import { SupportTicketsPage } from '@/features/school/support/pages/SupportTicketsPage';
 import { SupportTicketDetailPage } from '@/features/school/support/pages/SupportTicketDetailPage';
 import { ProfilePage } from '@/features/auth/pages/ProfilePage';
+import { ParentsListPage } from '@/features/school/parents/pages/ParentsListPage';
+import { ParentHomePage } from '@/features/parent/pages/ParentHomePage';
+import { ParentNoticesPage } from '@/features/parent/pages/ParentNoticesPage';
+import { ParentChildOverviewPage } from '@/features/parent/pages/ParentChildOverviewPage';
+import { ParentAttendancePage } from '@/features/parent/pages/ParentAttendancePage';
+import { ParentFeesPage } from '@/features/parent/pages/ParentFeesPage';
+import { ParentDiaryPage } from '@/features/parent/pages/ParentDiaryPage';
+import { ParentResultsPage } from '@/features/parent/pages/ParentResultsPage';
 import { usePermission } from '@/hooks/usePermission';
 import { useAppSelector } from '@/store/hooks';
 import { selectUser } from '@/store/selectors/permissions';
@@ -52,6 +60,7 @@ import { ProtectedRoute } from './ProtectedRoute';
 function DashboardRouter() {
   const user = useAppSelector(selectUser);
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'parent') return <Navigate to="/parent" replace />;
   return user.role === 'super_admin' ? <SuperAdminDashboard /> : <SchoolDashboard />;
 }
 
@@ -98,6 +107,22 @@ function StaffRoute() {
   if (user?.role === 'super_admin' || !can('settings.users.manage')) {
     return <Navigate to="/forbidden" replace />;
   }
+  return <Outlet />;
+}
+
+function ParentsRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || user?.role === 'parent' || !can('settings.users.manage')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <ParentsListPage />;
+}
+
+function ParentPortalRoute() {
+  const user = useAppSelector(selectUser);
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'parent') return <Navigate to="/forbidden" replace />;
   return <Outlet />;
 }
 
@@ -391,6 +416,19 @@ const router = createBrowserRouter([
       { path: '/diary', element: <DiaryRoute /> },
       { path: '/session-years', element: <SessionYearsRoute /> },
       { path: '/settings/roles', element: <CustomRolesRoute /> },
+      { path: '/parents', element: <ParentsRoute /> },
+      {
+        element: <ParentPortalRoute />,
+        children: [
+          { path: '/parent', element: <ParentHomePage /> },
+          { path: '/parent/notices', element: <ParentNoticesPage /> },
+          { path: '/parent/children/:studentId', element: <ParentChildOverviewPage /> },
+          { path: '/parent/children/:studentId/attendance', element: <ParentAttendancePage /> },
+          { path: '/parent/children/:studentId/fees', element: <ParentFeesPage /> },
+          { path: '/parent/children/:studentId/diary', element: <ParentDiaryPage /> },
+          { path: '/parent/children/:studentId/results', element: <ParentResultsPage /> },
+        ],
+      },
       {
         element: <AcademicRoute />,
         children: [

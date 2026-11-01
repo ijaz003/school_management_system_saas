@@ -69,7 +69,11 @@ export const SYSTEM_ROLES = [
     displayName: 'Parent',
     description: 'Parent portal access',
     permissions: [
-      'attendance.read', 'exams.result.publish', 'fees.invoice.read', 'diary.read',
+      'attendance.read',
+      'exams.result.publish',
+      'fees.invoice.read',
+      'diary.read',
+      'notices.read',
     ],
     isSystem: true,
     isSuperAdmin: false,

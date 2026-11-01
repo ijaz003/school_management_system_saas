@@ -7,6 +7,7 @@ import {
   DollarSign,
   FileText,
   GraduationCap,
+  Home,
   LayoutDashboard,
   LifeBuoy,
   ArrowRightLeft,
@@ -20,6 +21,7 @@ import {
   Shield,
   UserCog,
   Users,
+  UsersRound,
   Wallet,
   X,
 } from 'lucide-react';
@@ -28,6 +30,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { selectUser } from '@/store/selectors/permissions';
 import { setSidebar } from '@/store/slices/ui.slice';
 import { usePermission } from '@/hooks/usePermission';
+import { useActiveChildId, useParentChildren } from '@/features/parent/hooks/useParentPortal';
 import { SidebarItem } from './SidebarItem';
 
 interface MenuItem {
@@ -147,6 +150,12 @@ const SCHOOL_GROUPS: MenuGroup[] = [
         permission: 'settings.users.manage',
       },
       {
+        label: 'Parents',
+        path: '/parents',
+        icon: UsersRound,
+        permission: 'settings.users.manage',
+      },
+      {
         label: 'Audit log',
         path: '/audit',
         icon: ScrollText,
@@ -163,13 +172,48 @@ const SCHOOL_GROUPS: MenuGroup[] = [
   },
 ];
 
+/** Parent portal navigation. Child-scoped links point at the active child. */
+function buildParentGroups(child?: { id: string; fullName: string }): MenuGroup[] {
+  const groups: MenuGroup[] = [
+    {
+      label: 'Parent portal',
+      items: [
+        { label: 'Home', path: '/parent', icon: Home, exact: true },
+        { label: 'Notices', path: '/parent/notices', icon: Megaphone },
+      ],
+    },
+  ];
+  if (child) {
+    const base = `/parent/children/${child.id}`;
+    groups.push({
+      label: child.fullName,
+      items: [
+        { label: 'Overview', path: base, icon: GraduationCap, exact: true },
+        { label: 'Attendance', path: `${base}/attendance`, icon: CalendarCheck },
+        { label: 'Fees', path: `${base}/fees`, icon: DollarSign },
+        { label: 'Diary', path: `${base}/diary`, icon: BookMarked },
+        { label: 'Results', path: `${base}/results`, icon: FileText },
+      ],
+    });
+  }
+  return groups;
+}
+
 export function Sidebar() {
   const user = useAppSelector(selectUser);
   const sidebarOpen = useAppSelector((state) => state.ui.sidebarOpen);
   const dispatch = useAppDispatch();
   const { can } = usePermission();
   const isSuperAdmin = user?.role === 'super_admin';
-  const groups = isSuperAdmin ? SUPER_ADMIN_GROUPS : SCHOOL_GROUPS;
+  const isParent = user?.role === 'parent';
+  const childrenQuery = useParentChildren(isParent);
+  const activeChildId = useActiveChildId(isParent);
+  const activeChild = childrenQuery.data?.find((child) => child.id === activeChildId);
+  const groups = isParent
+    ? buildParentGroups(activeChild)
+    : isSuperAdmin
+      ? SUPER_ADMIN_GROUPS
+      : SCHOOL_GROUPS;
   const closeSidebar = () => dispatch(setSidebar(false));
 
   const visibleGroups = groups
@@ -192,7 +236,7 @@ export function Sidebar() {
           <div>
             <h2 className="font-display text-sm font-semibold text-ink-950">SchoolSaaS</h2>
             <p className="text-xs text-ink-500">
-              {isSuperAdmin ? 'Admin panel' : 'School workspace'}
+              {isSuperAdmin ? 'Admin panel' : isParent ? 'Parent portal' : 'School workspace'}
             </p>
           </div>
         </div>

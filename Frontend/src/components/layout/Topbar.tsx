@@ -7,6 +7,14 @@ import { UserMenu } from './UserMenu';
 
 const ROUTE_TITLES: Array<{ match: RegExp; title: string }> = [
   { match: /^\/dashboard$/, title: 'Dashboard' },
+  { match: /^\/parent\/notices/, title: 'Notices' },
+  { match: /^\/parent\/children\/[^/]+\/attendance/, title: 'Attendance' },
+  { match: /^\/parent\/children\/[^/]+\/fees/, title: 'Fees' },
+  { match: /^\/parent\/children\/[^/]+\/diary/, title: 'Daily diary' },
+  { match: /^\/parent\/children\/[^/]+\/results/, title: 'Results' },
+  { match: /^\/parent\/children\//, title: 'Child overview' },
+  { match: /^\/parent$/, title: 'Parent home' },
+  { match: /^\/parents/, title: 'Parents' },
   { match: /^\/students\/promote/, title: 'Promote students' },
   { match: /^\/students\/id-cards/, title: 'ID cards' },
   { match: /^\/students/, title: 'Students' },
@@ -53,7 +61,11 @@ export function Topbar() {
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-ink-950">{routeTitle}</p>
             <p className="hidden truncate text-xs text-ink-500 sm:block">
-              {user?.role === 'super_admin' ? 'Platform control' : 'School operations'}
+              {user?.role === 'super_admin'
+                ? 'Platform control'
+                : user?.role === 'parent'
+                  ? 'Parent portal'
+                  : 'School operations'}
             </p>
           </div>
         </div>

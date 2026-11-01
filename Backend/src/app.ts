@@ -36,6 +36,8 @@ import schoolSupportRoutes from './modules/support/school-support.routes.js';
 import platformSupportRoutes from './modules/support/platform-support.routes.js';
 import expensesRoutes from './modules/expenses/expenses.routes.js';
 import timetableRoutes from './modules/timetable/timetable.routes.js';
+import parentsRoutes from './modules/parents/parents.routes.js';
+import parentPortalRoutes from './modules/parents/parent-portal.routes.js';
 
 export function createApp() {
   const app = express();
@@ -94,6 +96,8 @@ export function createApp() {
   app.use('/api/super-admin/support', platformSupportRoutes);
   app.use('/api/school/expenses', expensesRoutes);
   app.use('/api/school/timetable', timetableRoutes);
+  app.use('/api/school/parents', parentsRoutes);
+  app.use('/api/parent', parentPortalRoutes);
   app.use('/api/school', sectionsRoutes);
 
   app.use(notFound);

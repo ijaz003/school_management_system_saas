@@ -32,7 +32,7 @@ export function useLogin() {
       tokenStorage.set(accessToken);
       dispatch(setUser(user));
       toast.success('Welcome back!');
-      navigate('/dashboard', { replace: true });
+      navigate(user.role === 'parent' ? '/parent' : '/dashboard', { replace: true });
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Login failed');

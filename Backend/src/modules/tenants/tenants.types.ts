@@ -59,6 +59,7 @@ export const PLAN_PERMISSIONS = {
     'exams.marks.enter',
     'exams.result.publish',
     'notices.send',
+    'notices.read',
     'diary.read',
     'diary.write',
     'support.read',

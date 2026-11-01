@@ -35,6 +35,7 @@ import {
   timetableEntries,
   timetablePeriods,
 } from '../modules/timetable/timetable.schema.js';
+import { parentStudents } from '../modules/parents/parents.schema.js';
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
@@ -490,5 +491,20 @@ export const timetableEntriesRelations = relations(timetableEntries, ({ one }) =
   teacher: one(users, {
     fields: [timetableEntries.teacherId],
     references: [users.id],
+  }),
+}));
+
+export const parentStudentsRelations = relations(parentStudents, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [parentStudents.tenantId],
+    references: [tenants.id],
+  }),
+  parent: one(users, {
+    fields: [parentStudents.parentUserId],
+    references: [users.id],
+  }),
+  student: one(students, {
+    fields: [parentStudents.studentId],
+    references: [students.id],
   }),
 }));
