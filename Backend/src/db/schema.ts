@@ -17,4 +17,5 @@ export * from '../modules/exams/exams.schema.js';
 export * from '../modules/audit/audit.schema.js';
 export * from '../modules/support/support.schema.js';
 export * from '../modules/expenses/expenses.schema.js';
+export * from '../modules/timetable/timetable.schema.js';
 export * from './relations.js';

@@ -31,6 +31,8 @@ export const PERMISSIONS_LIST = [
   { key: 'expenses.delete', displayName: 'Delete Expenses', module: 'expenses', action: 'delete', category: 'Finance' },
   { key: 'expenses.categories.manage', displayName: 'Manage Expense Categories', module: 'expenses', action: 'update', category: 'Finance' },
   { key: 'reports.expenses', displayName: 'Expense Reports', module: 'reports', action: 'read', category: 'Reports' },
+  { key: 'timetable.read', displayName: 'View Timetable', module: 'timetable', action: 'read', category: 'Academic' },
+  { key: 'timetable.write', displayName: 'Manage Timetable', module: 'timetable', action: 'update', category: 'Academic' },
   { key: 'exams.schedule.create', displayName: 'Create Exam Schedule', module: 'exams', action: 'create', category: 'Academic' },
   { key: 'exams.marks.enter', displayName: 'Enter Marks', module: 'exams', action: 'create', category: 'Academic' },
   { key: 'exams.marks.approve', displayName: 'Approve Marks', module: 'exams', action: 'update', category: 'Academic' },

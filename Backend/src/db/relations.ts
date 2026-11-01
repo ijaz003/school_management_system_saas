@@ -31,6 +31,10 @@ import {
   expenseCategories,
   expenses,
 } from '../modules/expenses/expenses.schema.js';
+import {
+  timetableEntries,
+  timetablePeriods,
+} from '../modules/timetable/timetable.schema.js';
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
@@ -451,6 +455,40 @@ export const expensesRelations = relations(expenses, ({ one }) => ({
   }),
   creator: one(users, {
     fields: [expenses.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const timetablePeriodsRelations = relations(
+  timetablePeriods,
+  ({ one, many }) => ({
+    tenant: one(tenants, {
+      fields: [timetablePeriods.tenantId],
+      references: [tenants.id],
+    }),
+    entries: many(timetableEntries),
+  }),
+);
+
+export const timetableEntriesRelations = relations(timetableEntries, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [timetableEntries.tenantId],
+    references: [tenants.id],
+  }),
+  section: one(sections, {
+    fields: [timetableEntries.sectionId],
+    references: [sections.id],
+  }),
+  period: one(timetablePeriods, {
+    fields: [timetableEntries.periodId],
+    references: [timetablePeriods.id],
+  }),
+  subject: one(subjects, {
+    fields: [timetableEntries.subjectId],
+    references: [subjects.id],
+  }),
+  teacher: one(users, {
+    fields: [timetableEntries.teacherId],
     references: [users.id],
   }),
 }));

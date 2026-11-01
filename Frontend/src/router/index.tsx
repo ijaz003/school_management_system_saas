@@ -29,6 +29,7 @@ import { DiaryListPage } from '@/features/school/diary/pages/DiaryListPage';
 import { FeesPage } from '@/features/school/fees/pages/FeesPage';
 import { FeeVoucherPage } from '@/features/school/fees/pages/FeeVoucherPage';
 import { ExpensesPage } from '@/features/school/expenses/pages/ExpensesPage';
+import { TimetablePage } from '@/features/school/timetable/pages/TimetablePage';
 import { ExamsListPage } from '@/features/school/exams/pages/ExamsListPage';
 import { ExamDetailPage } from '@/features/school/exams/pages/ExamDetailPage';
 import { ExamReportCardsPage } from '@/features/school/exams/pages/ExamReportCardsPage';
@@ -205,6 +206,15 @@ function ExpensesRoute() {
   return <ExpensesPage />;
 }
 
+function TimetableRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || !can('timetable.read')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <TimetablePage />;
+}
+
 function DiaryRoute() {
   const user = useAppSelector(selectUser);
   const { can } = usePermission();
@@ -359,6 +369,7 @@ const router = createBrowserRouter([
         ],
       },
       { path: '/expenses', element: <ExpensesRoute /> },
+      { path: '/timetable', element: <TimetableRoute /> },
       {
         element: <ExamsRoute />,
         children: [

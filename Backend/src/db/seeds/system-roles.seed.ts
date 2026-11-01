@@ -18,9 +18,9 @@ export const SYSTEM_ROLES = [
     displayName: 'School Admin',
     description: 'School owner — full school access',
     permissions: [
-      'students.*', 'teachers.*', 'classes.*', 'attendance.*', 'session_years.*', 'fees.*',
-      'expenses.*', 'exams.*', 'notices.*', 'diary.*', 'support.*', 'sms.send', 'reports.*',
-      'settings.*', 'subscription.view', 'audit.read',
+      'students.*', 'teachers.*', 'classes.*', 'attendance.*', 'session_years.*', 'timetable.*',
+      'fees.*', 'expenses.*', 'exams.*', 'notices.*', 'diary.*', 'support.*', 'sms.send',
+      'reports.*', 'settings.*', 'subscription.view', 'audit.read',
     ],
     isSystem: true,
     isSuperAdmin: false,
@@ -33,8 +33,8 @@ export const SYSTEM_ROLES = [
     description: 'Principal — view and approve',
     permissions: [
       'students.read', 'fees.invoice.read', 'fees.payment.record',
-      'expenses.read', 'attendance.*', 'exams.marks.approve', 'exams.result.publish',
-      'notices.*', 'diary.*', 'support.*', 'reports.*',
+      'expenses.read', 'attendance.*', 'timetable.read', 'exams.marks.approve',
+      'exams.result.publish', 'notices.*', 'diary.*', 'support.*', 'reports.*',
     ],
     isSystem: true,
     isSuperAdmin: false,
@@ -56,7 +56,7 @@ export const SYSTEM_ROLES = [
     displayName: 'Teacher',
     description: 'Teaching staff',
     permissions: [
-      'students.read', 'attendance.mark', 'attendance.read',
+      'students.read', 'attendance.mark', 'attendance.read', 'timetable.read',
       'exams.marks.enter', 'notices.send', 'diary.read', 'diary.write',
     ],
     isSystem: true,
