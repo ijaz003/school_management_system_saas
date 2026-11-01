@@ -19,6 +19,7 @@ import {
   Shield,
   UserCog,
   Users,
+  Wallet,
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -102,6 +103,7 @@ const SCHOOL_GROUPS: MenuGroup[] = [
     label: 'Operations',
     items: [
       { label: 'Fees', path: '/fees', icon: DollarSign, permission: 'fees.invoice.read' },
+      { label: 'Expenses', path: '/expenses', icon: Wallet, permission: 'expenses.read' },
       {
         label: 'Reports',
         path: '/reports',

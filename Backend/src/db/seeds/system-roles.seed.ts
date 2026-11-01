@@ -19,8 +19,8 @@ export const SYSTEM_ROLES = [
     description: 'School owner — full school access',
     permissions: [
       'students.*', 'teachers.*', 'classes.*', 'attendance.*', 'session_years.*', 'fees.*',
-      'exams.*', 'notices.*', 'diary.*', 'support.*', 'sms.send', 'reports.*', 'settings.*',
-      'subscription.view', 'audit.read',
+      'expenses.*', 'exams.*', 'notices.*', 'diary.*', 'support.*', 'sms.send', 'reports.*',
+      'settings.*', 'subscription.view', 'audit.read',
     ],
     isSystem: true,
     isSuperAdmin: false,
@@ -33,7 +33,7 @@ export const SYSTEM_ROLES = [
     description: 'Principal — view and approve',
     permissions: [
       'students.read', 'fees.invoice.read', 'fees.payment.record',
-      'attendance.*', 'exams.marks.approve', 'exams.result.publish',
+      'expenses.read', 'attendance.*', 'exams.marks.approve', 'exams.result.publish',
       'notices.*', 'diary.*', 'support.*', 'reports.*',
     ],
     isSystem: true,
@@ -45,7 +45,7 @@ export const SYSTEM_ROLES = [
     name: 'accountant',
     displayName: 'Accountant',
     description: 'Fee collection and finance',
-    permissions: ['students.read', 'fees.*', 'reports.fees'],
+    permissions: ['students.read', 'fees.*', 'expenses.*', 'reports.fees', 'reports.expenses'],
     isSystem: true,
     isSuperAdmin: false,
     category: 'staff',

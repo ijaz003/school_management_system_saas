@@ -27,6 +27,10 @@ import {
   supportMessages,
   supportTickets,
 } from '../modules/support/support.schema.js';
+import {
+  expenseCategories,
+  expenses,
+} from '../modules/expenses/expenses.schema.js';
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
@@ -421,6 +425,32 @@ export const supportMessagesRelations = relations(supportMessages, ({ one }) => 
   }),
   author: one(users, {
     fields: [supportMessages.authorId],
+    references: [users.id],
+  }),
+}));
+
+export const expenseCategoriesRelations = relations(
+  expenseCategories,
+  ({ one, many }) => ({
+    tenant: one(tenants, {
+      fields: [expenseCategories.tenantId],
+      references: [tenants.id],
+    }),
+    expenses: many(expenses),
+  }),
+);
+
+export const expensesRelations = relations(expenses, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [expenses.tenantId],
+    references: [tenants.id],
+  }),
+  category: one(expenseCategories, {
+    fields: [expenses.categoryId],
+    references: [expenseCategories.id],
+  }),
+  creator: one(users, {
+    fields: [expenses.createdBy],
     references: [users.id],
   }),
 }));

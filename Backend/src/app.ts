@@ -34,6 +34,7 @@ import settingsRoutes from './modules/school/settings/settings.routes.js';
 import sessionYearsRoutes from './modules/session-years/session-years.routes.js';
 import schoolSupportRoutes from './modules/support/school-support.routes.js';
 import platformSupportRoutes from './modules/support/platform-support.routes.js';
+import expensesRoutes from './modules/expenses/expenses.routes.js';
 
 export function createApp() {
   const app = express();
@@ -90,6 +91,7 @@ export function createApp() {
   app.use('/api/school/session-years', sessionYearsRoutes);
   app.use('/api/school/support', schoolSupportRoutes);
   app.use('/api/super-admin/support', platformSupportRoutes);
+  app.use('/api/school/expenses', expensesRoutes);
   app.use('/api/school', sectionsRoutes);
 
   app.use(notFound);

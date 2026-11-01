@@ -486,7 +486,9 @@ function TicketRow({
       >
         <span
           aria-hidden
-          className={`absolute inset-y-0 left-0 w-0.5 ${statusAccent[ticket.status]}`}
+          className={`absolute inset-y-0 left-0 w-0.5 ${
+            statusAccent[ticket.status as SupportStatus] ?? 'bg-ink-400'
+          }`}
         />
         <div className="flex items-start justify-between gap-3 pl-3">
           <div className="min-w-0 flex-1">
