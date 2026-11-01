@@ -11,6 +11,7 @@ import { teacherAssignments } from '../modules/teacher-assignments/teacher-assig
 import { students } from '../modules/students/students.schema.js';
 import { attendanceRecords } from '../modules/attendance/attendance.schema.js';
 import { notices } from '../modules/notices/notices.schema.js';
+import { diaryEntries } from '../modules/diary/diary.schema.js';
 import {
   feeInvoices,
   feePayments,
@@ -211,6 +212,25 @@ export const noticesRelations = relations(notices, ({ one }) => ({
   }),
   author: one(users, {
     fields: [notices.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const diaryEntriesRelations = relations(diaryEntries, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [diaryEntries.tenantId],
+    references: [tenants.id],
+  }),
+  class: one(classes, {
+    fields: [diaryEntries.classId],
+    references: [classes.id],
+  }),
+  section: one(sections, {
+    fields: [diaryEntries.sectionId],
+    references: [sections.id],
+  }),
+  author: one(users, {
+    fields: [diaryEntries.createdBy],
     references: [users.id],
   }),
 }));

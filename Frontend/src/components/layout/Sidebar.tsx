@@ -9,6 +9,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   LifeBuoy,
+  BookMarked,
   Megaphone,
   School,
   ScrollText,
@@ -103,6 +104,7 @@ const SCHOOL_GROUPS: MenuGroup[] = [
         ],
       },
       { label: 'Notices', path: '/notices', icon: Megaphone, permission: 'notices.read' },
+      { label: 'Daily diary', path: '/diary', icon: BookMarked, permission: 'diary.read' },
     ],
   },
   {

@@ -64,6 +64,13 @@
       "when": 1793463798194,
       "tag": "0008_romantic_ghost_rider",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793503090717,
+      "tag": "0009_same_scream",
+      "breakpoints": true
     }
   ]
 }

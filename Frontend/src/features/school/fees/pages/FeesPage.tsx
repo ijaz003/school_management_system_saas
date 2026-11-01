@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Banknote, Download, Plus, Receipt, Trash2, Wallet } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Banknote, Download, Plus, Printer, Receipt, Trash2, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
@@ -886,9 +887,19 @@ function InvoiceDetailModal({
       }
       size="lg"
       footer={
-        <Button type="button" variant="outline" onClick={onClose}>
-          Close
-        </Button>
+        <>
+          {invoiceId ? (
+            <Link
+              to={`/fees/vouchers/${invoiceId}`}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-ink-200 px-4 py-2 text-sm font-medium text-ink-900 hover:bg-ink-50"
+            >
+              <Printer className="h-4 w-4" aria-hidden="true" /> Print voucher
+            </Link>
+          ) : null}
+          <Button type="button" variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </>
       }
     >
       {invoiceQuery.isPending || !invoice ? (

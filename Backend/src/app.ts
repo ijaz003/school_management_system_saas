@@ -23,6 +23,7 @@ import studentsRoutes from './modules/students/students.routes.js';
 import teachersRoutes from './modules/teachers/teachers.routes.js';
 import attendanceRoutes from './modules/attendance/attendance.routes.js';
 import noticesRoutes from './modules/notices/notices.routes.js';
+import diaryRoutes from './modules/diary/diary.routes.js';
 import feesRoutes from './modules/fees/fees.routes.js';
 import examsRoutes from './modules/exams/exams.routes.js';
 import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
@@ -75,6 +76,7 @@ export function createApp() {
   app.use('/api/school/teachers', teachersRoutes);
   app.use('/api/school/attendance', attendanceRoutes);
   app.use('/api/school/notices', noticesRoutes);
+  app.use('/api/school/diary', diaryRoutes);
   app.use('/api/school/fees', feesRoutes);
   app.use('/api/school/exams', examsRoutes);
   app.use('/api/school/dashboard', dashboardRoutes);

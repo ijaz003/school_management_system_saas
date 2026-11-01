@@ -10,6 +10,7 @@ export * from '../modules/teacher-assignments/teacher-assignments.schema.js';
 export * from '../modules/students/students.schema.js';
 export * from '../modules/attendance/attendance.schema.js';
 export * from '../modules/notices/notices.schema.js';
+export * from '../modules/diary/diary.schema.js';
 export * from '../modules/fees/fees.schema.js';
 export * from '../modules/exams/exams.schema.js';
 export * from '../modules/audit/audit.schema.js';

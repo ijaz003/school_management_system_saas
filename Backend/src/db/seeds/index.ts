@@ -1,6 +1,7 @@
 import { closeDatabase } from '../../config/database.js';
 import { seedPermissions } from './permissions.seed.js';
 import { seedSystemRoles } from './system-roles.seed.js';
+import { syncPlanPermissions } from './sync-plan-permissions.seed.js';
 
 async function main() {
   console.log('Starting database seeds...');
@@ -8,6 +9,7 @@ async function main() {
   try {
     await seedPermissions();
     await seedSystemRoles();
+    await syncPlanPermissions();
     console.log('Database seeds completed successfully.');
   } catch (error) {
     console.error('Database seeding failed:', error);

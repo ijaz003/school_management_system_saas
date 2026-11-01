@@ -29,6 +29,8 @@ export const PERMISSIONS_LIST = [
   { key: 'exams.reportcard.generate', displayName: 'Generate Report Cards', module: 'exams', action: 'read', category: 'Academic' },
   { key: 'notices.send', displayName: 'Send Notices', module: 'notices', action: 'create', category: 'Communication' },
   { key: 'notices.read', displayName: 'View Notices', module: 'notices', action: 'read', category: 'Communication' },
+  { key: 'diary.read', displayName: 'View Daily Diary', module: 'diary', action: 'read', category: 'Communication' },
+  { key: 'diary.write', displayName: 'Manage Daily Diary', module: 'diary', action: 'create', category: 'Communication' },
   { key: 'sms.send', displayName: 'Send SMS', module: 'notices', action: 'create', category: 'Communication' },
   { key: 'reports.fees', displayName: 'Fee Reports', module: 'reports', action: 'read', category: 'Reports' },
   { key: 'reports.academic', displayName: 'Academic Reports', module: 'reports', action: 'read', category: 'Reports' },

@@ -19,8 +19,8 @@ export const SYSTEM_ROLES = [
     description: 'School owner — full school access',
     permissions: [
       'students.*', 'teachers.*', 'classes.*', 'attendance.*', 'fees.*',
-      'exams.*', 'notices.*', 'sms.send', 'reports.*', 'settings.*',
-      'subscription.view',
+      'exams.*', 'notices.*', 'diary.*', 'sms.send', 'reports.*', 'settings.*',
+      'subscription.view', 'audit.read',
     ],
     isSystem: true,
     isSuperAdmin: false,
@@ -34,7 +34,7 @@ export const SYSTEM_ROLES = [
     permissions: [
       'students.read', 'fees.invoice.read', 'fees.payment.record',
       'attendance.*', 'exams.marks.approve', 'exams.result.publish',
-      'notices.*', 'reports.*',
+      'notices.*', 'diary.*', 'reports.*',
     ],
     isSystem: true,
     isSuperAdmin: false,
@@ -57,7 +57,7 @@ export const SYSTEM_ROLES = [
     description: 'Teaching staff',
     permissions: [
       'students.read', 'attendance.mark', 'attendance.read',
-      'exams.marks.enter', 'notices.send',
+      'exams.marks.enter', 'notices.send', 'diary.read', 'diary.write',
     ],
     isSystem: true,
     isSuperAdmin: false,
@@ -69,7 +69,7 @@ export const SYSTEM_ROLES = [
     displayName: 'Parent',
     description: 'Parent portal access',
     permissions: [
-      'attendance.read', 'exams.result.publish', 'fees.invoice.read',
+      'attendance.read', 'exams.result.publish', 'fees.invoice.read', 'diary.read',
     ],
     isSystem: true,
     isSuperAdmin: false,
@@ -80,7 +80,7 @@ export const SYSTEM_ROLES = [
 
 export async function seedSystemRoles() {
   let added = 0;
-  let skipped = 0;
+  let updated = 0;
 
   for (const role of SYSTEM_ROLES) {
     const [existing] = await db
@@ -90,7 +90,18 @@ export async function seedSystemRoles() {
       .limit(1);
 
     if (existing) {
-      skipped++;
+      await db
+        .update(roles)
+        .set({
+          displayName: role.displayName,
+          description: role.description,
+          permissions: [...role.permissions],
+          category: role.category,
+          color: role.color,
+          updatedAt: new Date(),
+        })
+        .where(eq(roles.id, existing.id));
+      updated++;
       continue;
     }
 
@@ -102,5 +113,5 @@ export async function seedSystemRoles() {
     added++;
   }
 
-  console.log(`System roles seeded: ${added} added, ${skipped} already present`);
+  console.log(`System roles seeded: ${added} added, ${updated} updated`);
 }

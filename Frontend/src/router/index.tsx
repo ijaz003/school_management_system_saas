@@ -25,7 +25,9 @@ import { AttendancePage } from '@/features/school/attendance/pages/AttendancePag
 import { AttendanceScanPage } from '@/features/school/attendance/pages/AttendanceScanPage';
 import { StudentIdCardsPage } from '@/features/school/students/pages/StudentIdCardsPage';
 import { NoticesListPage } from '@/features/school/notices/pages/NoticesListPage';
+import { DiaryListPage } from '@/features/school/diary/pages/DiaryListPage';
 import { FeesPage } from '@/features/school/fees/pages/FeesPage';
+import { FeeVoucherPage } from '@/features/school/fees/pages/FeeVoucherPage';
 import { ExamsListPage } from '@/features/school/exams/pages/ExamsListPage';
 import { ExamDetailPage } from '@/features/school/exams/pages/ExamDetailPage';
 import { ExamReportCardsPage } from '@/features/school/exams/pages/ExamReportCardsPage';
@@ -186,7 +188,16 @@ function FeesRoute() {
   if (user?.role === 'super_admin' || !can('fees.invoice.read')) {
     return <Navigate to="/forbidden" replace />;
   }
-  return <FeesPage />;
+  return <Outlet />;
+}
+
+function DiaryRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  if (user?.role === 'super_admin' || !can('diary.read')) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <DiaryListPage />;
 }
 
 function ExamsRoute() {
@@ -276,7 +287,13 @@ const router = createBrowserRouter([
         ],
       },
       { path: '/classes', element: <Navigate to="/settings/classes" replace /> },
-      { path: '/fees', element: <FeesRoute /> },
+      {
+        element: <FeesRoute />,
+        children: [
+          { path: '/fees', element: <FeesPage /> },
+          { path: '/fees/vouchers/:id', element: <FeeVoucherPage /> },
+        ],
+      },
       {
         element: <ExamsRoute />,
         children: [
@@ -295,6 +312,7 @@ const router = createBrowserRouter([
         ],
       },
       { path: '/notices', element: <NoticesRoute /> },
+      { path: '/diary', element: <DiaryRoute /> },
       { path: '/settings/roles', element: <CustomRolesRoute /> },
       {
         element: <AcademicRoute />,
