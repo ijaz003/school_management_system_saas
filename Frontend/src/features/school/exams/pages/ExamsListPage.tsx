@@ -1,18 +1,21 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, Plus, Trash2 } from 'lucide-react';
+import { ClipboardList, Plus, Search, Trash2 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
+import { ListPagination } from '@/components/ui/list-pagination';
 import { Modal } from '@/components/ui/modal';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useClass } from '@/features/school/classes/hooks/useClass';
 import { usePermission } from '@/hooks/usePermission';
+import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import {
   useCreateExam,
   useDeleteExam,
@@ -42,8 +45,7 @@ export function ExamsListPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
+      <PageShell
           eyebrow="Academic"
           title="Exams"
           description="Schedule exams, enter marks, and publish results."
@@ -54,11 +56,23 @@ export function ExamsListPage() {
               </Button>
             ) : undefined
           }
-        />
+      >
 
-        <section className="panel grid grid-cols-1 gap-3 p-4 md:grid-cols-12">
-          <div className="md:col-span-5">
+        <FiltersPanel
+          description="Find exams by name, status, or class."
+          pageLimit={filters.limit ?? 20}
+          onPageLimitChange={(limit) => setFilters((current) => ({ ...current, limit, page: 1 }))}
+          onClear={() => setFilters((current) => resetListFilters(current))}
+          clearDisabled={!hasActiveFilters(filters)}
+        >
+          <FilterField
+            id="exam-search"
+            label="Search"
+            icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />}
+            className="md:col-span-5"
+          >
             <Input
+              id="exam-search"
               type="search"
               aria-label="Search exams"
               placeholder="Search exams..."
@@ -71,52 +85,58 @@ export function ExamsListPage() {
                 }))
               }
             />
-          </div>
-          <select
-            aria-label="Filter by status"
-            className="field-select md:col-span-3"
-            value={filters.status ?? ''}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                status: (event.target.value || undefined) as ExamStatus | undefined,
-                page: 1,
-              }))
-            }
-          >
-            <option value="">All statuses</option>
-            <option value="draft">Draft</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="marks_entry">Marks entry</option>
-            <option value="published">Published</option>
-          </select>
-          <select
-            aria-label="Filter by class"
-            className="field-select md:col-span-4"
-            value={filters.classId ?? ''}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                classId: event.target.value || undefined,
-                page: 1,
-              }))
-            }
-          >
-            <option value="">All classes</option>
-            {(classesQuery.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </section>
+          </FilterField>
+          <FilterField id="exam-status-filter" label="Status" className="md:col-span-3">
+            <select
+              id="exam-status-filter"
+              aria-label="Filter by status"
+              className="field-select"
+              value={filters.status ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  status: (event.target.value || undefined) as ExamStatus | undefined,
+                  page: 1,
+                }))
+              }
+            >
+              <option value="">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="marks_entry">Marks entry</option>
+              <option value="published">Published</option>
+            </select>
+          </FilterField>
+          <FilterField id="exam-class-filter" label="Class" className="md:col-span-4">
+            <select
+              id="exam-class-filter"
+              aria-label="Filter by class"
+              className="field-select"
+              value={filters.classId ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  classId: event.target.value || undefined,
+                  page: 1,
+                }))
+              }
+            >
+              <option value="">All classes</option>
+              {(classesQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </FilterField>
+        </FiltersPanel>
 
         {examsQuery.isPending ? (
-          <div className="panel">
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
             <PageLoader compact />
           </div>
         ) : examsQuery.error ? (
-          <section className="rounded-2xl border border-red-200 bg-white p-8 text-center">
+          <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center shadow-sm">
             <h2 className="font-semibold text-ink-950">Failed to load exams</h2>
             <p className="mt-2 text-sm text-ink-700">{examsQuery.error.message}</p>
           </section>
@@ -139,36 +159,16 @@ export function ExamsListPage() {
           </div>
         )}
 
-        {pagination && pagination.totalPages > 1 && (
-          <footer className="flex justify-between gap-3">
-            <p className="text-sm text-ink-700/70">
-              Page {pagination.page} of {pagination.totalPages}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pagination.page <= 1}
-                onClick={() =>
-                  setFilters((current) => ({ ...current, page: (current.page ?? 1) - 1 }))
-                }
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pagination.page >= pagination.totalPages}
-                onClick={() =>
-                  setFilters((current) => ({ ...current, page: (current.page ?? 1) + 1 }))
-                }
-              >
-                Next
-              </Button>
-            </div>
-          </footer>
+        {pagination && (
+          <ListPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+          />
         )}
-      </div>
+      </PageShell>
 
       {creating && <CreateExamModal onClose={() => setCreating(false)} />}
 
@@ -198,7 +198,7 @@ function ExamRow({
   onDelete: () => void;
 }) {
   return (
-    <article className="panel p-5">
+    <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-ink-100">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <Link to={`/exams/${exam.id}`} className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap gap-2">

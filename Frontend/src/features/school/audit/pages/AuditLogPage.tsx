@@ -2,20 +2,17 @@ import { useMemo, useState } from 'react';
 import {
   ScrollText,
   Search,
-  X,
   CalendarDays,
-  SlidersHorizontal,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
   Activity,
   ShieldCheck,
 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageHeader } from '@/components/ui/page-header';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
+import { ListPagination } from '@/components/ui/list-pagination';
+import { PageShell } from '@/components/ui/page-shell';
 import { usePermission } from '@/hooks/usePermission';
 import { useAuditLogs } from '../hooks/useAuditLogs';
 
@@ -95,6 +92,7 @@ export function AuditLogPage() {
     can('audit.read') || can('settings.users.manage') || can('settings.school.edit');
 
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(30);
   const [action, setAction] = useState('');
   const [entityType, setEntityType] = useState('');
   const [from, setFrom] = useState(monthStart);
@@ -103,7 +101,7 @@ export function AuditLogPage() {
   const query = useAuditLogs(
     {
       page,
-      limit: 30,
+      limit,
       action: action || undefined,
       entityType: entityType || undefined,
       from: from || undefined,
@@ -118,6 +116,7 @@ export function AuditLogPage() {
   );
 
   const resetFilters = () => {
+    // keep the current page limit, reset everything else
     setAction('');
     setEntityType('');
     setFrom(monthStart());
@@ -144,131 +143,109 @@ export function AuditLogPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-6xl space-y-6 pb-12">
-        {/* ---------- Page header ---------- */}
-        <div className="relative overflow-hidden rounded-2xl border border-ink-100 bg-gradient-to-br from-white via-white to-ink-50/60 px-5 py-6 shadow-sm sm:px-7 sm:py-7">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary-100/40 blur-3xl"
-          />
-          <div className="relative">
-            <PageHeader
-              eyebrow="Administration"
-              title="Audit log"
-              description="Track who changed fees, exams, settings, and roles across your school."
-            />
-          </div>
-        </div>
-
+      <PageShell
+        eyebrow="Administration"
+        title="Audit log"
+        description="Track who changed fees, exams, settings, and roles across your school."
+        footerNote={
+          <>
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+            <span>Audit events are immutable and retained per your school's policy.</span>
+          </>
+        }
+      >
         {/* ---------- Filters ---------- */}
-        <section className="sticky top-4 z-10 rounded-2xl border border-ink-100 bg-white/85 p-4 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/70 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink-100/70 text-ink-600">
-                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
-              </span>
-              <div>
-                <h2 className="text-[13px] font-semibold tracking-tight text-ink-900">
-                  Filters
-                </h2>
-                <p className="text-[11px] text-ink-500">
-                  Narrow down events by date, action, or entity.
-                </p>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={resetFilters}
-              disabled={!hasFilters}
-              className="text-[12px] font-medium text-ink-500 transition hover:text-ink-900 disabled:opacity-40"
-            >
-              <X className="mr-1 h-3.5 w-3.5" aria-hidden />
-              Clear
-            </Button>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <FilterField
+        <FiltersPanel
+          description="Narrow down events by date, action, or entity."
+          pageLimit={limit}
+          onPageLimitChange={(next) => {
+            setLimit(next);
+            setPage(1);
+          }}
+          onClear={resetFilters}
+          clearDisabled={!hasFilters}
+        >
+          <FilterField
+            id="audit-from"
+            label="From"
+            icon={<CalendarDays className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-3"
+          >
+            <input
               id="audit-from"
-              label="From"
-              icon={<CalendarDays className="h-3.5 w-3.5" aria-hidden />}
-            >
-              <input
-                id="audit-from"
-                type="date"
-                className="field-select w-full text-[13px]"
-                value={from}
-                max={to || undefined}
-                onChange={(event) => {
-                  setFrom(event.target.value);
-                  setPage(1);
-                }}
-              />
-            </FilterField>
+              type="date"
+              className="field-select w-full text-[13px]"
+              value={from}
+              max={to || undefined}
+              onChange={(event) => {
+                setFrom(event.target.value);
+                setPage(1);
+              }}
+            />
+          </FilterField>
 
-            <FilterField
+          <FilterField
+            id="audit-to"
+            label="To"
+            icon={<CalendarDays className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-3"
+          >
+            <input
               id="audit-to"
-              label="To"
-              icon={<CalendarDays className="h-3.5 w-3.5" aria-hidden />}
-            >
-              <input
-                id="audit-to"
-                type="date"
-                className="field-select w-full text-[13px]"
-                value={to}
-                min={from || undefined}
-                onChange={(event) => {
-                  setTo(event.target.value);
-                  setPage(1);
-                }}
-              />
-            </FilterField>
+              type="date"
+              className="field-select w-full text-[13px]"
+              value={to}
+              min={from || undefined}
+              onChange={(event) => {
+                setTo(event.target.value);
+                setPage(1);
+              }}
+            />
+          </FilterField>
 
-            <FilterField
+          <FilterField
+            id="audit-action"
+            label="Action"
+            icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-3"
+          >
+            <input
               id="audit-action"
-              label="Action"
-              icon={<Search className="h-3.5 w-3.5" aria-hidden />}
-            >
-              <input
-                id="audit-action"
-                className="field-select w-full font-mono text-[12.5px]"
-                placeholder="fees.payment.record"
-                value={action}
-                onChange={(event) => {
-                  setAction(event.target.value.trim());
-                  setPage(1);
-                }}
-              />
-            </FilterField>
+              className="field-select w-full font-mono text-[12.5px]"
+              placeholder="fees.payment.record"
+              value={action}
+              onChange={(event) => {
+                setAction(event.target.value.trim());
+                setPage(1);
+              }}
+            />
+          </FilterField>
 
-            <FilterField
+          <FilterField
+            id="audit-entity"
+            label="Entity"
+            icon={<ScrollText className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-3"
+          >
+            <select
               id="audit-entity"
-              label="Entity"
-              icon={<ScrollText className="h-3.5 w-3.5" aria-hidden />}
+              className="field-select w-full text-[13px]"
+              value={entityType}
+              onChange={(event) => {
+                setEntityType(event.target.value);
+                setPage(1);
+              }}
             >
-              <select
-                id="audit-entity"
-                className="field-select w-full text-[13px]"
-                value={entityType}
-                onChange={(event) => {
-                  setEntityType(event.target.value);
-                  setPage(1);
-                }}
-              >
-                {ENTITY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </FilterField>
-          </div>
+              {ENTITY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </FilterField>
 
           {hasFilters && (
-            <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-ink-100 pt-3">
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-ink-100 pt-3 md:col-span-12">
               <span className="text-[11px] font-medium uppercase tracking-wider text-ink-400">
                 Active
               </span>
@@ -279,8 +256,7 @@ export function AuditLogPage() {
               )}
             </div>
           )}
-        </section>
-
+        </FiltersPanel>
         {/* ---------- Results ---------- */}
         {query.isPending ? (
           <SkeletonList />
@@ -391,54 +367,24 @@ export function AuditLogPage() {
               ))}
             </ul>
 
-            {pagination && pagination.totalPages > 1 && (
-              <Pagination
-                page={pagination.page}
-                totalPages={pagination.totalPages}
-                total={pagination.total}
-                limit={30}
-                onChange={setPage}
-              />
-            )}
           </section>
         )}
 
-        {/* Footer note */}
-        <div className="flex items-center justify-center gap-1.5 pt-2 text-[11px] text-ink-400">
-          <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
-          <span>Audit events are immutable and retained per your school's policy.</span>
-        </div>
-      </div>
+        {pagination && (
+          <ListPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit ?? limit}
+            onPageChange={setPage}
+          />
+        )}
+      </PageShell>
     </AppLayout>
   );
 }
 
 /* ---------- small components ---------- */
-
-function FilterField({
-  id,
-  label,
-  icon,
-  children,
-}: {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label
-        htmlFor={id}
-        className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500"
-      >
-        <span className="text-ink-400">{icon}</span>
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
 
 function FilterChip({ label, mono = false }: { label: string; mono?: boolean }) {
   return (
@@ -478,60 +424,5 @@ function SkeletonList() {
         ))}
       </ul>
     </section>
-  );
-}
-
-function Pagination({
-  page,
-  totalPages,
-  total,
-  limit,
-  onChange,
-}: {
-  page: number;
-  totalPages: number;
-  total: number;
-  limit: number;
-  onChange: (page: number) => void;
-}) {
-  const start = (page - 1) * limit + 1;
-  const end = Math.min(page * limit, total);
-
-  return (
-    <div className="flex flex-col gap-3 border-t border-ink-100 bg-ink-50/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-      <p className="text-[12px] tabular-nums text-ink-500">
-        Showing <span className="font-semibold text-ink-800">{start}–{end}</span> of{' '}
-        <span className="font-semibold text-ink-800">{total.toLocaleString()}</span>
-      </p>
-      <div className="flex items-center gap-1.5">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={page <= 1}
-          onClick={() => onChange(Math.max(1, page - 1))}
-          aria-label="Previous page"
-          className="transition active:scale-[0.98]"
-        >
-          <ChevronLeft className="h-4 w-4" aria-hidden />
-          <span className="hidden sm:inline">Prev</span>
-        </Button>
-        <span className="px-2 text-[12px] font-medium tabular-nums text-ink-700">
-          {page} / {totalPages}
-        </span>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={page >= totalPages}
-          onClick={() => onChange(page + 1)}
-          aria-label="Next page"
-          className="transition active:scale-[0.98]"
-        >
-          <span className="hidden sm:inline">Next</span>
-          <ChevronRight className="h-4 w-4" aria-hidden />
-        </Button>
-      </div>
-    </div>
   );
 }

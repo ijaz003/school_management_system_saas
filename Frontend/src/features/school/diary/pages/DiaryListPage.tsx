@@ -7,7 +7,6 @@ import {
   Search,
   CalendarDays,
   GraduationCap,
-  CircleDot,
   Clock,
   CheckCircle2,
   FileText,
@@ -15,17 +14,20 @@ import {
   MessageSquare,
   AlertCircle,
   Sparkles,
-  Filter,
 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
+import { ListPagination } from '@/components/ui/list-pagination';
+import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { Modal } from '@/components/ui/modal';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { usePermission } from '@/hooks/usePermission';
+import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useSections } from '@/features/school/classes/hooks/useSections';
 import {
@@ -110,184 +112,146 @@ export function DiaryListPage() {
         [data-diary-list] > *:nth-child(4) { animation-delay: 90ms; }
       `}</style>
 
-      <div className="mx-auto max-w-5xl space-y-6 pb-12">
-        {/* ---------- Header ---------- */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white via-white to-ink-50/60 px-5 py-6 shadow-sm ring-1 ring-ink-100 sm:px-7 sm:py-7">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary-100/40 blur-3xl"
-          />
-          <div className="relative">
-            <PageHeader
-              eyebrow="Communication"
-              title="Daily diary"
-              description="Record homework and class notes by class, section, and date."
-              actions={
-                canWrite ? (
-                  <Button
-                    onClick={() => setCreating(true)}
-                    className="transition active:scale-[0.98]"
-                  >
-                    <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                    New entry
-                  </Button>
-                ) : undefined
-              }
-            />
-          </div>
-        </div>
-
-        {/* ---------- Stat strip ---------- */}
-        <div className="grid gap-3 sm:grid-cols-3" aria-live="polite">
-          <StatCard
+      <PageShell
+        eyebrow="Communication"
+        title="Daily diary"
+        description="Record homework and class notes by class, section, and date."
+        actions={
+          canWrite ? (
+            <Button onClick={() => setCreating(true)} className="transition active:scale-[0.98]">
+              <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              New entry
+            </Button>
+          ) : undefined
+        }
+        footerNote={
+          <>
+            <Sparkles className="h-3.5 w-3.5" aria-hidden />
+            <span>Published entries are visible to parents and students on that class.</span>
+          </>
+        }
+      >
+        <MetricGrid>
+          <MetricCard
             icon={<PenLine className="h-4 w-4" aria-hidden />}
             label="Drafts"
             value={totals.drafts}
             tone="warning"
           />
-          <StatCard
+          <MetricCard
             icon={<CheckCircle2 className="h-4 w-4" aria-hidden />}
             label="Published"
             value={totals.published}
             tone="success"
           />
-          <StatCard
+          <MetricCard
             icon={<BookMarked className="h-4 w-4" aria-hidden />}
             label="Shown"
             value={totals.total}
             tone="primary"
           />
-        </div>
+        </MetricGrid>
 
-        {/* ---------- Filters ---------- */}
-        <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-ink-100">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink-100/70 text-ink-600">
-                <Filter className="h-3.5 w-3.5" aria-hidden />
-              </span>
-              <div>
-                <p className="text-[12.5px] font-semibold tracking-tight text-ink-900">
-                  Filters
-                </p>
-                <p className="text-[11px] text-ink-500">
-                  Search or narrow down by class, date, and status.
-                </p>
-              </div>
-            </div>
-          </div>
+        <FiltersPanel
+          description="Search or narrow down by class, date, and status."
+          pageLimit={filters.limit ?? 20}
+          onPageLimitChange={(limit) => setFilters((current) => ({ ...current, limit, page: 1 }))}
+          onClear={() => setFilters((current) => resetListFilters(current))}
+          clearDisabled={!hasActiveFilters(filters)}
+        >
+          <FilterField
+            id="diary-search"
+            label="Search"
+            icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-4"
+          >
+            <Input
+              id="diary-search"
+              type="search"
+              aria-label="Search diary"
+              placeholder="Search diary..."
+              value={filters.search ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  search: event.target.value || undefined,
+                  page: 1,
+                }))
+              }
+            />
+          </FilterField>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-            <div className="md:col-span-4">
-              <label
-                htmlFor="diary-search"
-                className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500"
-              >
-                <Search className="h-3.5 w-3.5 text-ink-400" aria-hidden />
-                Search
-              </label>
-              <Input
-                id="diary-search"
-                type="search"
-                aria-label="Search diary"
-                placeholder="Search diary..."
-                value={filters.search ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    search: event.target.value || undefined,
-                    page: 1,
-                  }))
-                }
-              />
-            </div>
+          <FilterField
+            id="diary-class-filter"
+            label="Class"
+            icon={<GraduationCap className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-3"
+          >
+            <select
+              id="diary-class-filter"
+              aria-label="Filter by class"
+              className="field-select w-full text-[13px]"
+              value={filters.classId ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  classId: event.target.value || undefined,
+                  sectionId: undefined,
+                  page: 1,
+                }))
+              }
+            >
+              <option value="">All classes</option>
+              {classes.map((klass) => (
+                <option key={klass.id} value={klass.id}>
+                  {klass.name}
+                </option>
+              ))}
+            </select>
+          </FilterField>
 
-            <div className="md:col-span-3">
-              <label
-                htmlFor="diary-class-filter"
-                className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500"
-              >
-                <GraduationCap className="h-3.5 w-3.5 text-ink-400" aria-hidden />
-                Class
-              </label>
-              <select
-                id="diary-class-filter"
-                aria-label="Filter by class"
-                className="field-select w-full text-[13px]"
-                value={filters.classId ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    classId: event.target.value || undefined,
-                    sectionId: undefined,
-                    page: 1,
-                  }))
-                }
-              >
-                <option value="">All classes</option>
-                {classes.map((klass) => (
-                  <option key={klass.id} value={klass.id}>
-                    {klass.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <FilterField
+            id="diary-date"
+            label="Date"
+            icon={<CalendarDays className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-3"
+          >
+            <Input
+              id="diary-date"
+              type="date"
+              aria-label="Filter by date"
+              className="w-full"
+              value={filters.entryDate ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  entryDate: event.target.value || undefined,
+                  page: 1,
+                }))
+              }
+            />
+          </FilterField>
 
-            <div className="md:col-span-3">
-              <label
-                htmlFor="diary-date"
-                className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500"
-              >
-                <CalendarDays className="h-3.5 w-3.5 text-ink-400" aria-hidden />
-                Date
-              </label>
-              <Input
-                id="diary-date"
-                type="date"
-                aria-label="Filter by date"
-                className="w-full"
-                value={filters.entryDate ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    entryDate: event.target.value || undefined,
-                    page: 1,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label
-                htmlFor="diary-status"
-                className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500"
-              >
-                <CircleDot className="h-3.5 w-3.5 text-ink-400" aria-hidden />
-                Status
-              </label>
-              <select
-                id="diary-status"
-                aria-label="Filter by status"
-                className="field-select w-full text-[13px]"
-                value={filters.status ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    status: (event.target.value || undefined) as
-                      | DiaryStatus
-                      | undefined,
-                    page: 1,
-                  }))
-                }
-              >
-                <option value="">All</option>
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-              </select>
-            </div>
-          </div>
-        </section>
-
+          <FilterField id="diary-status" label="Status" className="md:col-span-2">
+            <select
+              id="diary-status"
+              aria-label="Filter by status"
+              className="field-select w-full text-[13px]"
+              value={filters.status ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  status: (event.target.value || undefined) as DiaryStatus | undefined,
+                  page: 1,
+                }))
+              }
+            >
+              <option value="">All</option>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </FilterField>
+        </FiltersPanel>
         {/* ---------- Results ---------- */}
         {diaryQuery.isPending ? (
           <SkeletonList />
@@ -334,57 +298,16 @@ export function DiaryListPage() {
           </div>
         )}
 
-        {/* ---------- Pagination ---------- */}
-        {pagination && pagination.totalPages > 1 && (
-          <footer className="flex flex-col gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-ink-100 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[12px] text-ink-500" style={tabularNums}>
-              Page{' '}
-              <span className="font-semibold text-ink-800">{pagination.page}</span>{' '}
-              of{' '}
-              <span className="font-semibold text-ink-800">
-                {pagination.totalPages}
-              </span>
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pagination.page <= 1}
-                onClick={() =>
-                  setFilters((current) => ({
-                    ...current,
-                    page: (current.page ?? 1) - 1,
-                  }))
-                }
-                className="transition active:scale-[0.98]"
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pagination.page >= pagination.totalPages}
-                onClick={() =>
-                  setFilters((current) => ({
-                    ...current,
-                    page: (current.page ?? 1) + 1,
-                  }))
-                }
-                className="transition active:scale-[0.98]"
-              >
-                Next
-              </Button>
-            </div>
-          </footer>
+        {pagination && (
+          <ListPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+          />
         )}
-
-        <div className="flex items-center justify-center gap-1.5 pt-2 text-[11px] text-ink-400">
-          <Sparkles className="h-3.5 w-3.5" aria-hidden />
-          <span>
-            Published entries are visible to parents and students on that class.
-          </span>
-        </div>
-      </div>
+      </PageShell>
 
       {creating && (
         <CreateDiaryModal classes={classes} onClose={() => setCreating(false)} />
@@ -409,58 +332,6 @@ export function DiaryListPage() {
 }
 
 /* ---------- stat card ---------- */
-
-function StatCard({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  tone: 'primary' | 'success' | 'warning';
-}) {
-  const map = {
-    primary: {
-      wrap: 'from-primary-50 to-white ring-primary-100',
-      icon: 'bg-primary-100 text-primary-700',
-    },
-    success: {
-      wrap: 'from-emerald-50 to-white ring-emerald-100',
-      icon: 'bg-emerald-100 text-emerald-700',
-    },
-    warning: {
-      wrap: 'from-amber-50 to-white ring-amber-100',
-      icon: 'bg-amber-100 text-amber-700',
-    },
-  } as const;
-  const s = map[tone];
-  return (
-    <div
-      className={`flex items-center gap-3 rounded-2xl bg-gradient-to-br p-4 shadow-sm ring-1 ring-inset ${s.wrap}`}
-    >
-      <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${s.icon}`}
-      >
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-500">
-          {label}
-        </p>
-        <p
-          className="font-display text-[18px] font-semibold tracking-tight text-ink-950"
-          style={tabularNums}
-        >
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ---------- diary card ---------- */
 
 function DiaryCard({
   entry,

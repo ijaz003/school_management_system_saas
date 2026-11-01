@@ -1,5 +1,7 @@
 import { Search } from 'lucide-react';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
+import { hasActiveFilters } from '@/lib/list-filters';
 
 interface RoleFiltersProps {
   value: string;
@@ -8,19 +10,26 @@ interface RoleFiltersProps {
 
 export function RoleFilters({ value, onChange }: RoleFiltersProps) {
   return (
-    <div className="panel p-4">
-      <label htmlFor="role-search" className="sr-only">Search roles</label>
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+    <FiltersPanel
+      description="Find roles by name or description."
+      onClear={() => onChange('')}
+      clearDisabled={!hasActiveFilters({ search: value })}
+    >
+      <FilterField
+        id="role-search"
+        label="Search"
+        icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+        className="md:col-span-6"
+      >
         <Input
           id="role-search"
           type="search"
+          aria-label="Search roles"
           placeholder="Search roles by name..."
-          className="pl-10"
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
-      </div>
-    </div>
+      </FilterField>
+    </FiltersPanel>
   );
 }

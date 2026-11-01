@@ -1,13 +1,14 @@
-import { useState } from 'react';
-import { CreditCard, Download, GraduationCap, Plus } from 'lucide-react';
+﻿import { useState } from 'react';
+import { CheckCircle2, CreditCard, Download, GraduationCap, Plus, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageHeader } from '@/components/ui/page-header';
-import { StatCard } from '@/components/ui/stat-card';
+import { ListPagination } from '@/components/ui/list-pagination';
+import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
+import { PageShell } from '@/components/ui/page-shell';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { usePermission } from '@/hooks/usePermission';
 import { buildQueryString } from '@/lib/api';
@@ -51,8 +52,7 @@ export function StudentsListPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
+      <PageShell
           eyebrow="Academic"
           title="Students"
           description="Manage admissions, class placement, and guardians."
@@ -75,21 +75,23 @@ export function StudentsListPage() {
               )}
             </>
           }
-        />
-
+      >
         {pagination && (
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard label="Total students" value={pagination.total} />
-            <StatCard label="On this page" value={items.length} />
-            <StatCard
+          <MetricGrid>
+            <MetricCard icon={<GraduationCap className="h-4 w-4" aria-hidden="true" />} label="Total students" value={pagination.total} tone="primary" />
+            <MetricCard icon={<Users className="h-4 w-4" aria-hidden="true" />} label="On this page" value={items.length} />
+            <MetricCard
+              icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
               label="Active on page"
               value={items.filter((item) => item.status === 'active').length}
+              tone="success"
             />
-            <StatCard
+            <MetricCard
               label="Other status"
               value={items.filter((item) => item.status !== 'active').length}
+              tone="warning"
             />
-          </div>
+          </MetricGrid>
         )}
 
         <StudentFilters value={filters} onChange={setFilters} />
@@ -137,38 +139,17 @@ export function StudentsListPage() {
               onDelete={setPendingDelete}
             />
             {pagination && (
-              <footer className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-ink-500">
-                  Showing page {pagination.page} of {pagination.totalPages} · {pagination.total}{' '}
-                  total
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page <= 1}
-                    onClick={() =>
-                      setFilters((current) => ({ ...current, page: (current.page ?? 1) - 1 }))
-                    }
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page >= pagination.totalPages}
-                    onClick={() =>
-                      setFilters((current) => ({ ...current, page: (current.page ?? 1) + 1 }))
-                    }
-                  >
-                    Next
-                  </Button>
-                </div>
-              </footer>
+              <ListPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                limit={pagination.limit}
+                onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+              />
             )}
           </>
         )}
-      </div>
+      </PageShell>
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}

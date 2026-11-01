@@ -7,7 +7,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
-import { PageHeader } from '@/components/ui/page-header';
+import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
+import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import {
@@ -30,19 +31,40 @@ export function SessionYearsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
-          eyebrow="Academic"
-          title="Session years"
-          description="Define academic years and mark the current session used for placements and promotions."
-          actions={
-            canWrite ? (
-              <Button onClick={() => setCreating(true)}>
-                <Plus className="h-4 w-4" aria-hidden="true" /> New session year
-              </Button>
-            ) : undefined
-          }
-        />
+      <PageShell
+        eyebrow="Academic"
+        title="Session years"
+        description="Define academic years and mark the current session used for placements and promotions."
+        actions={
+          canWrite ? (
+            <Button onClick={() => setCreating(true)}>
+              <Plus className="h-4 w-4" aria-hidden="true" /> New session year
+            </Button>
+          ) : undefined
+        }
+      >
+        {!yearsQuery.isPending && !yearsQuery.error && items.length > 0 && (
+          <MetricGrid>
+            <MetricCard
+              icon={<CalendarRange className="h-4 w-4" aria-hidden />}
+              label="Total years"
+              value={items.length}
+              tone="primary"
+            />
+            <MetricCard
+              icon={<CheckCircle2 className="h-4 w-4" aria-hidden />}
+              label="Current"
+              value={items.filter((year) => year.isCurrent).length}
+              tone="success"
+            />
+            <MetricCard
+              icon={<CalendarRange className="h-4 w-4" aria-hidden />}
+              label="Closed"
+              value={items.filter((year) => year.status === 'closed').length}
+              tone="neutral"
+            />
+          </MetricGrid>
+        )}
 
         {yearsQuery.isPending ? (
           <div className="panel">
@@ -111,7 +133,7 @@ export function SessionYearsPage() {
             ))}
           </div>
         )}
-      </div>
+      </PageShell>
 
       {creating && <CreateSessionYearModal onClose={() => setCreating(false)} />}
 

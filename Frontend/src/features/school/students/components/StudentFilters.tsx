@@ -1,7 +1,8 @@
-import { RotateCcw, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
+import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useSections } from '@/features/school/classes/hooks/useSections';
 import type { StudentFilters as Filters, StudentStatus } from '../hooks/keys';
@@ -42,107 +43,99 @@ export function StudentFilters({
   };
 
   return (
-    <div className="panel space-y-3 p-4">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-        <div className="relative md:col-span-4">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-            aria-hidden="true"
-          />
+    <div className="space-y-3">
+      <FiltersPanel
+        description="Search by name, class, section, or status."
+        pageLimit={value.limit ?? 20}
+        onPageLimitChange={(limit) => onChange({ ...value, limit, page: 1 })}
+        onClear={() => onChange(resetListFilters(value))}
+        clearDisabled={!hasActiveFilters(value)}
+      >
+        <FilterField
+          id="student-search"
+          label="Search"
+          icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />}
+          className="md:col-span-6"
+        >
           <Input
+            id="student-search"
             type="search"
             aria-label="Search students"
             placeholder="Search name, admission no, guardian…"
-            className="pl-10"
             value={value.search ?? ''}
             onChange={(event) =>
               onChange({ ...value, search: event.target.value || undefined, page: 1 })
             }
           />
-        </div>
+        </FilterField>
 
-        <select
-          aria-label="Filter by class"
-          className="field-select md:col-span-2"
-          value={value.classId ?? ''}
-          onChange={(event) =>
-            onChange({
-              ...value,
-              classId: event.target.value || undefined,
-              sectionId: undefined,
-              page: 1,
-            })
-          }
-        >
-          <option value="">All classes</option>
-          {classesQuery.data?.map((cls) => (
-            <option key={cls.id} value={cls.id}>
-              {cls.name}
-            </option>
-          ))}
-        </select>
+        <FilterField id="student-class" label="Class" className="md:col-span-2">
+          <select
+            id="student-class"
+            aria-label="Filter by class"
+            className="field-select"
+            value={value.classId ?? ''}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                classId: event.target.value || undefined,
+                sectionId: undefined,
+                page: 1,
+              })
+            }
+          >
+            <option value="">All classes</option>
+            {classesQuery.data?.map((cls) => (
+              <option key={cls.id} value={cls.id}>
+                {cls.name}
+              </option>
+            ))}
+          </select>
+        </FilterField>
 
-        <select
-          aria-label="Filter by section"
-          className="field-select md:col-span-2"
-          value={value.sectionId ?? ''}
-          disabled={!value.classId || sectionsQuery.isPending}
-          onChange={(event) =>
-            onChange({ ...value, sectionId: event.target.value || undefined, page: 1 })
-          }
-        >
-          <option value="">All sections</option>
-          {sectionsQuery.data?.map((section) => (
-            <option key={section.id} value={section.id}>
-              {section.name}
-            </option>
-          ))}
-        </select>
+        <FilterField id="student-section" label="Section" className="md:col-span-2">
+          <select
+            id="student-section"
+            aria-label="Filter by section"
+            className="field-select"
+            value={value.sectionId ?? ''}
+            disabled={!value.classId || sectionsQuery.isPending}
+            onChange={(event) =>
+              onChange({ ...value, sectionId: event.target.value || undefined, page: 1 })
+            }
+          >
+            <option value="">All sections</option>
+            {sectionsQuery.data?.map((section) => (
+              <option key={section.id} value={section.id}>
+                {section.name}
+              </option>
+            ))}
+          </select>
+        </FilterField>
 
-        <select
-          aria-label="Filter by status"
-          className="field-select md:col-span-2"
-          value={value.status ?? ''}
-          onChange={(event) =>
-            onChange({
-              ...value,
-              status: (event.target.value || undefined) as StudentStatus | undefined,
-              page: 1,
-            })
-          }
-        >
-          <option value="">All statuses</option>
-          {STATUSES.map((status) => (
-            <option key={status.value} value={status.value}>
-              {status.label}
-            </option>
-          ))}
-        </select>
-
-        <select
-          aria-label="Rows per page"
-          className="field-select md:col-span-1"
-          value={value.limit ?? 20}
-          onChange={(event) =>
-            onChange({ ...value, limit: Number(event.target.value), page: 1 })
-          }
-        >
-          <option value={10}>10</option>
-          <option value={20}>20</option>
-          <option value={50}>50</option>
-        </select>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="md:col-span-1"
-          aria-label="Reset student filters"
-          title="Reset filters"
-          onClick={() => onChange({ page: 1, limit: value.limit ?? 20 })}
-        >
-          <RotateCcw className="h-4 w-4" aria-hidden="true" />
-        </Button>
-      </div>
+        <FilterField id="student-status" label="Status" className="md:col-span-2">
+          <select
+            id="student-status"
+            aria-label="Filter by status"
+            className="field-select"
+            value={value.status ?? ''}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                status: (event.target.value || undefined) as StudentStatus | undefined,
+                page: 1,
+              })
+            }
+          >
+            <option value="">All statuses</option>
+            {STATUSES.map((status) => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+      </FiltersPanel>
 
       {chips.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
@@ -160,13 +153,6 @@ export function StudentFilters({
               </Badge>
             </button>
           ))}
-          <button
-            type="button"
-            className="text-xs font-semibold text-ink-500 hover:text-ink-800"
-            onClick={() => onChange({ page: 1, limit: value.limit ?? 20 })}
-          >
-            Clear all
-          </button>
         </div>
       )}
     </div>

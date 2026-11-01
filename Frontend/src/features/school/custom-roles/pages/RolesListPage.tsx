@@ -4,9 +4,9 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Modal } from '@/components/ui/modal';
-import { PageHeader } from '@/components/ui/page-header';
+import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
+import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
-import { StatCard } from '@/components/ui/stat-card';
 import { DeleteRoleDialog } from '../components/DeleteRoleDialog';
 import { RoleCard } from '../components/RoleCard';
 import { RoleFilters } from '../components/RoleFilters';
@@ -39,24 +39,37 @@ export function RolesListPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
-          eyebrow="Administration"
-          title="Custom roles"
-          description="Create roles and control which permissions staff members receive."
-          actions={
-            <Button type="button" onClick={() => setFormDialog({ mode: 'create' })}>
-              <Plus className="h-4 w-4" aria-hidden="true" /> Create role
-            </Button>
-          }
-        />
-
+      <PageShell
+        eyebrow="Administration"
+        title="Custom roles"
+        description="Create roles and control which permissions staff members receive."
+        actions={
+          <Button type="button" onClick={() => setFormDialog({ mode: 'create' })}>
+            <Plus className="h-4 w-4" aria-hidden="true" /> Create role
+          </Button>
+        }
+      >
         {!rolesQuery.isPending && !rolesQuery.error && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard label="All roles" value={roles.length} icon={ShieldCheck} />
-            <StatCard label="System roles" value={roles.filter((role) => role.isSystem).length} icon={Lock} />
-            <StatCard label="Custom roles" value={roles.filter((role) => !role.isSystem).length} icon={Users} />
-          </div>
+          <MetricGrid>
+            <MetricCard
+              icon={<ShieldCheck className="h-4 w-4" aria-hidden />}
+              label="All roles"
+              value={roles.length}
+              tone="primary"
+            />
+            <MetricCard
+              icon={<Lock className="h-4 w-4" aria-hidden />}
+              label="System roles"
+              value={roles.filter((role) => role.isSystem).length}
+              tone="neutral"
+            />
+            <MetricCard
+              icon={<Users className="h-4 w-4" aria-hidden />}
+              label="Custom roles"
+              value={roles.filter((role) => !role.isSystem).length}
+              tone="success"
+            />
+          </MetricGrid>
         )}
 
         <RoleFilters value={search} onChange={setSearch} />
@@ -136,7 +149,7 @@ export function RolesListPage() {
         )}
         <RoleViewModal role={viewRole} onClose={() => setViewRole(null)} />
         <DeleteRoleDialog role={deleteRole} onClose={() => setDeleteRole(null)} />
-      </div>
+      </PageShell>
     </AppLayout>
   );
 }

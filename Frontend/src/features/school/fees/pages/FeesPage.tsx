@@ -1,18 +1,21 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Banknote, Download, Plus, Printer, Receipt, Trash2, Wallet } from 'lucide-react';
+import { Banknote, Download, Plus, Printer, Receipt, Search, Trash2, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
+import { ListPagination } from '@/components/ui/list-pagination';
 import { Modal } from '@/components/ui/modal';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { buildQueryString } from '@/lib/api';
+import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import { downloadFile } from '@/lib/download';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useStudents } from '@/features/school/students/hooks/useStudents';
@@ -101,8 +104,7 @@ export function FeesPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
+      <PageShell
           eyebrow="Finance"
           title="Fees"
           description="Structures, invoices, and payments."
@@ -134,8 +136,7 @@ export function FeesPage() {
               )}
             </>
           }
-        />
-
+      >
         <div className="flex gap-2 border-b border-ink-200">
           <TabButton active={tab === 'invoices'} onClick={() => setTab('invoices')}>
             Invoices
@@ -147,9 +148,23 @@ export function FeesPage() {
 
         {tab === 'invoices' ? (
           <>
-            <section className="panel grid gap-3 p-4 md:grid-cols-12">
-              <div className="md:col-span-5">
+            <FiltersPanel
+              description="Find invoices by student, status, or class."
+              pageLimit={filters.limit ?? 20}
+              onPageLimitChange={(limit) =>
+                setFilters((current) => ({ ...current, limit, page: 1 }))
+              }
+              onClear={() => setFilters((current) => resetListFilters(current))}
+              clearDisabled={!hasActiveFilters(filters)}
+            >
+              <FilterField
+                id="invoice-search"
+                label="Search"
+                icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />}
+                className="md:col-span-5"
+              >
                 <Input
+                  id="invoice-search"
                   type="search"
                   aria-label="Search invoices"
                   placeholder="Search student, title, period..."
@@ -162,53 +177,59 @@ export function FeesPage() {
                     }))
                   }
                 />
-              </div>
-              <select
-                aria-label="Filter by status"
-                className={`field-select md:col-span-3`}
-                value={filters.status ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    status: (event.target.value || undefined) as InvoiceStatus | undefined,
-                    page: 1,
-                  }))
-                }
-              >
-                <option value="">All statuses</option>
-                <option value="draft">Draft</option>
-                <option value="issued">Issued</option>
-                <option value="partial">Partial</option>
-                <option value="paid">Paid</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-              <select
-                aria-label="Filter by class"
-                className={`field-select md:col-span-4`}
-                value={filters.classId ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    classId: event.target.value || undefined,
-                    page: 1,
-                  }))
-                }
-              >
-                <option value="">All classes</option>
-                {(classesQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </section>
+              </FilterField>
+              <FilterField id="invoice-status-filter" label="Status" className="md:col-span-3">
+                <select
+                  id="invoice-status-filter"
+                  aria-label="Filter by status"
+                  className="field-select"
+                  value={filters.status ?? ''}
+                  onChange={(event) =>
+                    setFilters((current) => ({
+                      ...current,
+                      status: (event.target.value || undefined) as InvoiceStatus | undefined,
+                      page: 1,
+                    }))
+                  }
+                >
+                  <option value="">All statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="issued">Issued</option>
+                  <option value="partial">Partial</option>
+                  <option value="paid">Paid</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </FilterField>
+              <FilterField id="invoice-class-filter" label="Class" className="md:col-span-4">
+                <select
+                  id="invoice-class-filter"
+                  aria-label="Filter by class"
+                  className="field-select"
+                  value={filters.classId ?? ''}
+                  onChange={(event) =>
+                    setFilters((current) => ({
+                      ...current,
+                      classId: event.target.value || undefined,
+                      page: 1,
+                    }))
+                  }
+                >
+                  <option value="">All classes</option>
+                  {(classesQuery.data ?? []).map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+            </FiltersPanel>
 
             {invoicesQuery.isPending ? (
-              <div className="panel">
+              <div className="rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
                 <PageLoader compact />
               </div>
             ) : invoicesQuery.error ? (
-              <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center">
+              <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center shadow-sm">
                 <h2 className="font-semibold text-ink-950">Failed to load invoices</h2>
                 <p className="mt-2 text-sm text-ink-600">{invoicesQuery.error.message}</p>
               </section>
@@ -232,38 +253,18 @@ export function FeesPage() {
               </div>
             )}
 
-            {pagination && pagination.totalPages > 1 && (
-              <footer className="flex justify-between gap-3">
-                <p className="text-sm text-ink-700/70">
-                  Page {pagination.page} of {pagination.totalPages}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page <= 1}
-                    onClick={() =>
-                      setFilters((current) => ({ ...current, page: (current.page ?? 1) - 1 }))
-                    }
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page >= pagination.totalPages}
-                    onClick={() =>
-                      setFilters((current) => ({ ...current, page: (current.page ?? 1) + 1 }))
-                    }
-                  >
-                    Next
-                  </Button>
-                </div>
-              </footer>
+            {pagination && (
+              <ListPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                limit={pagination.limit}
+                onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+              />
             )}
           </>
         ) : structuresQuery.isPending ? (
-          <div className="panel">
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
             <PageLoader compact />
           </div>
         ) : structures.length === 0 ? (
@@ -277,7 +278,7 @@ export function FeesPage() {
             {structures.map((structure) => (
               <article
                 key={structure.id}
-                className="panel flex flex-wrap items-start justify-between gap-3 p-5"
+                className="flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-ink-100"
               >
                 <div>
                   <div className="mb-2 flex flex-wrap gap-2">
@@ -313,7 +314,7 @@ export function FeesPage() {
             ))}
           </div>
         )}
-      </div>
+      </PageShell>
 
       {creatingInvoice && <CreateInvoiceModal onClose={() => setCreatingInvoice(false)} />}
       {generating && <GenerateInvoicesModal onClose={() => setGenerating(false)} />}
@@ -410,7 +411,7 @@ function InvoiceRow({
     invoice.balance > 0;
 
   return (
-    <article className="panel p-5">
+    <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-ink-100">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <button type="button" className="min-w-0 flex-1 text-left" onClick={onOpen}>
           <div className="mb-2 flex flex-wrap gap-2">

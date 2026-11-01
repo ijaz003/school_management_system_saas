@@ -5,9 +5,10 @@ import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { PageHeader } from '@/components/ui/page-header';
+import { ListPagination } from '@/components/ui/list-pagination';
+import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
+import { PageShell } from '@/components/ui/page-shell';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import { StatCard } from '@/components/ui/stat-card';
 import { StaffFilters } from '../components/StaffFilters';
 import { StaffTable } from '../components/StaffTable';
 import { useDeleteStaff } from '../hooks/useDeleteStaff';
@@ -61,8 +62,7 @@ export function StaffListPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
+      <PageShell
           eyebrow="Administration"
           title="Staff"
           description="Manage teachers, accountants, and support staff."
@@ -71,27 +71,28 @@ export function StaffListPage() {
               <Plus className="h-4 w-4" aria-hidden="true" /> Add staff
             </Button>
           }
-        />
-
+      >
         {pagination && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Total staff" value={pagination.total} icon={Users} />
-            <StatCard
+          <MetricGrid>
+            <MetricCard icon={<Users className="h-4 w-4" aria-hidden="true" />} label="Total staff" value={pagination.total} tone="primary" />
+            <MetricCard
+              icon={<UserCheck className="h-4 w-4" aria-hidden="true" />}
               label="Active on this page"
               value={items.filter((item) => item.isActive).length}
-              icon={UserCheck}
+              tone="success"
             />
-            <StatCard
+            <MetricCard
+              icon={<GraduationCap className="h-4 w-4" aria-hidden="true" />}
               label="Teachers on this page"
               value={items.filter((item) => item.role === 'teacher').length}
-              icon={GraduationCap}
             />
-            <StatCard
+            <MetricCard
+              icon={<UserX className="h-4 w-4" aria-hidden="true" />}
               label="Inactive on this page"
               value={items.filter((item) => !item.isActive).length}
-              icon={UserX}
+              tone="warning"
             />
-          </div>
+          </MetricGrid>
         )}
 
         <StaffFilters value={filters} onChange={setFilters} />
@@ -125,7 +126,7 @@ export function StaffListPage() {
         {staffQuery.isPending ? (
           <TableSkeleton rows={6} />
         ) : staffQuery.error ? (
-          <section className="panel border-danger-100 p-8 text-center">
+          <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center shadow-sm">
             <h2 className="font-display font-semibold text-ink-950">Failed to load staff</h2>
             <p className="mt-2 text-sm text-ink-600">{staffQuery.error.message}</p>
             <Button
@@ -138,7 +139,7 @@ export function StaffListPage() {
             </Button>
           </section>
         ) : staffQuery.data ? (
-          <section className="panel overflow-hidden p-0">
+          <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
             <StaffTable
               staff={staffQuery.data.items}
               onEdit={(member) => navigate(`/settings/staff/${member.id}/edit`)}
@@ -146,41 +147,18 @@ export function StaffListPage() {
               onResetPassword={handleReset}
               busy={deleteStaff.isPending || resetPassword.isPending}
             />
-            {pagination && pagination.totalPages > 1 && (
-              <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 bg-ink-50 px-4 py-4 sm:px-5">
-                <p className="text-sm text-ink-500">
-                  Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-                  {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page <= 1}
-                    onClick={() =>
-                      setFilters((current) => ({ ...current, page: pagination.page - 1 }))
-                    }
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm text-ink-600">
-                    Page {pagination.page} of {pagination.totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page >= pagination.totalPages}
-                    onClick={() =>
-                      setFilters((current) => ({ ...current, page: pagination.page + 1 }))
-                    }
-                  >
-                    Next
-                  </Button>
-                </div>
-              </footer>
-            )}
           </section>
         ) : null}
+
+        {pagination && (
+          <ListPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+          />
+        )}
 
         <ConfirmDialog
           open={pendingAction !== null}
@@ -198,7 +176,7 @@ export function StaffListPage() {
           onClose={() => setPendingAction(null)}
           onConfirm={confirmPending}
         />
-      </div>
+      </PageShell>
     </AppLayout>
   );
 }

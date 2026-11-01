@@ -6,9 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/ui/page-header';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
+import { ListPagination } from '@/components/ui/list-pagination';
+import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
+import { PageShell } from '@/components/ui/page-shell';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import { StatCard } from '@/components/ui/stat-card';
+import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import type { TeacherFilters } from '../hooks/keys';
 import { useTeachers } from '../hooks/useTeachers';
 
@@ -21,8 +24,7 @@ export function TeachersListPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
+      <PageShell
           eyebrow="Academic"
           title="Teachers"
           description="Assign subject teachers and class teachers to sections. Create teacher accounts from Staff."
@@ -31,50 +33,59 @@ export function TeachersListPage() {
               Add via Staff
             </Button>
           }
-        />
-
+      >
         {pagination && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Total teachers" value={pagination.total} icon={Users} />
-            <StatCard label="On this page" value={items.length} icon={UserCheck} />
-            <StatCard
+          <MetricGrid>
+            <MetricCard icon={<Users className="h-4 w-4" aria-hidden="true" />} label="Total teachers" value={pagination.total} tone="primary" />
+            <MetricCard icon={<UserCheck className="h-4 w-4" aria-hidden="true" />} label="On this page" value={items.length} />
+            <MetricCard
+              icon={<BookOpen className="h-4 w-4" aria-hidden="true" />}
               label="With subjects"
               value={items.filter((item) => item.assignmentCount > 0).length}
-              icon={BookOpen}
+              tone="success"
             />
-            <StatCard
+            <MetricCard
+              icon={<GraduationCap className="h-4 w-4" aria-hidden="true" />}
               label="Class teachers"
               value={items.filter((item) => item.classTeacherCount > 0).length}
-              icon={GraduationCap}
+              tone="warning"
             />
-          </div>
+          </MetricGrid>
         )}
 
-        <section className="panel p-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-            <div className="relative md:col-span-8">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-                aria-hidden="true"
-              />
-              <Input
-                type="search"
-                aria-label="Search teachers"
-                placeholder="Search by name, email, or phone"
-                className="pl-10"
-                value={filters.search ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    search: event.target.value || undefined,
-                    page: 1,
-                  }))
-                }
-              />
-            </div>
+        <FiltersPanel
+          description="Search teachers by name, contact, or status."
+          pageLimit={filters.limit ?? 20}
+          onPageLimitChange={(limit) => setFilters((current) => ({ ...current, limit, page: 1 }))}
+          onClear={() => setFilters((current) => resetListFilters(current))}
+          clearDisabled={!hasActiveFilters(filters)}
+        >
+          <FilterField
+            id="teacher-search"
+            label="Search"
+            icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />}
+            className="md:col-span-8"
+          >
+            <Input
+              id="teacher-search"
+              type="search"
+              aria-label="Search teachers"
+              placeholder="Search by name, email, or phone"
+              value={filters.search ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  search: event.target.value || undefined,
+                  page: 1,
+                }))
+              }
+            />
+          </FilterField>
+          <FilterField id="teacher-status" label="Status" className="md:col-span-4">
             <select
+              id="teacher-status"
               aria-label="Filter by status"
-              className="field-select md:col-span-4"
+              className="field-select"
               value={filters.isActive === undefined ? '' : String(filters.isActive)}
               onChange={(event) =>
                 setFilters((current) => ({
@@ -89,13 +100,13 @@ export function TeachersListPage() {
               <option value="true">Active</option>
               <option value="false">Inactive</option>
             </select>
-          </div>
-        </section>
+          </FilterField>
+        </FiltersPanel>
 
         {teachersQuery.isPending ? (
           <TableSkeleton rows={6} />
         ) : teachersQuery.error ? (
-          <section className="panel border-danger-100 p-8 text-center">
+          <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center shadow-sm">
             <h2 className="font-display font-semibold text-ink-950">Failed to load teachers</h2>
             <p className="mt-2 text-sm text-ink-600">{teachersQuery.error.message}</p>
             <Button
@@ -116,7 +127,7 @@ export function TeachersListPage() {
           />
         ) : (
           <>
-            <div className="panel overflow-hidden p-0">
+            <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
                   <thead className="sticky top-0 border-b border-ink-100 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
@@ -161,38 +172,18 @@ export function TeachersListPage() {
               </div>
             </div>
 
-            {pagination && pagination.totalPages > 1 && (
-              <footer className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-ink-500">
-                  Page {pagination.page} of {pagination.totalPages}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page <= 1}
-                    onClick={() =>
-                      setFilters((current) => ({ ...current, page: (current.page ?? 1) - 1 }))
-                    }
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page >= pagination.totalPages}
-                    onClick={() =>
-                      setFilters((current) => ({ ...current, page: (current.page ?? 1) + 1 }))
-                    }
-                  >
-                    Next
-                  </Button>
-                </div>
-              </footer>
+            {pagination && (
+              <ListPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                limit={pagination.limit}
+                onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+              />
             )}
           </>
         )}
-      </div>
+      </PageShell>
     </AppLayout>
   );
 }

@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { Megaphone, Plus, Send, Trash2 } from 'lucide-react';
+import { Megaphone, Plus, Search, Send, Trash2 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
+import { ListPagination } from '@/components/ui/list-pagination';
 import { Modal } from '@/components/ui/modal';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
+import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import {
   useCreateNotice,
   useDeleteNotice,
@@ -33,8 +36,7 @@ export function NoticesListPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
+      <PageShell
           eyebrow="Communication"
           title="Notices"
           description="Create drafts and publish school announcements."
@@ -45,11 +47,23 @@ export function NoticesListPage() {
               </Button>
             ) : undefined
           }
-        />
+      >
 
-        <section className="panel grid grid-cols-1 gap-3 p-4 md:grid-cols-12">
-          <div className="md:col-span-6">
+        <FiltersPanel
+          description="Find notices by keyword, status, or audience."
+          pageLimit={filters.limit ?? 20}
+          onPageLimitChange={(limit) => setFilters((current) => ({ ...current, limit, page: 1 }))}
+          onClear={() => setFilters((current) => resetListFilters(current))}
+          clearDisabled={!hasActiveFilters(filters)}
+        >
+          <FilterField
+            id="notice-search"
+            label="Search"
+            icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />}
+            className="md:col-span-6"
+          >
             <Input
+              id="notice-search"
               type="search"
               aria-label="Search notices"
               placeholder="Search notices..."
@@ -62,49 +76,55 @@ export function NoticesListPage() {
                 }))
               }
             />
-          </div>
-          <select
-            aria-label="Filter by status"
-            className="field-select md:col-span-3"
-            value={filters.status ?? ''}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                status: (event.target.value || undefined) as NoticeStatus | undefined,
-                page: 1,
-              }))
-            }
-          >
-            <option value="">All statuses</option>
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-          </select>
-          <select
-            aria-label="Filter by audience"
-            className="field-select md:col-span-3"
-            value={filters.audience ?? ''}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                audience: (event.target.value || undefined) as NoticeAudience | undefined,
-                page: 1,
-              }))
-            }
-          >
-            <option value="">All audiences</option>
-            <option value="all">Everyone</option>
-            <option value="staff">Staff</option>
-            <option value="students">Students</option>
-            <option value="parents">Parents</option>
-          </select>
-        </section>
+          </FilterField>
+          <FilterField id="notice-status-filter" label="Status" className="md:col-span-3">
+            <select
+              id="notice-status-filter"
+              aria-label="Filter by status"
+              className="field-select"
+              value={filters.status ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  status: (event.target.value || undefined) as NoticeStatus | undefined,
+                  page: 1,
+                }))
+              }
+            >
+              <option value="">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </FilterField>
+          <FilterField id="notice-audience-filter" label="Audience" className="md:col-span-3">
+            <select
+              id="notice-audience-filter"
+              aria-label="Filter by audience"
+              className="field-select"
+              value={filters.audience ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  audience: (event.target.value || undefined) as NoticeAudience | undefined,
+                  page: 1,
+                }))
+              }
+            >
+              <option value="">All audiences</option>
+              <option value="all">Everyone</option>
+              <option value="staff">Staff</option>
+              <option value="students">Students</option>
+              <option value="parents">Parents</option>
+            </select>
+          </FilterField>
+        </FiltersPanel>
 
         {noticesQuery.isPending ? (
-          <div className="panel">
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
             <PageLoader compact />
           </div>
         ) : noticesQuery.error ? (
-          <section className="panel border-danger-100 p-8 text-center">
+          <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center shadow-sm">
             <h2 className="font-display font-semibold text-ink-950">Failed to load notices</h2>
             <p className="mt-2 text-sm text-ink-600">{noticesQuery.error.message}</p>
           </section>
@@ -135,36 +155,16 @@ export function NoticesListPage() {
           </div>
         )}
 
-        {pagination && pagination.totalPages > 1 && (
-          <footer className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-ink-500">
-              Page {pagination.page} of {pagination.totalPages}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pagination.page <= 1}
-                onClick={() =>
-                  setFilters((current) => ({ ...current, page: (current.page ?? 1) - 1 }))
-                }
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pagination.page >= pagination.totalPages}
-                onClick={() =>
-                  setFilters((current) => ({ ...current, page: (current.page ?? 1) + 1 }))
-                }
-              >
-                Next
-              </Button>
-            </div>
-          </footer>
+        {pagination && (
+          <ListPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+          />
         )}
-      </div>
+      </PageShell>
 
       {creating && <CreateNoticeModal onClose={() => setCreating(false)} />}
 
@@ -196,7 +196,7 @@ function NoticeCard({
   onDelete: () => void;
 }) {
   return (
-    <article className="panel p-4 sm:p-5">
+    <article className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-ink-100 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap gap-2">

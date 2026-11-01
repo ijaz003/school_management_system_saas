@@ -5,12 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
+import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { Modal } from '@/components/ui/modal';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import { StatCard } from '@/components/ui/stat-card';
 import { usePermission } from '@/hooks/usePermission';
+import { hasActiveFilters } from '@/lib/list-filters';
 import { SubjectForm } from '../components/SubjectForm';
 import { useDeleteSubject } from '../hooks/useDeleteSubject';
 import { useSubjects, type Subject } from '../hooks/useSubjects';
@@ -32,6 +34,9 @@ export function SubjectsListPage() {
     (subject) => subject.usedInClasses + subject.usedInSections > 0,
   ).length;
 
+  const filtersActive = hasActiveFilters({ search });
+  const metricValue = (value: number) => (query.isPending ? '—' : value);
+
   const handleDelete = (subject: Subject) => {
     if (subject.usedInClasses + subject.usedInSections > 0) return;
     setToDelete(subject);
@@ -39,47 +44,67 @@ export function SubjectsListPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
-          eyebrow="Academic"
-          title="Subjects"
-          description="Manage the subject catalogue for your school."
-          actions={
-            can('classes.create') ? (
-              <Button onClick={() => setCreating(true)}>
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Add subject
-              </Button>
-            ) : undefined
-          }
-        />
+      <PageShell
+        eyebrow="Academic"
+        title="Subjects"
+        description="Manage the subject catalogue for your school."
+        actions={
+          can('classes.create') ? (
+            <Button onClick={() => setCreating(true)}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add subject
+            </Button>
+          ) : undefined
+        }
+      >
+        <MetricGrid>
+          <MetricCard
+            icon={<BookOpen className="h-4 w-4" aria-hidden />}
+            label="Total subjects"
+            value={metricValue(allSubjects.length)}
+            tone="primary"
+          />
+          <MetricCard
+            icon={<Library className="h-4 w-4" aria-hidden />}
+            label="Core subjects"
+            value={metricValue(coreCount)}
+            tone="neutral"
+          />
+          <MetricCard
+            icon={<Sparkles className="h-4 w-4" aria-hidden />}
+            label="Elective subjects"
+            value={metricValue(electiveCount)}
+            tone="warning"
+          />
+          <MetricCard
+            icon={<CheckCircle2 className="h-4 w-4" aria-hidden />}
+            label="In use"
+            value={metricValue(inUseCount)}
+            tone="success"
+          />
+        </MetricGrid>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total subjects" value={allSubjects.length} icon={BookOpen} loading={query.isPending} />
-          <StatCard label="Core subjects" value={coreCount} icon={Library} loading={query.isPending} />
-          <StatCard label="Elective subjects" value={electiveCount} icon={Sparkles} loading={query.isPending} />
-          <StatCard label="In use" value={inUseCount} icon={CheckCircle2} loading={query.isPending} />
-        </div>
-
-        <section className="panel p-4">
-          <label htmlFor="subject-search" className="sr-only">
-            Search subjects
-          </label>
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-              aria-hidden="true"
-            />
+        <FiltersPanel
+          description="Find subjects by name or code."
+          onClear={() => setSearch('')}
+          clearDisabled={!filtersActive}
+        >
+          <FilterField
+            id="subject-search"
+            label="Search"
+            icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-6"
+          >
             <Input
               id="subject-search"
               type="search"
-              className="pl-10"
+              aria-label="Search subjects"
               placeholder="Search by subject name or code..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-          </div>
-        </section>
+          </FilterField>
+        </FiltersPanel>
 
         {query.isPending ? (
           <TableSkeleton rows={6} />
@@ -193,7 +218,7 @@ export function SubjectsListPage() {
             remove.mutate(toDelete.id, { onSettled: () => setToDelete(null) });
           }}
         />
-      </div>
+      </PageShell>
     </AppLayout>
   );
 }

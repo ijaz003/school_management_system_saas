@@ -1,13 +1,24 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarCheck, CheckCheck, ScanLine, Users } from 'lucide-react';
+import {
+  CalendarCheck,
+  CalendarX,
+  CheckCheck,
+  CheckCircle2,
+  Clock,
+  HelpCircle,
+  ScanLine,
+  Users,
+  XCircle,
+} from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/ui/page-header';
+import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
+import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
-import { StatCard } from '@/components/ui/stat-card';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useSections } from '@/features/school/classes/hooks/useSections';
 import { usePermission } from '@/hooks/usePermission';
@@ -105,8 +116,7 @@ export function AttendancePage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
+      <PageShell
           eyebrow="Academic"
           title="Attendance"
           description="Mark daily attendance by class section."
@@ -127,13 +137,17 @@ export function AttendancePage() {
               )}
             </>
           }
-        />
-
-        <section className="panel grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 md:grid-cols-12">
-          <div className="md:col-span-4">
-            <label htmlFor="att-class" className="mb-1.5 block text-sm font-medium text-ink-800">
-              Class
-            </label>
+      >
+        <FiltersPanel
+          description="Pick a class, section, and date to load the attendance sheet."
+          onClear={() => {
+            setClassId('');
+            setSectionId('');
+            setDate(today());
+          }}
+          clearDisabled={!classId && !sectionId && date === today()}
+        >
+          <FilterField id="att-class" label="Class" className="md:col-span-4">
             <select
               id="att-class"
               className="field-select"
@@ -147,11 +161,8 @@ export function AttendancePage() {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="md:col-span-4">
-            <label htmlFor="att-section" className="mb-1.5 block text-sm font-medium text-ink-800">
-              Section
-            </label>
+          </FilterField>
+          <FilterField id="att-section" label="Section" className="md:col-span-4">
             <select
               id="att-section"
               className="field-select"
@@ -166,17 +177,16 @@ export function AttendancePage() {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="sm:col-span-2 md:col-span-4">
+          </FilterField>
+          <FilterField id="att-date" label="Date" className="md:col-span-4">
             <Input
               id="att-date"
-              label="Date"
               type="date"
               value={date}
               onChange={(event) => setDate(event.target.value)}
             />
-          </div>
-        </section>
+          </FilterField>
+        </FiltersPanel>
 
         {!sectionId ? (
           <EmptyState
@@ -185,11 +195,11 @@ export function AttendancePage() {
             description="Select class and section to load the attendance sheet."
           />
         ) : sheetQuery.isPending ? (
-          <div className="panel">
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
             <PageLoader compact />
           </div>
         ) : sheetQuery.error ? (
-          <section className="panel border-danger-100 p-8 text-center">
+          <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center shadow-sm">
             <h2 className="font-display font-semibold text-ink-950">Failed to load attendance</h2>
             <p className="mt-2 text-sm text-ink-600">{sheetQuery.error.message}</p>
             <Button
@@ -209,13 +219,13 @@ export function AttendancePage() {
           />
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              <StatCard label="Present" value={counts.present} />
-              <StatCard label="Absent" value={counts.absent} />
-              <StatCard label="Late" value={counts.late} />
-              <StatCard label="Leave" value={counts.leave} />
-              <StatCard label="Unmarked" value={counts.unmarked} className="col-span-2 sm:col-span-1" />
-            </div>
+            <MetricGrid>
+              <MetricCard icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />} label="Present" value={counts.present} tone="success" />
+              <MetricCard icon={<XCircle className="h-4 w-4" aria-hidden="true" />} label="Absent" value={counts.absent} tone="danger" />
+              <MetricCard icon={<Clock className="h-4 w-4" aria-hidden="true" />} label="Late" value={counts.late} tone="warning" />
+              <MetricCard icon={<CalendarX className="h-4 w-4" aria-hidden="true" />} label="Leave" value={counts.leave} tone="primary" />
+              <MetricCard icon={<HelpCircle className="h-4 w-4" aria-hidden="true" />} label="Unmarked" value={counts.unmarked} />
+            </MetricGrid>
 
             {canMark && (
               <div className="flex flex-wrap items-center gap-2">
@@ -234,7 +244,7 @@ export function AttendancePage() {
               </div>
             )}
 
-            <div className="panel overflow-hidden p-0">
+            <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
                   <thead className="sticky top-0 border-b border-ink-100 bg-ink-50 text-xs uppercase tracking-wide text-ink-500">
@@ -306,7 +316,7 @@ export function AttendancePage() {
             )}
           </>
         )}
-      </div>
+      </PageShell>
     </AppLayout>
   );
 }

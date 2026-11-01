@@ -3,11 +3,13 @@ import { BookOpen, Plus, Search } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
+import { hasActiveFilters } from '@/lib/list-filters';
 import { ClassCard } from '../components/ClassCard';
 import { ClassForm } from '../components/ClassForm';
 import { useClasses } from '../hooks/useClasses';
@@ -19,6 +21,7 @@ export function ClassesListPage() {
   const query = useClasses(search);
   const classes = query.data ?? [];
   const canCreate = can('classes.create');
+  const filtersActive = hasActiveFilters({ search });
 
   const addButton = (
     <Button onClick={() => setCreating(true)}>
@@ -29,33 +32,33 @@ export function ClassesListPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
-          eyebrow="Academic"
-          title="Classes"
-          description="Organize grade levels, subjects, and sections."
-          actions={canCreate ? addButton : undefined}
-        />
-
-        <section className="panel p-4">
-          <label htmlFor="class-search" className="sr-only">
-            Search classes
-          </label>
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400"
-              aria-hidden="true"
-            />
+      <PageShell
+        eyebrow="Academic"
+        title="Classes"
+        description="Organize grade levels, subjects, and sections."
+        actions={canCreate ? addButton : undefined}
+      >
+        <FiltersPanel
+          description="Find classes by name."
+          onClear={() => setSearch('')}
+          clearDisabled={!filtersActive}
+        >
+          <FilterField
+            id="class-search"
+            label="Search"
+            icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-6"
+          >
             <Input
               id="class-search"
               type="search"
-              className="pl-10"
+              aria-label="Search classes"
               placeholder="Search classes..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-          </div>
-        </section>
+          </FilterField>
+        </FiltersPanel>
 
         {query.isPending ? (
           <div className="panel">
@@ -103,7 +106,7 @@ export function ClassesListPage() {
             <ClassForm onSuccess={() => setCreating(false)} onCancel={() => setCreating(false)} />
           </Modal>
         )}
-      </div>
+      </PageShell>
     </AppLayout>
   );
 }

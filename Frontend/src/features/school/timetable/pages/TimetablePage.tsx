@@ -7,7 +7,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
-import { PageHeader } from '@/components/ui/page-header';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
+import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
@@ -82,8 +83,7 @@ export function TimetablePage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
+      <PageShell
           eyebrow="Academic"
           title="Timetable"
           description="Build weekly class schedules by section, period, and day."
@@ -94,8 +94,7 @@ export function TimetablePage() {
               </Button>
             ) : undefined
           }
-        />
-
+      >
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -117,11 +116,15 @@ export function TimetablePage() {
 
         {tab === 'grid' ? (
           <>
-            <section className="panel grid grid-cols-1 gap-3 p-4 md:grid-cols-2">
-              <div>
-                <label htmlFor="tt-class" className="mb-1.5 block text-sm font-medium text-ink-800">
-                  Class
-                </label>
+            <FiltersPanel
+              description="Choose a class and section to view its weekly timetable."
+              onClear={() => {
+                setClassId('');
+                setSectionId('');
+              }}
+              clearDisabled={!classId && !sectionId}
+            >
+              <FilterField id="tt-class" label="Class" className="md:col-span-6">
                 <select
                   id="tt-class"
                   className="field-select"
@@ -138,11 +141,8 @@ export function TimetablePage() {
                     </option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label htmlFor="tt-section" className="mb-1.5 block text-sm font-medium text-ink-800">
-                  Section
-                </label>
+              </FilterField>
+              <FilterField id="tt-section" label="Section" className="md:col-span-6">
                 <select
                   id="tt-section"
                   className="field-select"
@@ -157,8 +157,8 @@ export function TimetablePage() {
                     </option>
                   ))}
                 </select>
-              </div>
-            </section>
+              </FilterField>
+            </FiltersPanel>
 
             {!sectionId ? (
               <EmptyState
@@ -167,16 +167,16 @@ export function TimetablePage() {
                 description="Choose a class and section to view or edit its weekly timetable."
               />
             ) : gridQuery.isPending ? (
-              <div className="panel">
+              <div className="rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
                 <PageLoader compact />
               </div>
             ) : gridQuery.error ? (
-              <section className="panel border-danger-100 p-8 text-center">
+              <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center shadow-sm">
                 <h2 className="font-display font-semibold text-ink-950">Failed to load timetable</h2>
                 <p className="mt-2 text-sm text-ink-600">{gridQuery.error.message}</p>
               </section>
             ) : (
-              <section className="panel overflow-x-auto p-0">
+              <section className="overflow-x-auto rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
                 <table className="min-w-[720px] w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-ink-100 bg-ink-50/80">
@@ -263,11 +263,11 @@ export function TimetablePage() {
             )}
           </>
         ) : periodsQuery.isPending ? (
-          <div className="panel">
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
             <PageLoader compact />
           </div>
         ) : periodsQuery.error ? (
-          <section className="panel border-danger-100 p-8 text-center">
+          <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center shadow-sm">
             <h2 className="font-display font-semibold text-ink-950">Failed to load periods</h2>
             <p className="mt-2 text-sm text-ink-600">{periodsQuery.error.message}</p>
           </section>
@@ -285,7 +285,7 @@ export function TimetablePage() {
             }
           />
         ) : (
-          <section className="panel overflow-hidden p-0">
+          <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
             <ul className="divide-y divide-ink-100">
               {periods.map((period) => (
                 <li
@@ -330,7 +330,7 @@ export function TimetablePage() {
             </ul>
           </section>
         )}
-      </div>
+      </PageShell>
 
       {editingSlot && sectionId ? (
         <SlotModal

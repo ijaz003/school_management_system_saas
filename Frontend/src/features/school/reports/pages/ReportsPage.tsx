@@ -4,7 +4,8 @@ import { BarChart3, ClipboardList, DollarSign } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageHeader } from '@/components/ui/page-header';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
+import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { StatCard } from '@/components/ui/stat-card';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
@@ -59,6 +60,25 @@ export function ReportsPage() {
   const [sectionId, setSectionId] = useState('');
   const [examId, setExamId] = useState('');
 
+  const [defaultFrom] = useState(monthStart);
+  const [defaultTo] = useState(today);
+  const dateFiltersActive =
+    (tab === 'fees' || tab === 'attendance') &&
+    (from !== defaultFrom || to !== defaultTo);
+  const filtersActive =
+    dateFiltersActive ||
+    Boolean(classId) ||
+    (tab === 'attendance' && Boolean(sectionId)) ||
+    (tab === 'academic' && Boolean(examId));
+
+  const clearFilters = () => {
+    setFrom(defaultFrom);
+    setTo(defaultTo);
+    setClassId('');
+    setSectionId('');
+    setExamId('');
+  };
+
   const classesQuery = useClasses();
   const sectionsQuery = useSections(classId);
   const examsQuery = useExams(
@@ -105,13 +125,11 @@ export function ReportsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
-          eyebrow="Insights"
-          title="Reports"
-          description="Fees, attendance, and academic summaries for your school."
-        />
-
+      <PageShell
+        eyebrow="Insights"
+        title="Reports"
+        description="Fees, attendance, and academic summaries for your school."
+      >
         <div className="flex flex-wrap gap-2 border-b border-ink-200">
           {canFees && (
             <TabButton active={tab === 'fees'} onClick={() => setTab('fees')}>
@@ -130,33 +148,37 @@ export function ReportsPage() {
           )}
         </div>
 
-        <section className="panel grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <FiltersPanel
+          description="Narrow the report by date range, class, or exam."
+          onClear={clearFilters}
+          clearDisabled={!filtersActive}
+        >
           {(tab === 'fees' || tab === 'attendance') && (
             <>
-              <label className="block text-sm">
-                <span className="mb-1.5 block font-medium text-ink-800">From</span>
+              <FilterField id="report-from" label="From" className="md:col-span-3">
                 <input
+                  id="report-from"
                   type="date"
-                  className="field-select"
+                  className="field-select w-full text-[13px]"
                   value={from}
                   onChange={(event) => setFrom(event.target.value)}
                 />
-              </label>
-              <label className="block text-sm">
-                <span className="mb-1.5 block font-medium text-ink-800">To</span>
+              </FilterField>
+              <FilterField id="report-to" label="To" className="md:col-span-3">
                 <input
+                  id="report-to"
                   type="date"
-                  className="field-select"
+                  className="field-select w-full text-[13px]"
                   value={to}
                   onChange={(event) => setTo(event.target.value)}
                 />
-              </label>
+              </FilterField>
             </>
           )}
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-ink-800">Class</span>
+          <FilterField id="report-class" label="Class" className="md:col-span-3">
             <select
-              className="field-select"
+              id="report-class"
+              className="field-select w-full text-[13px]"
               value={classId}
               onChange={(event) => {
                 setClassId(event.target.value);
@@ -171,12 +193,12 @@ export function ReportsPage() {
                 </option>
               ))}
             </select>
-          </label>
+          </FilterField>
           {tab === 'attendance' && (
-            <label className="block text-sm">
-              <span className="mb-1.5 block font-medium text-ink-800">Section</span>
+            <FilterField id="report-section" label="Section" className="md:col-span-3">
               <select
-                className="field-select"
+                id="report-section"
+                className="field-select w-full text-[13px]"
                 value={sectionId}
                 disabled={!classId}
                 onChange={(event) => setSectionId(event.target.value)}
@@ -188,13 +210,13 @@ export function ReportsPage() {
                   </option>
                 ))}
               </select>
-            </label>
+            </FilterField>
           )}
           {tab === 'academic' && (
-            <label className="block text-sm sm:col-span-2 lg:col-span-2">
-              <span className="mb-1.5 block font-medium text-ink-800">Exam</span>
+            <FilterField id="report-exam" label="Exam" className="md:col-span-6">
               <select
-                className="field-select"
+                id="report-exam"
+                className="field-select w-full text-[13px]"
                 value={examId}
                 onChange={(event) => setExamId(event.target.value)}
               >
@@ -205,9 +227,9 @@ export function ReportsPage() {
                   </option>
                 ))}
               </select>
-            </label>
+            </FilterField>
           )}
-        </section>
+        </FiltersPanel>
 
         {tab === 'fees' && (
           <FeesReportView query={feesQuery} />
@@ -218,7 +240,7 @@ export function ReportsPage() {
         {tab === 'academic' && (
           <AcademicReportView query={academicQuery} />
         )}
-      </div>
+      </PageShell>
     </AppLayout>
   );
 }

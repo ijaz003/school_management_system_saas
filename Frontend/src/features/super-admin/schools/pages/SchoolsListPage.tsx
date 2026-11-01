@@ -3,9 +3,9 @@ import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/ui/page-header';
+import { ListPagination } from '@/components/ui/list-pagination';
+import { PageShell } from '@/components/ui/page-shell';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import { Pagination } from '../components/Pagination';
 import { SchoolFilters } from '../components/SchoolFilters';
 import { SchoolsTable } from '../components/SchoolsTable';
 import { useSchools } from '../hooks/useSchools';
@@ -18,8 +18,7 @@ export function SchoolsListPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
+      <PageShell
           eyebrow="Platform"
           title="Schools management"
           description="Manage schools on your platform"
@@ -28,14 +27,14 @@ export function SchoolsListPage() {
               <Plus className="h-4 w-4" aria-hidden="true" /> Add school
             </Button>
           }
-        />
+      >
 
         <SchoolFilters value={filters} onChange={setFilters} />
 
         {isPending ? (
           <TableSkeleton rows={6} />
         ) : error ? (
-          <section className="panel border-danger-100 p-8 text-center">
+          <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center shadow-sm">
             <h2 className="font-display text-lg font-semibold text-ink-950">Could not load schools</h2>
             <p className="mt-2 text-sm text-ink-600">{error.message}</p>
             <Button
@@ -48,20 +47,21 @@ export function SchoolsListPage() {
             </Button>
           </section>
         ) : data ? (
-          <section className="panel overflow-hidden p-0">
+          <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
             <SchoolsTable schools={data.items} />
-            {data.pagination.totalPages > 1 && (
-              <Pagination
-                page={data.pagination.page}
-                totalPages={data.pagination.totalPages}
-                total={data.pagination.total}
-                limit={data.pagination.limit}
-                onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
-              />
-            )}
           </section>
         ) : null}
-      </div>
+
+        {data && (
+          <ListPagination
+            page={data.pagination.page}
+            totalPages={data.pagination.totalPages}
+            total={data.pagination.total}
+            limit={data.pagination.limit}
+            onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+          />
+        )}
+      </PageShell>
     </AppLayout>
   );
 }

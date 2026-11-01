@@ -1,15 +1,19 @@
 import { useState } from 'react';
-import { Pencil, Plus, Receipt, Trash2, Wallet } from 'lucide-react';
+import { Ban, CheckCircle2, Coins, Pencil, Plus, Receipt, Search, Trash2, Wallet } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
+import { ListPagination } from '@/components/ui/list-pagination';
+import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { Modal } from '@/components/ui/modal';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
+import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import {
   useCreateExpense,
   useCreateExpenseCategory,
@@ -70,8 +74,7 @@ export function ExpensesPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <PageHeader
+      <PageShell
           eyebrow="Finance"
           title="Expenses"
           description="Track school spending by category, vendor, and payment method."
@@ -86,8 +89,7 @@ export function ExpensesPage() {
               </Button>
             ) : undefined
           }
-        />
-
+      >
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -110,35 +112,45 @@ export function ExpensesPage() {
         {tab === 'expenses' ? (
           <>
             {summary ? (
-              <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="panel p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
-                    Recorded total
-                  </p>
-                  <p className="mt-1 font-display text-2xl font-semibold text-ink-950">
-                    {formatMoney(summary.totalAmount)}
-                  </p>
-                </div>
-                <div className="panel p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
-                    Recorded
-                  </p>
-                  <p className="mt-1 font-display text-2xl font-semibold text-ink-950">
-                    {summary.recordedCount}
-                  </p>
-                </div>
-                <div className="panel p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-ink-400">Voided</p>
-                  <p className="mt-1 font-display text-2xl font-semibold text-ink-950">
-                    {summary.voidCount}
-                  </p>
-                </div>
-              </section>
+              <MetricGrid>
+                <MetricCard
+                  icon={<Coins className="h-4 w-4" aria-hidden="true" />}
+                  label="Recorded total"
+                  value={formatMoney(summary.totalAmount)}
+                  tone="primary"
+                />
+                <MetricCard
+                  icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+                  label="Recorded"
+                  value={summary.recordedCount}
+                  tone="success"
+                />
+                <MetricCard
+                  icon={<Ban className="h-4 w-4" aria-hidden="true" />}
+                  label="Voided"
+                  value={summary.voidCount}
+                  tone="neutral"
+                />
+              </MetricGrid>
             ) : null}
 
-            <section className="panel grid grid-cols-1 gap-3 p-4 md:grid-cols-12">
-              <div className="md:col-span-4">
+            <FiltersPanel
+              description="Filter by category, payment method, status, or date range."
+              pageLimit={filters.limit ?? 20}
+              onPageLimitChange={(limit) =>
+                setFilters((current) => ({ ...current, limit, page: 1 }))
+              }
+              onClear={() => setFilters((current) => resetListFilters(current))}
+              clearDisabled={!hasActiveFilters(filters)}
+            >
+              <FilterField
+                id="expense-search"
+                label="Search"
+                icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />}
+                className="md:col-span-6"
+              >
                 <Input
+                  id="expense-search"
                   type="search"
                   aria-label="Search expenses"
                   placeholder="Search title, vendor, reference..."
@@ -151,65 +163,75 @@ export function ExpensesPage() {
                     }))
                   }
                 />
-              </div>
-              <select
-                aria-label="Filter by category"
-                className="field-select md:col-span-2"
-                value={filters.categoryId ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    categoryId: event.target.value || undefined,
-                    page: 1,
-                  }))
-                }
-              >
-                <option value="">All categories</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label="Filter by payment method"
-                className="field-select md:col-span-2"
-                value={filters.paymentMethod ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    paymentMethod: (event.target.value || undefined) as
-                      | ExpensePaymentMethod
-                      | undefined,
-                    page: 1,
-                  }))
-                }
-              >
-                <option value="">All methods</option>
-                <option value="cash">Cash</option>
-                <option value="bank">Bank</option>
-                <option value="cheque">Cheque</option>
-                <option value="online">Online</option>
-                <option value="other">Other</option>
-              </select>
-              <select
-                aria-label="Filter by status"
-                className="field-select md:col-span-2"
-                value={filters.status ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    status: (event.target.value || undefined) as ExpenseStatus | undefined,
-                    page: 1,
-                  }))
-                }
-              >
-                <option value="">All statuses</option>
-                <option value="recorded">Recorded</option>
-                <option value="void">Void</option>
-              </select>
-              <div className="md:col-span-1">
+              </FilterField>
+              <FilterField id="expense-category-filter" label="Category" className="md:col-span-3">
+                <select
+                  id="expense-category-filter"
+                  aria-label="Filter by category"
+                  className="field-select"
+                  value={filters.categoryId ?? ''}
+                  onChange={(event) =>
+                    setFilters((current) => ({
+                      ...current,
+                      categoryId: event.target.value || undefined,
+                      page: 1,
+                    }))
+                  }
+                >
+                  <option value="">All categories</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+              <FilterField id="expense-method-filter" label="Method" className="md:col-span-3">
+                <select
+                  id="expense-method-filter"
+                  aria-label="Filter by payment method"
+                  className="field-select"
+                  value={filters.paymentMethod ?? ''}
+                  onChange={(event) =>
+                    setFilters((current) => ({
+                      ...current,
+                      paymentMethod: (event.target.value || undefined) as
+                        | ExpensePaymentMethod
+                        | undefined,
+                      page: 1,
+                    }))
+                  }
+                >
+                  <option value="">All methods</option>
+                  <option value="cash">Cash</option>
+                  <option value="bank">Bank</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="online">Online</option>
+                  <option value="other">Other</option>
+                </select>
+              </FilterField>
+              <FilterField id="expense-status-filter" label="Status" className="md:col-span-4">
+                <select
+                  id="expense-status-filter"
+                  aria-label="Filter by status"
+                  className="field-select"
+                  value={filters.status ?? ''}
+                  onChange={(event) =>
+                    setFilters((current) => ({
+                      ...current,
+                      status: (event.target.value || undefined) as ExpenseStatus | undefined,
+                      page: 1,
+                    }))
+                  }
+                >
+                  <option value="">All statuses</option>
+                  <option value="recorded">Recorded</option>
+                  <option value="void">Void</option>
+                </select>
+              </FilterField>
+              <FilterField id="expense-from" label="From" className="md:col-span-4">
                 <Input
+                  id="expense-from"
                   type="date"
                   aria-label="From date"
                   value={filters.fromDate ?? ''}
@@ -221,9 +243,10 @@ export function ExpensesPage() {
                     }))
                   }
                 />
-              </div>
-              <div className="md:col-span-1">
+              </FilterField>
+              <FilterField id="expense-to" label="To" className="md:col-span-4">
                 <Input
+                  id="expense-to"
                   type="date"
                   aria-label="To date"
                   value={filters.toDate ?? ''}
@@ -235,15 +258,15 @@ export function ExpensesPage() {
                     }))
                   }
                 />
-              </div>
-            </section>
+              </FilterField>
+            </FiltersPanel>
 
             {expensesQuery.isPending ? (
-              <div className="panel">
+              <div className="rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
                 <PageLoader compact />
               </div>
             ) : expensesQuery.error ? (
-              <section className="panel border-danger-100 p-8 text-center">
+              <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center shadow-sm">
                 <h2 className="font-display font-semibold text-ink-950">Failed to load expenses</h2>
                 <p className="mt-2 text-sm text-ink-600">{expensesQuery.error.message}</p>
               </section>
@@ -261,7 +284,7 @@ export function ExpensesPage() {
                 }
               />
             ) : (
-              <section className="panel overflow-hidden p-0">
+              <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
                 <ul className="divide-y divide-ink-100">
                   {items.map((expense) => (
                     <li
@@ -342,50 +365,24 @@ export function ExpensesPage() {
               </section>
             )}
 
-            {pagination && pagination.totalPages > 1 ? (
-              <footer className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-ink-500">
-                  Page {pagination.page} of {pagination.totalPages}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page <= 1}
-                    onClick={() =>
-                      setFilters((current) => ({
-                        ...current,
-                        page: (current.page ?? 1) - 1,
-                      }))
-                    }
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page >= pagination.totalPages}
-                    onClick={() =>
-                      setFilters((current) => ({
-                        ...current,
-                        page: (current.page ?? 1) + 1,
-                      }))
-                    }
-                  >
-                    Next
-                  </Button>
-                </div>
-              </footer>
-            ) : null}
+            {pagination && (
+              <ListPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                limit={pagination.limit}
+                onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+              />
+            )}
           </>
         ) : (
           <>
             {categoriesQuery.isPending ? (
-              <div className="panel">
+              <div className="rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
                 <PageLoader compact />
               </div>
             ) : categoriesQuery.error ? (
-              <section className="panel border-danger-100 p-8 text-center">
+              <section className="rounded-2xl border border-danger-100 bg-white p-8 text-center shadow-sm">
                 <h2 className="font-display font-semibold text-ink-950">
                   Failed to load categories
                 </h2>
@@ -405,7 +402,7 @@ export function ExpensesPage() {
                 }
               />
             ) : (
-              <section className="panel overflow-hidden p-0">
+              <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-ink-100">
                 <ul className="divide-y divide-ink-100">
                   {categories.map((category) => (
                     <li
@@ -453,7 +450,7 @@ export function ExpensesPage() {
             )}
           </>
         )}
-      </div>
+      </PageShell>
 
       {creating ? (
         <ExpenseFormModal

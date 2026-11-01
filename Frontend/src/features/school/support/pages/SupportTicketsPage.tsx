@@ -3,7 +3,6 @@ import {
   LifeBuoy,
   Plus,
   Search,
-  Filter,
   CircleDot,
   Clock,
   CheckCircle2,
@@ -22,10 +21,14 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
+import { ListPagination } from '@/components/ui/list-pagination';
+import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { Modal } from '@/components/ui/modal';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { usePermission } from '@/hooks/usePermission';
+import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import {
   formatCategory,
   formatPriority,
@@ -94,9 +97,10 @@ export function SupportTicketsPage({ scope }: { scope: Scope }) {
     return { open, inProgress, resolved, total: items.length };
   }, [items]);
 
+  const filtersActive = hasActiveFilters(filters);
+
   return (
     <AppLayout>
-      {/* embedded utilities — no external CSS needed */}
       <style>{`
         @keyframes panel-in {
           from { opacity: 0; transform: translateY(4px); }
@@ -109,207 +113,182 @@ export function SupportTicketsPage({ scope }: { scope: Scope }) {
         [data-ticket-list] > li:nth-child(5)  { animation-delay: 80ms; }
       `}</style>
 
-      <div className="mx-auto max-w-6xl space-y-6 pb-12">
-        {/* ---------- Header ---------- */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white via-white to-ink-50/60 px-5 py-6 shadow-sm ring-1 ring-ink-100 sm:px-7 sm:py-7">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-primary-100/40 blur-3xl"
-          />
-          <div className="relative">
-            <PageHeader
-              eyebrow={scope === 'platform' ? 'Platform' : 'Help'}
-              title={scope === 'platform' ? 'Support inbox' : 'Support'}
-              description={
-                scope === 'platform'
-                  ? 'Review and reply to school support requests.'
-                  : 'Contact platform support about billing, access, or technical issues.'
-              }
-              actions={
-                canCreate ? (
-                  <Button
-                    onClick={() => setCreating(true)}
-                    className="transition active:scale-[0.98]"
-                  >
-                    <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                    New ticket
-                  </Button>
-                ) : undefined
-              }
-            />
-          </div>
-        </div>
-
-        {/* ---------- Stat strip ---------- */}
-        <div className="grid gap-3 sm:grid-cols-4" aria-live="polite">
-          <StatCard
+      <PageShell
+        eyebrow={scope === 'platform' ? 'Platform' : 'Help'}
+        title={scope === 'platform' ? 'Support inbox' : 'Support'}
+        description={
+          scope === 'platform'
+            ? 'Review and reply to school support requests.'
+            : 'Contact platform support about billing, access, or technical issues.'
+        }
+        actions={
+          canCreate ? (
+            <Button
+              onClick={() => setCreating(true)}
+              className="transition active:scale-[0.98]"
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              New ticket
+            </Button>
+          ) : undefined
+        }
+        footerNote={
+          <>
+            <Sparkles className="h-3.5 w-3.5" aria-hidden />
+            <span>All replies appear in-thread and notify the other side.</span>
+          </>
+        }
+      >
+        <MetricGrid>
+          <MetricCard
             icon={<Inbox className="h-4 w-4" aria-hidden />}
             label="Open"
             value={totals.open}
             tone="primary"
           />
-          <StatCard
+          <MetricCard
             icon={<Clock className="h-4 w-4" aria-hidden />}
             label="In progress"
             value={totals.inProgress}
             tone="warning"
           />
-          <StatCard
+          <MetricCard
             icon={<CheckCircle2 className="h-4 w-4" aria-hidden />}
             label="Resolved"
             value={totals.resolved}
             tone="success"
           />
-          <StatCard
+          <MetricCard
             icon={<MessageSquare className="h-4 w-4" aria-hidden />}
             label="Shown"
             value={totals.total}
             tone="neutral"
           />
-        </div>
+        </MetricGrid>
 
-        {/* ---------- Filters ---------- */}
-        <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-ink-100">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink-100/70 text-ink-600">
-                <Filter className="h-3.5 w-3.5" aria-hidden />
-              </span>
-              <div>
-                <p className="text-[12.5px] font-semibold tracking-tight text-ink-900">
-                  Filters
-                </p>
-                <p className="text-[11px] text-ink-500">
-                  Find tickets by status, category, or priority.
-                </p>
-              </div>
-            </div>
-          </div>
+        <FiltersPanel
+          description="Find tickets by status, category, or priority."
+          pageLimit={filters.limit ?? 20}
+          onPageLimitChange={(limit) =>
+            setFilters((current) => ({ ...current, limit, page: 1 }))
+          }
+          onClear={() => setFilters((current) => resetListFilters(current))}
+          clearDisabled={!filtersActive}
+        >
+          <FilterField
+            id="support-search"
+            label="Search"
+            icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-5"
+          >
+            <Input
+              id="support-search"
+              type="search"
+              aria-label="Search tickets"
+              placeholder={
+                scope === 'platform'
+                  ? 'Search subject or school...'
+                  : 'Search tickets...'
+              }
+              value={filters.search ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  search: event.target.value || undefined,
+                  page: 1,
+                }))
+              }
+            />
+          </FilterField>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-            <div className="md:col-span-5">
-              <label
-                htmlFor="support-search"
-                className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500"
-              >
-                <Search className="h-3.5 w-3.5 text-ink-400" aria-hidden />
-                Search
-              </label>
-              <Input
-                id="support-search"
-                type="search"
-                aria-label="Search tickets"
-                placeholder={
-                  scope === 'platform'
-                    ? 'Search subject or school...'
-                    : 'Search tickets...'
-                }
-                value={filters.search ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    search: event.target.value || undefined,
-                    page: 1,
-                  }))
-                }
-              />
-            </div>
+          <FilterField
+            id="support-status"
+            label="Status"
+            icon={<CircleDot className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-2"
+          >
+            <select
+              id="support-status"
+              aria-label="Filter by status"
+              className="field-select w-full text-[13px]"
+              value={filters.status ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  status: (event.target.value || undefined) as
+                    | SupportStatus
+                    | undefined,
+                  page: 1,
+                }))
+              }
+            >
+              <option value="">All</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In progress</option>
+              <option value="waiting_school">Waiting on school</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
+          </FilterField>
 
-            <div className="md:col-span-2">
-              <label
-                htmlFor="support-status"
-                className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500"
-              >
-                <CircleDot className="h-3.5 w-3.5 text-ink-400" aria-hidden />
-                Status
-              </label>
-              <select
-                id="support-status"
-                aria-label="Filter by status"
-                className="field-select w-full text-[13px]"
-                value={filters.status ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    status: (event.target.value || undefined) as
-                      | SupportStatus
-                      | undefined,
-                    page: 1,
-                  }))
-                }
-              >
-                <option value="">All</option>
-                <option value="open">Open</option>
-                <option value="in_progress">In progress</option>
-                <option value="waiting_school">Waiting on school</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
+          <FilterField
+            id="support-category-filter"
+            label="Category"
+            icon={<Tag className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-3"
+          >
+            <select
+              id="support-category-filter"
+              aria-label="Filter by category"
+              className="field-select w-full text-[13px]"
+              value={filters.category ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  category: (event.target.value || undefined) as
+                    | SupportCategory
+                    | undefined,
+                  page: 1,
+                }))
+              }
+            >
+              <option value="">All</option>
+              <option value="billing">Billing</option>
+              <option value="technical">Technical</option>
+              <option value="account">Account</option>
+              <option value="feature">Feature request</option>
+              <option value="other">Other</option>
+            </select>
+          </FilterField>
 
-            <div className="md:col-span-3">
-              <label
-                htmlFor="support-category-filter"
-                className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500"
-              >
-                <Tag className="h-3.5 w-3.5 text-ink-400" aria-hidden />
-                Category
-              </label>
-              <select
-                id="support-category-filter"
-                aria-label="Filter by category"
-                className="field-select w-full text-[13px]"
-                value={filters.category ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    category: (event.target.value || undefined) as
-                      | SupportCategory
-                      | undefined,
-                    page: 1,
-                  }))
-                }
-              >
-                <option value="">All</option>
-                <option value="billing">Billing</option>
-                <option value="technical">Technical</option>
-                <option value="account">Account</option>
-                <option value="feature">Feature request</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-2">
-              <label
-                htmlFor="support-priority-filter"
-                className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500"
-              >
-                <Flag className="h-3.5 w-3.5 text-ink-400" aria-hidden />
-                Priority
-              </label>
-              <select
-                id="support-priority-filter"
-                aria-label="Filter by priority"
-                className="field-select w-full text-[13px]"
-                value={filters.priority ?? ''}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    priority: (event.target.value || undefined) as
-                      | SupportPriority
-                      | undefined,
-                    page: 1,
-                  }))
-                }
-              >
-                <option value="">All</option>
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-          </div>
-        </section>
+          <FilterField
+            id="support-priority-filter"
+            label="Priority"
+            icon={<Flag className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
+            className="md:col-span-2"
+          >
+            <select
+              id="support-priority-filter"
+              aria-label="Filter by priority"
+              className="field-select w-full text-[13px]"
+              value={filters.priority ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  priority: (event.target.value || undefined) as
+                    | SupportPriority
+                    | undefined,
+                  page: 1,
+                }))
+              }
+            >
+              <option value="">All</option>
+              <option value="low">Low</option>
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+            </select>
+          </FilterField>
+        </FiltersPanel>
 
         {/* ---------- Results ---------- */}
         {ticketsQuery.isPending ? (
@@ -360,55 +339,16 @@ export function SupportTicketsPage({ scope }: { scope: Scope }) {
           </section>
         )}
 
-        {/* ---------- Pagination ---------- */}
-        {pagination && pagination.totalPages > 1 && (
-          <footer className="flex flex-col gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-ink-100 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[12px] text-ink-500" style={tabularNums}>
-              Page{' '}
-              <span className="font-semibold text-ink-800">{pagination.page}</span>{' '}
-              of{' '}
-              <span className="font-semibold text-ink-800">
-                {pagination.totalPages}
-              </span>
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pagination.page <= 1}
-                onClick={() =>
-                  setFilters((current) => ({
-                    ...current,
-                    page: (current.page ?? 1) - 1,
-                  }))
-                }
-                className="transition active:scale-[0.98]"
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pagination.page >= pagination.totalPages}
-                onClick={() =>
-                  setFilters((current) => ({
-                    ...current,
-                    page: (current.page ?? 1) + 1,
-                  }))
-                }
-                className="transition active:scale-[0.98]"
-              >
-                Next
-              </Button>
-            </div>
-          </footer>
-        )}
-
-        <div className="flex items-center justify-center gap-1.5 pt-2 text-[11px] text-ink-400">
-          <Sparkles className="h-3.5 w-3.5" aria-hidden />
-          <span>All replies appear in-thread and notify the other side.</span>
-        </div>
-      </div>
+        {pagination ? (
+          <ListPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            limit={pagination.limit}
+            onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
+          />
+        ) : null}
+      </PageShell>
 
       {creating && <CreateTicketModal onClose={() => setCreating(false)} />}
     </AppLayout>
@@ -416,60 +356,6 @@ export function SupportTicketsPage({ scope }: { scope: Scope }) {
 }
 
 /* ---------- sub-components ---------- */
-
-function StatCard({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  tone: 'primary' | 'success' | 'warning' | 'neutral';
-}) {
-  const map = {
-    primary: {
-      wrap: 'from-primary-50 to-white ring-primary-100',
-      icon: 'bg-primary-100 text-primary-700',
-    },
-    success: {
-      wrap: 'from-emerald-50 to-white ring-emerald-100',
-      icon: 'bg-emerald-100 text-emerald-700',
-    },
-    warning: {
-      wrap: 'from-amber-50 to-white ring-amber-100',
-      icon: 'bg-amber-100 text-amber-700',
-    },
-    neutral: {
-      wrap: 'from-ink-50 to-white ring-ink-100',
-      icon: 'bg-ink-100 text-ink-600',
-    },
-  } as const;
-  const s = map[tone];
-  return (
-    <div
-      className={`flex items-center gap-3 rounded-2xl bg-gradient-to-br p-4 shadow-sm ring-1 ring-inset ${s.wrap}`}
-    >
-      <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${s.icon}`}
-      >
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-500">
-          {label}
-        </p>
-        <p
-          className="font-display text-[18px] font-semibold tracking-tight text-ink-950"
-          style={tabularNums}
-        >
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function TicketRow({
   ticket,

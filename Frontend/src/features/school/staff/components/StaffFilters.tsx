@@ -1,6 +1,7 @@
-import { RotateCcw, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
+import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
+import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import { useAvailableRoles } from '../hooks/useAvailableRoles';
 import type { StaffFilters as Filters } from '../hooks/keys';
 
@@ -14,56 +15,68 @@ export function StaffFilters({
   const rolesQuery = useAvailableRoles();
 
   return (
-    <div className="panel p-4">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-        <div className="relative md:col-span-6">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
-          <Input
-            type="search"
-            aria-label="Search staff"
-            placeholder="Search by name, email, or phone"
-            className="pl-10"
-            value={value.search ?? ''}
-            onChange={(event) => onChange({ ...value, search: event.target.value || undefined, page: 1 })}
-          />
-        </div>
+    <FiltersPanel
+      description="Search staff by name, role, or status."
+      pageLimit={value.limit ?? 20}
+      onPageLimitChange={(limit) => onChange({ ...value, limit, page: 1 })}
+      onClear={() => onChange(resetListFilters(value))}
+      clearDisabled={!hasActiveFilters(value)}
+    >
+      <FilterField
+        id="staff-search"
+        label="Search"
+        icon={<Search className="h-3.5 w-3.5 text-ink-400" aria-hidden="true" />}
+        className="md:col-span-6"
+      >
+        <Input
+          id="staff-search"
+          type="search"
+          aria-label="Search staff"
+          placeholder="Search by name, email, or phone"
+          value={value.search ?? ''}
+          onChange={(event) =>
+            onChange({ ...value, search: event.target.value || undefined, page: 1 })
+          }
+        />
+      </FilterField>
+      <FilterField id="staff-role" label="Role" className="md:col-span-3">
         <select
+          id="staff-role"
           aria-label="Filter staff by role"
-          className="field-select md:col-span-3"
+          className="field-select"
           value={value.role ?? ''}
           disabled={rolesQuery.isPending || Boolean(rolesQuery.error)}
-          onChange={(event) => onChange({ ...value, role: event.target.value || undefined, page: 1 })}
+          onChange={(event) =>
+            onChange({ ...value, role: event.target.value || undefined, page: 1 })
+          }
         >
           <option value="">All roles</option>
           {rolesQuery.data?.map((role) => (
-            <option key={role.id} value={role.name}>{role.displayName}</option>
+            <option key={role.id} value={role.name}>
+              {role.displayName}
+            </option>
           ))}
         </select>
+      </FilterField>
+      <FilterField id="staff-status" label="Status" className="md:col-span-3">
         <select
+          id="staff-status"
           aria-label="Filter staff by active status"
-          className="field-select md:col-span-2"
+          className="field-select"
           value={value.isActive === undefined ? '' : String(value.isActive)}
-          onChange={(event) => onChange({
-            ...value,
-            isActive: event.target.value === '' ? undefined : event.target.value === 'true',
-            page: 1,
-          })}
+          onChange={(event) =>
+            onChange({
+              ...value,
+              isActive: event.target.value === '' ? undefined : event.target.value === 'true',
+              page: 1,
+            })
+          }
         >
           <option value="">All statuses</option>
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full md:col-span-1"
-          aria-label="Reset staff filters"
-          title="Reset filters"
-          onClick={() => onChange({ page: 1, limit: value.limit ?? 20 })}
-        >
-          <RotateCcw className="h-4 w-4" aria-hidden="true" />
-        </Button>
-      </div>
-    </div>
+      </FilterField>
+    </FiltersPanel>
   );
 }
