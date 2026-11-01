@@ -18,6 +18,7 @@
     "autoprefixer": "^10.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.55.0",
     "postcss": "^8.5.29",
     "qrcode": "^1.5.4",

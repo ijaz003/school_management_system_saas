@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ScanLine } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { ArrowLeft, Camera, CameraOff, ScanLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,8 @@ interface ScanResult {
   };
 }
 
+const CAMERA_REGION_ID = 'attendance-qr-reader';
+
 export function AttendanceScanPage() {
   const { can } = usePermission();
   const canMark = can('attendance.mark');
@@ -47,7 +50,17 @@ export function AttendanceScanPage() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [lastResult, setLastResult] = useState<ScanResult | null>(null);
   const [history, setHistory] = useState<ScanResult[]>([]);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const dateRef = useRef(date);
+  const busyRef = useRef(false);
+  const lastScannedRef = useRef<{ code: string; at: number } | null>(null);
+
+  useEffect(() => {
+    dateRef.current = date;
+  }, [date]);
 
   const scanMutation = useMutation({
     mutationFn: async (payload: { code: string; date: string }) => {
@@ -71,11 +84,98 @@ export function AttendanceScanPage() {
       setCode('');
       inputRef.current?.focus();
     },
+    onSettled: () => {
+      // Allow next camera scan after a short cooldown
+      window.setTimeout(() => {
+        busyRef.current = false;
+      }, 1500);
+    },
   });
 
+  const submitCode = useCallback(
+    (raw: string) => {
+      const value = raw.trim().toUpperCase();
+      if (!value || !enabled) return;
+
+      const now = Date.now();
+      const last = lastScannedRef.current;
+      if (last && last.code === value && now - last.at < 2500) {
+        return;
+      }
+      if (busyRef.current || scanMutation.isPending) return;
+
+      busyRef.current = true;
+      lastScannedRef.current = { code: value, at: now };
+      scanMutation.mutate({ code: value, date: dateRef.current });
+    },
+    [enabled, scanMutation],
+  );
+
+  const stopCamera = useCallback(async () => {
+    const scanner = scannerRef.current;
+    scannerRef.current = null;
+    if (!scanner) {
+      setCameraOn(false);
+      return;
+    }
+    try {
+      if (scanner.isScanning) {
+        await scanner.stop();
+      }
+      scanner.clear();
+    } catch {
+      // ignore stop errors when camera already closed
+    }
+    setCameraOn(false);
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    if (!enabled) {
+      toast.error('Enable card attendance in School Settings first');
+      return;
+    }
+    setCameraError(null);
+    await stopCamera();
+
+    try {
+      const scanner = new Html5Qrcode(CAMERA_REGION_ID);
+      scannerRef.current = scanner;
+      await scanner.start(
+        { facingMode: 'environment' },
+        {
+          fps: 8,
+          qrbox: { width: 240, height: 240 },
+          aspectRatio: 1,
+        },
+        (decoded) => {
+          submitCode(decoded);
+        },
+        () => {
+          // ignore frame-level "not found" noise
+        },
+      );
+      setCameraOn(true);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Could not open camera. Allow camera permission and try again.';
+      setCameraError(message);
+      setCameraOn(false);
+      scannerRef.current = null;
+      toast.error(message);
+    }
+  }, [enabled, stopCamera, submitCode]);
+
   useEffect(() => {
-    if (enabled && canMark) inputRef.current?.focus();
-  }, [enabled, canMark]);
+    if (enabled && canMark && !cameraOn) inputRef.current?.focus();
+  }, [enabled, canMark, cameraOn]);
+
+  useEffect(() => {
+    return () => {
+      void stopCamera();
+    };
+  }, [stopCamera]);
 
   if (!canMark) {
     return (
@@ -101,7 +201,7 @@ export function AttendanceScanPage() {
           <PageHeader
             eyebrow="Attendance"
             title="Card scan station"
-            description="Plug in a USB barcode/QR scanner (keyboard wedge). Scan student cards to mark present."
+            description="Use the webcam to scan student ID QR cards, or a USB barcode scanner / typed code."
           />
         </div>
 
@@ -115,7 +215,49 @@ export function AttendanceScanPage() {
           </section>
         )}
 
-        <section className="panel grid gap-4 p-5 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className="panel grid gap-5 p-5 lg:grid-cols-2">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-semibold text-ink-950">Webcam QR scanner</h2>
+              {cameraOn ? (
+                <Button type="button" variant="outline" onClick={() => void stopCamera()}>
+                  <CameraOff className="h-4 w-4" aria-hidden="true" /> Stop camera
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  disabled={!enabled}
+                  onClick={() => void startCamera()}
+                >
+                  <Camera className="h-4 w-4" aria-hidden="true" /> Start camera
+                </Button>
+              )}
+            </div>
+
+            <div className="relative min-h-64 overflow-hidden rounded-2xl border border-ink-200 bg-ink-950/95">
+              <div
+                id={CAMERA_REGION_ID}
+                className="w-full [&_video]:max-h-80 [&_video]:w-full [&_video]:object-cover"
+              />
+              {!cameraOn && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center text-ink-300">
+                  <Camera className="h-10 w-10 opacity-60" aria-hidden="true" />
+                  <p className="text-sm">
+                    Camera is off. Click “Start camera” and allow permission.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {cameraError && (
+              <p className="text-sm text-danger-700">{cameraError}</p>
+            )}
+            <p className="text-xs text-ink-500">
+              Hold the printed ID card QR in front of the camera. Each successful scan marks present
+              for the selected date.
+            </p>
+          </div>
+
           <div className="space-y-4">
             <label className="block text-sm">
               <span className="mb-1.5 block font-medium text-ink-800">Attendance date</span>
@@ -128,7 +270,9 @@ export function AttendanceScanPage() {
             </label>
 
             <label className="block text-sm">
-              <span className="mb-1.5 block font-medium text-ink-800">Scan code</span>
+              <span className="mb-1.5 block font-medium text-ink-800">
+                Manual / USB scanner code
+              </span>
               <div className="flex gap-2">
                 <input
                   ref={inputRef}
@@ -140,58 +284,51 @@ export function AttendanceScanPage() {
                   onKeyDown={(event) => {
                     if (event.key !== 'Enter') return;
                     event.preventDefault();
-                    const value = code.trim();
-                    if (!value || !enabled) return;
-                    scanMutation.mutate({ code: value, date });
+                    submitCode(code);
                   }}
                   autoComplete="off"
-                  autoFocus
                 />
                 <Button
                   type="button"
                   disabled={!enabled || !code.trim() || scanMutation.isPending}
                   isLoading={scanMutation.isPending}
-                  onClick={() => {
-                    const value = code.trim();
-                    if (!value) return;
-                    scanMutation.mutate({ code: value, date });
-                  }}
+                  onClick={() => submitCode(code)}
                 >
                   <ScanLine className="h-4 w-4" aria-hidden="true" /> Mark
                 </Button>
               </div>
               <p className="mt-2 text-xs text-ink-500">
-                Most USB scanners type the code and send Enter automatically.
+                USB scanners still work here (they type the code + Enter).
               </p>
             </label>
-          </div>
 
-          <div className="rounded-2xl border border-ink-100 bg-ink-50/60 p-5">
-            {lastResult ? (
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={lastResult.alreadyMarked ? 'warning' : 'success'}>
-                    {lastResult.alreadyMarked ? 'Already marked' : 'Marked'}
-                  </Badge>
-                  <Badge tone="primary">{lastResult.status}</Badge>
+            <div className="rounded-2xl border border-ink-100 bg-ink-50/60 p-5">
+              {lastResult ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone={lastResult.alreadyMarked ? 'warning' : 'success'}>
+                      {lastResult.alreadyMarked ? 'Already marked' : 'Marked'}
+                    </Badge>
+                    <Badge tone="primary">{lastResult.status}</Badge>
+                  </div>
+                  <p className="font-display text-2xl font-semibold text-ink-950">
+                    {lastResult.student.fullName}
+                  </p>
+                  <p className="text-sm text-ink-600">
+                    {lastResult.student.admissionNo} · {lastResult.student.className} ·{' '}
+                    {lastResult.student.sectionName}
+                  </p>
+                  <p className="text-xs text-ink-400">
+                    {new Date(lastResult.scannedAt).toLocaleString()}
+                  </p>
                 </div>
-                <p className="font-display text-2xl font-semibold text-ink-950">
-                  {lastResult.student.fullName}
-                </p>
-                <p className="text-sm text-ink-600">
-                  {lastResult.student.admissionNo} · {lastResult.student.className} ·{' '}
-                  {lastResult.student.sectionName}
-                </p>
-                <p className="text-xs text-ink-400">
-                  {new Date(lastResult.scannedAt).toLocaleString()}
-                </p>
-              </div>
-            ) : (
-              <div className="flex h-full min-h-40 flex-col items-center justify-center text-center text-ink-500">
-                <ScanLine className="mb-3 h-10 w-10 text-ink-300" aria-hidden="true" />
-                <p className="text-sm">Waiting for scan…</p>
-              </div>
-            )}
+              ) : (
+                <div className="flex h-full min-h-36 flex-col items-center justify-center text-center text-ink-500">
+                  <ScanLine className="mb-3 h-10 w-10 text-ink-300" aria-hidden="true" />
+                  <p className="text-sm">Waiting for scan…</p>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
