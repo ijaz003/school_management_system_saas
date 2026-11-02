@@ -15,6 +15,7 @@ const TABS: Array<{ section: ChildSection; label: string }> = [
   { section: 'attendance', label: 'Attendance' },
   { section: 'fees', label: 'Fees' },
   { section: 'diary', label: 'Diary' },
+  { section: 'timetable', label: 'Timetable' },
   { section: 'results', label: 'Results' },
 ];
 

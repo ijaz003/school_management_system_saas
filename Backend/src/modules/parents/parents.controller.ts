@@ -198,6 +198,18 @@ export const parentPortalController = {
     return ApiResponse.paginated(res, data.items, data.pagination, 'Notices fetched');
   }),
 
+  timetable: asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user;
+    if (!user) throw new UnauthorizedError();
+    const context = await parentPortalService.requireParentActor(user);
+    const data = await parentPortalService.getChildTimetable({
+      parentUserId: context.userId,
+      tenantId: context.tenantId,
+      studentId: getId(req, 'studentId'),
+    });
+    return ApiResponse.success(res, data, 'Child timetable fetched');
+  }),
+
   results: asyncHandler(async (req: Request, res: Response) => {
     const user = req.user;
     if (!user) throw new UnauthorizedError();

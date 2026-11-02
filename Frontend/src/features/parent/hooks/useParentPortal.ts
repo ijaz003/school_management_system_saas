@@ -101,6 +101,41 @@ export interface ChildResults {
   results: ChildResultCard[];
 }
 
+export interface ChildTimetablePeriod {
+  id: string;
+  name: string;
+  sortOrder: number;
+  startTime: string;
+  endTime: string;
+  isBreak: boolean;
+}
+
+export interface ChildTimetableEntry {
+  id: string;
+  sectionId: string;
+  periodId: string;
+  dayOfWeek: number;
+  subjectId: string | null;
+  subjectName: string | null;
+  subjectCode: string | null;
+  teacherId: string | null;
+  teacherName: string | null;
+  room: string | null;
+}
+
+export interface ChildTimetable {
+  student: Pick<ParentChild, 'id' | 'fullName' | 'admissionNo' | 'className' | 'sectionName'>;
+  section: {
+    id: string;
+    name: string;
+    fullName: string;
+    classId: string;
+    className: string;
+  };
+  periods: ChildTimetablePeriod[];
+  entries: ChildTimetableEntry[];
+}
+
 export const parentPortalKeys = {
   all: ['parent-portal'] as const,
   home: () => [...parentPortalKeys.all, 'home'] as const,
@@ -112,6 +147,7 @@ export const parentPortalKeys = {
     [...parentPortalKeys.all, 'fees', id, page, limit] as const,
   diary: (id: string, page: number, limit: number) =>
     [...parentPortalKeys.all, 'diary', id, page, limit] as const,
+  timetable: (id: string) => [...parentPortalKeys.all, 'timetable', id] as const,
   results: (id: string) => [...parentPortalKeys.all, 'results', id] as const,
 };
 
@@ -178,6 +214,20 @@ export function useChildDiary(studentId: string, page = 1, limit = 20) {
         `/parent/children/${studentId}/diary${buildQueryString({ page, limit })}`,
       );
       if (!response.data) throw new Error('The server returned no diary');
+      return response.data;
+    },
+    enabled: Boolean(studentId),
+  });
+}
+
+export function useChildTimetable(studentId: string) {
+  return useQuery({
+    queryKey: parentPortalKeys.timetable(studentId),
+    queryFn: async () => {
+      const response = await api.get<ChildTimetable>(
+        `/parent/children/${studentId}/timetable`,
+      );
+      if (!response.data) throw new Error('The server returned no timetable');
       return response.data;
     },
     enabled: Boolean(studentId),

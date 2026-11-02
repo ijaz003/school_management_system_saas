@@ -10,6 +10,7 @@ import * as feesService from '../fees/fees.service.js';
 import { notices } from '../notices/notices.schema.js';
 import { sections } from '../sections/sections.schema.js';
 import { students } from '../students/students.schema.js';
+import * as timetableService from '../timetable/timetable.service.js';
 import { users } from '../auth/auth.schema.js';
 import {
   assertParentOwnsStudent,
@@ -216,6 +217,23 @@ export async function listParentNotices(input: {
     items: rows,
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
   };
+}
+
+export async function getChildTimetable(input: {
+  parentUserId: string;
+  tenantId: string;
+  studentId: string;
+}) {
+  const student = await requireLinkedStudent(
+    input.parentUserId,
+    input.studentId,
+    input.tenantId,
+  );
+  const grid = await timetableService.getSectionTimetable(
+    student.sectionId,
+    input.tenantId,
+  );
+  return { student, ...grid };
 }
 
 export async function getChildResults(input: {

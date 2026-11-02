@@ -48,6 +48,7 @@ import { ParentChildOverviewPage } from '@/features/parent/pages/ParentChildOver
 import { ParentAttendancePage } from '@/features/parent/pages/ParentAttendancePage';
 import { ParentFeesPage } from '@/features/parent/pages/ParentFeesPage';
 import { ParentDiaryPage } from '@/features/parent/pages/ParentDiaryPage';
+import { ParentTimetablePage } from '@/features/parent/pages/ParentTimetablePage';
 import { ParentResultsPage } from '@/features/parent/pages/ParentResultsPage';
 import { usePermission } from '@/hooks/usePermission';
 import { useAppSelector } from '@/store/hooks';
@@ -426,6 +427,7 @@ const router = createBrowserRouter([
           { path: '/parent/children/:studentId/attendance', element: <ParentAttendancePage /> },
           { path: '/parent/children/:studentId/fees', element: <ParentFeesPage /> },
           { path: '/parent/children/:studentId/diary', element: <ParentDiaryPage /> },
+          { path: '/parent/children/:studentId/timetable', element: <ParentTimetablePage /> },
           { path: '/parent/children/:studentId/results', element: <ParentResultsPage /> },
         ],
       },

@@ -13,6 +13,7 @@ router.get('/notices', parentPortalController.notices);
 router.get('/children/:studentId/attendance', parentPortalController.attendance);
 router.get('/children/:studentId/fees', parentPortalController.fees);
 router.get('/children/:studentId/diary', parentPortalController.diary);
+router.get('/children/:studentId/timetable', parentPortalController.timetable);
 router.get('/children/:studentId/results', parentPortalController.results);
 
 export default router;

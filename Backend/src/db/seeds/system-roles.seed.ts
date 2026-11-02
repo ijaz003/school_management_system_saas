@@ -74,6 +74,7 @@ export const SYSTEM_ROLES = [
       'fees.invoice.read',
       'diary.read',
       'notices.read',
+      'timetable.read',
     ],
     isSystem: true,
     isSuperAdmin: false,

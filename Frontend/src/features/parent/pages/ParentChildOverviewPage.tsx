@@ -1,6 +1,7 @@
 import {
   BookMarked,
   CalendarCheck,
+  CalendarClock,
   CalendarX,
   DollarSign,
   FileText,
@@ -21,6 +22,7 @@ const LINKS: Array<{
   { section: 'attendance', label: 'Attendance', description: 'Daily presence record', icon: CalendarCheck },
   { section: 'fees', label: 'Fees', description: 'Invoices and balances', icon: DollarSign },
   { section: 'diary', label: 'Daily diary', description: 'Classwork and homework', icon: BookMarked },
+  { section: 'timetable', label: 'Timetable', description: 'Weekly class schedule', icon: CalendarClock },
   { section: 'results', label: 'Results', description: 'Published exam results', icon: FileText },
 ];
 

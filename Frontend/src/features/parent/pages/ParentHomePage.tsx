@@ -33,7 +33,7 @@ export function ParentHomePage() {
       <PageShell
         eyebrow="Parent portal"
         title={user ? `Welcome, ${user.fullName.split(' ')[0]}` : 'Welcome'}
-        description="Follow your children’s attendance, fees, daily diary, and results."
+        description="Follow your children’s attendance, fees, diary, timetable, and results."
         actions={
           <Link to="/parent/notices">
             <Button variant="outline">
@@ -117,6 +117,11 @@ export function ParentHomePage() {
                   <Link to={childPath(child.id, 'diary')}>
                     <Button variant="outline" size="sm" className="w-full">
                       Diary
+                    </Button>
+                  </Link>
+                  <Link to={childPath(child.id, 'timetable')}>
+                    <Button variant="outline" size="sm" className="w-full">
+                      Timetable
                     </Button>
                   </Link>
                   <Link to={childPath(child.id, 'results')}>

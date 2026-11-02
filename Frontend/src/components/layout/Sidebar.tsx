@@ -192,6 +192,7 @@ function buildParentGroups(child?: { id: string; fullName: string }): MenuGroup[
         { label: 'Attendance', path: `${base}/attendance`, icon: CalendarCheck },
         { label: 'Fees', path: `${base}/fees`, icon: DollarSign },
         { label: 'Diary', path: `${base}/diary`, icon: BookMarked },
+        { label: 'Timetable', path: `${base}/timetable`, icon: CalendarClock },
         { label: 'Results', path: `${base}/results`, icon: FileText },
       ],
     });
