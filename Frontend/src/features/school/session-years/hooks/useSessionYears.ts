@@ -44,10 +44,28 @@ export interface PromoteResult {
   errors: Array<{ studentId: string; admissionNo: string; message: string }>;
 }
 
+export interface SessionYearPlacement {
+  id: string;
+  studentId: string;
+  studentName: string;
+  admissionNo: string;
+  sessionYearId: string;
+  sessionYearName: string;
+  classId: string;
+  className: string;
+  sectionId: string;
+  sectionName: string;
+  status: string;
+  isCurrent: boolean;
+  createdAt: string;
+}
+
 const keys = {
   all: ['session-years'] as const,
   list: () => [...keys.all, 'list'] as const,
   current: () => [...keys.all, 'current'] as const,
+  detail: (id: string) => [...keys.all, 'detail', id] as const,
+  placements: (sessionYearId: string) => [...keys.all, 'placements', sessionYearId] as const,
   preview: (fromSessionYearId: string, fromClassId: string, toClassId?: string) =>
     [...keys.all, 'preview', fromSessionYearId, fromClassId, toClassId ?? ''] as const,
 };
@@ -75,6 +93,31 @@ export function useCurrentSessionYear(options: { enabled?: boolean } = {}) {
   });
 }
 
+export function useSessionYear(id: string | undefined) {
+  return useQuery({
+    queryKey: keys.detail(id ?? ''),
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const response = await api.get<SessionYear>(`/school/session-years/${id}`);
+      if (!response.data) throw new Error('Session year not found');
+      return response.data;
+    },
+  });
+}
+
+export function useSessionYearPlacements(sessionYearId: string | undefined) {
+  return useQuery({
+    queryKey: keys.placements(sessionYearId ?? ''),
+    enabled: Boolean(sessionYearId),
+    queryFn: async () => {
+      const response = await api.get<SessionYearPlacement[]>(
+        `/school/session-years/placements${buildQueryString({ sessionYearId })}`,
+      );
+      return response.data ?? [];
+    },
+  });
+}
+
 export function useCreateSessionYear() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -94,6 +137,33 @@ export function useCreateSessionYear() {
       void queryClient.invalidateQueries({ queryKey: keys.all });
     },
     onError: (error: Error) => toast.error(error.message || 'Failed to create session year'),
+  });
+}
+
+export function useUpdateSessionYear() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      data: {
+        name?: string;
+        startDate?: string;
+        endDate?: string;
+        status?: SessionYearStatus;
+      };
+    }) => {
+      const response = await api.patch<SessionYear>(
+        `/school/session-years/${input.id}`,
+        input.data,
+      );
+      if (!response.data) throw new Error('Session year was not updated');
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Session year updated');
+      void queryClient.invalidateQueries({ queryKey: keys.all });
+    },
+    onError: (error: Error) => toast.error(error.message || 'Failed to update session year'),
   });
 }
 
