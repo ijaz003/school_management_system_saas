@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ClipboardList, Plus, Search, Trash2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ClipboardList, Plus, Search } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { Modal } from '@/components/ui/modal';
 import { PageShell } from '@/components/ui/page-shell';
+import { RowActions } from '@/components/ui/row-actions';
 import { PageLoader } from '@/components/ui/spinner';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useClass } from '@/features/school/classes/hooks/useClass';
@@ -197,6 +198,8 @@ function ExamRow({
   canSchedule: boolean;
   onDelete: () => void;
 }) {
+  const navigate = useNavigate();
+
   return (
     <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-ink-100">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -213,11 +216,12 @@ function ExamRow({
             {` · ${exam.subjectsCount} subject${exam.subjectsCount === 1 ? '' : 's'}`}
           </p>
         </Link>
-        {canSchedule && exam.status !== 'published' && (
-          <Button type="button" size="sm" variant="ghost" onClick={onDelete} aria-label="Delete">
-            <Trash2 className="h-4 w-4 text-danger-600" />
-          </Button>
-        )}
+        <RowActions
+          onPreview={() => navigate(`/exams/${exam.id}`)}
+          onDelete={
+            canSchedule && exam.status !== 'published' ? onDelete : undefined
+          }
+        />
       </div>
     </article>
   );

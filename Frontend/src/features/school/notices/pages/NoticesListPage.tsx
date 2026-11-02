@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Megaphone, Plus, Search, Send, Trash2 } from 'lucide-react';
+import { Megaphone, Plus, Search, Send } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { RowActions } from '@/components/ui/row-actions';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
@@ -27,6 +28,7 @@ export function NoticesListPage() {
   const canSend = can('notices.send');
   const [filters, setFilters] = useState<NoticeFilters>({ page: 1, limit: 20 });
   const [creating, setCreating] = useState(false);
+  const [previewing, setPreviewing] = useState<Notice | null>(null);
   const [deleting, setDeleting] = useState<Notice | null>(null);
   const noticesQuery = useNotices(filters);
   const publishNotice = usePublishNotice();
@@ -150,6 +152,7 @@ export function NoticesListPage() {
                 canSend={canSend}
                 onPublish={() => publishNotice.mutate(notice.id)}
                 onDelete={() => setDeleting(notice)}
+                onPreview={() => setPreviewing(notice)}
               />
             ))}
           </div>
@@ -167,6 +170,32 @@ export function NoticesListPage() {
       </PageShell>
 
       {creating && <CreateNoticeModal onClose={() => setCreating(false)} />}
+
+      {previewing ? (
+        <Modal
+          open
+          onClose={() => setPreviewing(null)}
+          title={previewing.title}
+          description="Notice preview"
+          footer={
+            <Button type="button" variant="outline" onClick={() => setPreviewing(null)}>
+              Close
+            </Button>
+          }
+        >
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Badge tone={previewing.status === 'published' ? 'success' : 'warning'}>
+                {previewing.status}
+              </Badge>
+              <Badge tone="primary">{previewing.audience}</Badge>
+            </div>
+            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-ink-800">
+              {previewing.body}
+            </p>
+          </div>
+        </Modal>
+      ) : null}
 
       <ConfirmDialog
         open={deleting !== null}
@@ -189,11 +218,13 @@ function NoticeCard({
   canSend,
   onPublish,
   onDelete,
+  onPreview,
 }: {
   notice: Notice;
   canSend: boolean;
   onPublish: () => void;
   onDelete: () => void;
+  onPreview: () => void;
 }) {
   return (
     <article className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-ink-100 sm:p-5">
@@ -206,7 +237,9 @@ function NoticeCard({
             <Badge tone="primary">{notice.audience}</Badge>
           </div>
           <h2 className="font-display text-lg font-semibold text-ink-950">{notice.title}</h2>
-          <p className="mt-2 whitespace-pre-wrap break-words text-sm text-ink-700">{notice.body}</p>
+          <p className="mt-2 line-clamp-3 whitespace-pre-wrap break-words text-sm text-ink-700">
+            {notice.body}
+          </p>
           <p className="mt-3 text-xs text-ink-400">
             {notice.createdByName ? `By ${notice.createdByName} · ` : ''}
             {notice.publishedAt
@@ -214,18 +247,17 @@ function NoticeCard({
               : `Created ${new Date(notice.createdAt).toLocaleString()}`}
           </p>
         </div>
-        {canSend && (
-          <div className="flex gap-2">
-            {notice.status === 'draft' && (
-              <Button type="button" size="sm" onClick={onPublish}>
-                <Send className="h-4 w-4" aria-hidden="true" /> Publish
-              </Button>
-            )}
-            <Button type="button" size="sm" variant="ghost" onClick={onDelete} aria-label="Delete">
-              <Trash2 className="h-4 w-4 text-danger-600" aria-hidden="true" />
+        <div className="flex flex-wrap items-center gap-2">
+          {canSend && notice.status === 'draft' ? (
+            <Button type="button" size="sm" onClick={onPublish}>
+              <Send className="h-4 w-4" aria-hidden="true" /> Publish
             </Button>
-          </div>
-        )}
+          ) : null}
+          <RowActions
+            onPreview={onPreview}
+            onDelete={canSend ? onDelete : undefined}
+          />
+        </div>
       </div>
     </article>
   );

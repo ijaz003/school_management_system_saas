@@ -1,6 +1,6 @@
-import { BookOpen, Layers3, Trash2 } from 'lucide-react';
+import { BookOpen, Layers3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { RowActions } from '@/components/ui/row-actions';
 import type { ClassSection } from '../hooks/useClass';
 
 export function SectionCard({
@@ -46,18 +46,12 @@ export function SectionCard({
         </div>
       )}
       {onDelete && (
-        <div className="mt-4 flex justify-end border-t border-ink-100 pt-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onDelete}
-            isLoading={deleting}
-            aria-label={`Delete ${section.fullName}`}
-          >
-            <Trash2 className="h-4 w-4 text-danger-600" aria-hidden="true" />
-            Delete section
-          </Button>
+        <div className="mt-4 border-t border-ink-100 pt-3">
+          <RowActions
+            onDelete={onDelete}
+            deleteLabel={`Delete ${section.fullName}`}
+            disabled={deleting}
+          />
         </div>
       )}
     </article>

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Banknote, Download, Plus, Printer, Receipt, Search, Trash2, Wallet } from 'lucide-react';
+import { Banknote, Download, Plus, Printer, Receipt, Search, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { Modal } from '@/components/ui/modal';
 import { PageShell } from '@/components/ui/page-shell';
+import { RowActions } from '@/components/ui/row-actions';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { buildQueryString } from '@/lib/api';
@@ -71,6 +72,7 @@ export function FeesPage() {
   const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null);
   const [detailInvoiceId, setDetailInvoiceId] = useState<string | null>(null);
   const [pendingStructureDelete, setPendingStructureDelete] = useState<FeeStructure | null>(null);
+  const [previewStructure, setPreviewStructure] = useState<FeeStructure | null>(null);
   const [pendingVoidPaymentId, setPendingVoidPaymentId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
@@ -299,17 +301,12 @@ export function FeesPage() {
                     <p className="mt-2 text-sm text-ink-500">{structure.description}</p>
                   )}
                 </div>
-                {canEditStructure && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    aria-label="Delete structure"
-                    onClick={() => setPendingStructureDelete(structure)}
-                  >
-                    <Trash2 className="h-4 w-4 text-danger-600" />
-                  </Button>
-                )}
+                <RowActions
+                  onPreview={() => setPreviewStructure(structure)}
+                  onDelete={
+                    canEditStructure ? () => setPendingStructureDelete(structure) : undefined
+                  }
+                />
               </article>
             ))}
           </div>
@@ -330,6 +327,12 @@ export function FeesPage() {
           canRefund={canRefund}
           onClose={() => setDetailInvoiceId(null)}
           onRequestVoid={(paymentId) => setPendingVoidPaymentId(paymentId)}
+        />
+      )}
+      {previewStructure && (
+        <StructurePreviewModal
+          structure={previewStructure}
+          onClose={() => setPreviewStructure(null)}
         />
       )}
 
@@ -413,7 +416,7 @@ function InvoiceRow({
   return (
     <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-ink-100">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <button type="button" className="min-w-0 flex-1 text-left" onClick={onOpen}>
+        <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap gap-2">
             <Badge tone={statusTone[invoice.status]}>{invoice.status}</Badge>
             {invoice.periodLabel && <Badge tone="neutral">{invoice.periodLabel}</Badge>}
@@ -429,14 +432,68 @@ function InvoiceRow({
             Due {invoice.dueDate} · Paid {formatMoney(invoice.amountPaid)} of{' '}
             {formatMoney(invoice.amount)} · Balance {formatMoney(invoice.balance)}
           </p>
-        </button>
-        {payable && (
-          <Button type="button" size="sm" onClick={onPay}>
-            <Wallet className="h-4 w-4" aria-hidden="true" /> Record payment
-          </Button>
-        )}
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {payable ? (
+            <Button type="button" size="sm" onClick={onPay}>
+              <Wallet className="h-4 w-4" aria-hidden="true" /> Record payment
+            </Button>
+          ) : null}
+          <RowActions onPreview={onOpen} />
+        </div>
       </div>
     </article>
+  );
+}
+
+function StructurePreviewModal({
+  structure,
+  onClose,
+}: {
+  structure: FeeStructure;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={structure.name}
+      description="Fee structure details"
+      footer={
+        <Button type="button" variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      }
+    >
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Badge tone="primary" className="capitalize">
+          {structure.frequency.replace('_', ' ')}
+        </Badge>
+        <Badge tone={structure.isActive ? 'success' : 'neutral'}>
+          {structure.isActive ? 'Active' : 'Inactive'}
+        </Badge>
+      </div>
+      <dl className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">Amount</dt>
+          <dd className="mt-1 text-sm font-medium text-ink-900">{formatMoney(structure.amount)}</dd>
+        </div>
+        <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">Class</dt>
+          <dd className="mt-1 text-sm font-medium text-ink-900">
+            {structure.className ?? 'All classes'}
+          </dd>
+        </div>
+        <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100 sm:col-span-2">
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+            Description
+          </dt>
+          <dd className="mt-1 text-sm font-medium text-ink-900">
+            {structure.description?.trim() || '—'}
+          </dd>
+        </div>
+      </dl>
+    </Modal>
   );
 }
 

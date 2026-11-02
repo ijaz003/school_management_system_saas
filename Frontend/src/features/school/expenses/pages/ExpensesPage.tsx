@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ban, CheckCircle2, Coins, Pencil, Plus, Receipt, Search, Trash2, Wallet } from 'lucide-react';
+import { Ban, CheckCircle2, Coins, Plus, Receipt, Search, Wallet } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { ListPagination } from '@/components/ui/list-pagination';
 import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { Modal } from '@/components/ui/modal';
 import { PageShell } from '@/components/ui/page-shell';
+import { RowActions } from '@/components/ui/row-actions';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
@@ -56,9 +57,11 @@ export function ExpensesPage() {
   const [filters, setFilters] = useState<ExpenseFilters>({ page: 1, limit: 20 });
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
+  const [previewing, setPreviewing] = useState<Expense | null>(null);
   const [deleting, setDeleting] = useState<Expense | null>(null);
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ExpenseCategory | null>(null);
+  const [previewingCategory, setPreviewingCategory] = useState<ExpenseCategory | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<ExpenseCategory | null>(null);
 
   const expensesQuery = useExpenses(filters);
@@ -312,28 +315,18 @@ export function ExpensesPage() {
                           <p className="mt-1 line-clamp-2 text-xs text-ink-400">{expense.notes}</p>
                         ) : null}
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         {canUpdate && expense.status === 'recorded' ? (
-                          <>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setEditing(expense)}
-                            >
-                              <Pencil className="h-4 w-4" aria-hidden="true" /> Edit
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                updateExpense.mutate({ id: expense.id, status: 'void' })
-                              }
-                            >
-                              Void
-                            </Button>
-                          </>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              updateExpense.mutate({ id: expense.id, status: 'void' })
+                            }
+                          >
+                            Void
+                          </Button>
                         ) : null}
                         {canUpdate && expense.status === 'void' ? (
                           <Button
@@ -347,17 +340,16 @@ export function ExpensesPage() {
                             Restore
                           </Button>
                         ) : null}
-                        {canDelete ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setDeleting(expense)}
-                            aria-label="Delete expense"
-                          >
-                            <Trash2 className="h-4 w-4 text-danger-600" aria-hidden="true" />
-                          </Button>
-                        ) : null}
+                        <RowActions
+                          onPreview={() => setPreviewing(expense)}
+                          onEdit={
+                            canUpdate && expense.status === 'recorded'
+                              ? () => setEditing(expense)
+                              : undefined
+                          }
+                          onDelete={canDelete ? () => setDeleting(expense) : undefined}
+                          disabled={updateExpense.isPending || deleteExpense.isPending}
+                        />
                       </div>
                     </li>
                   ))}
@@ -422,27 +414,16 @@ export function ExpensesPage() {
                           <p className="mt-1 text-sm text-ink-500">{category.description}</p>
                         ) : null}
                       </div>
-                      {canManageCategories ? (
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingCategory(category)}
-                          >
-                            <Pencil className="h-4 w-4" aria-hidden="true" /> Edit
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setDeletingCategory(category)}
-                            aria-label="Delete category"
-                          >
-                            <Trash2 className="h-4 w-4 text-danger-600" aria-hidden="true" />
-                          </Button>
-                        </div>
-                      ) : null}
+                      <RowActions
+                        onPreview={() => setPreviewingCategory(category)}
+                        onEdit={
+                          canManageCategories ? () => setEditingCategory(category) : undefined
+                        }
+                        onDelete={
+                          canManageCategories ? () => setDeletingCategory(category) : undefined
+                        }
+                        disabled={deleteCategory.isPending}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -467,6 +448,10 @@ export function ExpensesPage() {
         />
       ) : null}
 
+      {previewing ? (
+        <ExpensePreviewModal expense={previewing} onClose={() => setPreviewing(null)} />
+      ) : null}
+
       {(creatingCategory || editingCategory) && (
         <CategoryFormModal
           category={editingCategory}
@@ -476,6 +461,13 @@ export function ExpensesPage() {
           }}
         />
       )}
+
+      {previewingCategory ? (
+        <CategoryPreviewModal
+          category={previewingCategory}
+          onClose={() => setPreviewingCategory(null)}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={deleting !== null}
@@ -762,6 +754,130 @@ function CategoryFormModal({
             Active
           </label>
         ) : null}
+      </div>
+    </Modal>
+  );
+}
+
+function ExpensePreviewModal({
+  expense,
+  onClose,
+}: {
+  expense: Expense;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={expense.title}
+      description="Expense details"
+      footer={
+        <Button type="button" variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Badge tone={expense.status === 'void' ? 'neutral' : 'success'}>{expense.status}</Badge>
+          {expense.categoryName ? <Badge tone="primary">{expense.categoryName}</Badge> : null}
+          <Badge tone="neutral">{expense.paymentMethod}</Badge>
+        </div>
+        <dl className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Amount
+            </dt>
+            <dd className="mt-1 text-sm font-medium text-ink-900">{formatMoney(expense.amount)}</dd>
+          </div>
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">Date</dt>
+            <dd className="mt-1 text-sm font-medium text-ink-900">{expense.expenseDate}</dd>
+          </div>
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Vendor
+            </dt>
+            <dd className="mt-1 text-sm font-medium text-ink-900">{expense.vendor || '—'}</dd>
+          </div>
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Reference
+            </dt>
+            <dd className="mt-1 text-sm font-medium text-ink-900">{expense.reference || '—'}</dd>
+          </div>
+          {expense.createdByName ? (
+            <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100 sm:col-span-2">
+              <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                Recorded by
+              </dt>
+              <dd className="mt-1 text-sm font-medium text-ink-900">{expense.createdByName}</dd>
+            </div>
+          ) : null}
+        </dl>
+        {expense.notes ? (
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">Notes</p>
+            <p className="mt-1 text-sm text-ink-800">{expense.notes}</p>
+          </div>
+        ) : null}
+      </div>
+    </Modal>
+  );
+}
+
+function CategoryPreviewModal({
+  category,
+  onClose,
+}: {
+  category: ExpenseCategory;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={category.name}
+      description="Category details"
+      footer={
+        <Button type="button" variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        <Badge tone={category.isActive ? 'success' : 'neutral'}>
+          {category.isActive ? 'Active' : 'Inactive'}
+        </Badge>
+        <dl className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Created
+            </dt>
+            <dd className="mt-1 text-sm font-medium text-ink-900">
+              {new Date(category.createdAt).toLocaleString()}
+            </dd>
+          </div>
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Updated
+            </dt>
+            <dd className="mt-1 text-sm font-medium text-ink-900">
+              {new Date(category.updatedAt).toLocaleString()}
+            </dd>
+          </div>
+        </dl>
+        {category.description ? (
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Description
+            </p>
+            <p className="mt-1 text-sm text-ink-800">{category.description}</p>
+          </div>
+        ) : (
+          <p className="text-sm text-ink-500">No description provided.</p>
+        )}
       </div>
     </Modal>
   );

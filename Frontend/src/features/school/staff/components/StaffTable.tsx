@@ -1,8 +1,8 @@
-import { Eye, KeyRound, Pencil, Trash2, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { RowActions } from '@/components/ui/row-actions';
 import type { StaffMember } from '../hooks/useStaff';
 
 interface StaffTableProps {
@@ -89,20 +89,13 @@ export function StaffTable({ staff, onEdit, onDelete, onResetPassword, busy = fa
                 {new Date(member.createdAt).toLocaleDateString()}
               </td>
               <td className="px-4 py-4 sm:px-5">
-                <div className="flex items-center justify-end gap-1">
-                  <Button type="button" variant="ghost" size="sm" aria-label={`View ${member.fullName}`} title="View" onClick={() => navigate(`/settings/staff/${member.id}`)}>
-                    <Eye className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" aria-label={`Edit ${member.fullName}`} title="Edit" onClick={() => onEdit(member)}>
-                    <Pencil className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" className="text-warning-700 hover:bg-warning-50" aria-label={`Reset password for ${member.fullName}`} title="Reset password" disabled={busy} onClick={() => onResetPassword(member)}>
-                    <KeyRound className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" className="text-danger-600 hover:bg-danger-50" aria-label={`Delete ${member.fullName}`} title="Delete" disabled={busy} onClick={() => onDelete(member)}>
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </div>
+                <RowActions
+                  onPreview={() => navigate(`/settings/staff/${member.id}`)}
+                  onEdit={() => onEdit(member)}
+                  onResetPassword={() => onResetPassword(member)}
+                  onDelete={() => onDelete(member)}
+                  disabled={busy}
+                />
               </td>
             </tr>
           ))}

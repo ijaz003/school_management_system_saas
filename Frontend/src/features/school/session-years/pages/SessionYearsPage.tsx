@@ -1,14 +1,5 @@
 import { useMemo, useState } from 'react';
-import {
-  CalendarRange,
-  CheckCircle2,
-  Eye,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  Users,
-} from 'lucide-react';
+import { CalendarRange, CheckCircle2, Plus, Search, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +12,7 @@ import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { Modal } from '@/components/ui/modal';
 import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
+import { RowActions } from '@/components/ui/row-actions';
 import { usePermission } from '@/hooks/usePermission';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import {
@@ -252,49 +244,25 @@ export function SessionYearsPage() {
                         {formatDate(year.startDate)} → {formatDate(year.endDate)}
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setPreviewing(year)}
-                      >
-                        <Eye className="h-4 w-4" aria-hidden="true" /> Preview
-                      </Button>
-                      {canWrite ? (
-                        <>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditing(year)}
-                          >
-                            <Pencil className="h-4 w-4" aria-hidden="true" /> Edit
-                          </Button>
-                          {!year.isCurrent && year.status !== 'closed' ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setCurrent.mutate(year.id)}
-                              isLoading={setCurrent.isPending}
-                            >
-                              <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Set current
-                            </Button>
-                          ) : null}
-                          {!year.isCurrent ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              aria-label={`Delete ${year.name}`}
-                              onClick={() => setDeleting(year)}
-                            >
-                              <Trash2 className="h-4 w-4 text-danger-600" aria-hidden="true" />
-                            </Button>
-                          ) : null}
-                        </>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {!year.isCurrent && year.status !== 'closed' && canWrite ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setCurrent.mutate(year.id)}
+                          isLoading={setCurrent.isPending}
+                        >
+                          <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Set current
+                        </Button>
                       ) : null}
+                      <RowActions
+                        onPreview={() => setPreviewing(year)}
+                        onEdit={canWrite ? () => setEditing(year) : undefined}
+                        onDelete={
+                          canWrite && !year.isCurrent ? () => setDeleting(year) : undefined
+                        }
+                      />
                     </div>
                   </li>
                 ))}

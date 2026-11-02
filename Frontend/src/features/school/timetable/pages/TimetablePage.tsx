@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Clock3,
   Coffee,
-  Eye,
   LayoutGrid,
   Pencil,
   Plus,
@@ -23,6 +22,7 @@ import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { Modal } from '@/components/ui/modal';
 import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
+import { RowActions } from '@/components/ui/row-actions';
 import { usePermission } from '@/hooks/usePermission';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
@@ -373,55 +373,31 @@ export function TimetablePage() {
                                           Room {entry.room}
                                         </p>
                                       ) : null}
-                                      <div className="mt-2 flex flex-wrap gap-1">
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="outline"
-                                          className="h-7 px-2 text-xs"
-                                          onClick={() =>
+                                      <div className="mt-1">
+                                        <RowActions
+                                          className="justify-start"
+                                          onPreview={() =>
                                             setPreviewingSlot({
                                               period,
                                               dayOfWeek: day.value,
                                               entry,
                                             })
                                           }
-                                        >
-                                          <Eye className="h-3.5 w-3.5" aria-hidden="true" /> Preview
-                                        </Button>
-                                        {canWrite ? (
-                                          <>
-                                            <Button
-                                              type="button"
-                                              size="sm"
-                                              variant="outline"
-                                              className="h-7 px-2 text-xs"
-                                              onClick={() =>
-                                                setEditingSlot({
-                                                  period,
-                                                  dayOfWeek: day.value,
-                                                  entry,
-                                                })
-                                              }
-                                            >
-                                              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />{' '}
-                                              Edit
-                                            </Button>
-                                            <Button
-                                              type="button"
-                                              size="sm"
-                                              variant="ghost"
-                                              className="h-7 px-2 text-xs"
-                                              aria-label="Clear slot"
-                                              onClick={() => setClearingEntry(entry)}
-                                            >
-                                              <Trash2
-                                                className="h-3.5 w-3.5 text-danger-600"
-                                                aria-hidden="true"
-                                              />
-                                            </Button>
-                                          </>
-                                        ) : null}
+                                          onEdit={
+                                            canWrite
+                                              ? () =>
+                                                  setEditingSlot({
+                                                    period,
+                                                    dayOfWeek: day.value,
+                                                    entry,
+                                                  })
+                                              : undefined
+                                          }
+                                          onDelete={
+                                            canWrite ? () => setClearingEntry(entry) : undefined
+                                          }
+                                          deleteLabel="Clear slot"
+                                        />
                                       </div>
                                     </>
                                   ) : canWrite ? (
@@ -598,37 +574,11 @@ export function TimetablePage() {
                             {period.startTime} – {period.endTime}
                           </p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setPreviewingPeriod(period)}
-                          >
-                            <Eye className="h-4 w-4" aria-hidden="true" /> Preview
-                          </Button>
-                          {canWrite ? (
-                            <>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditingPeriod(period)}
-                              >
-                                <Pencil className="h-4 w-4" aria-hidden="true" /> Edit
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setDeletingPeriod(period)}
-                                aria-label={`Delete ${period.name}`}
-                              >
-                                <Trash2 className="h-4 w-4 text-danger-600" aria-hidden="true" />
-                              </Button>
-                            </>
-                          ) : null}
-                        </div>
+                        <RowActions
+                          onPreview={() => setPreviewingPeriod(period)}
+                          onEdit={canWrite ? () => setEditingPeriod(period) : undefined}
+                          onDelete={canWrite ? () => setDeletingPeriod(period) : undefined}
+                        />
                       </li>
                     ))}
                   </ul>

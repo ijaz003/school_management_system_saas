@@ -1,6 +1,5 @@
-import { Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { RowActions } from '@/components/ui/row-actions';
 import type { StudentListItem } from '../hooks/useStudents';
 
 const STATUS_TONE = {
@@ -51,10 +50,7 @@ export function StudentTable({
           </thead>
           <tbody className="divide-y divide-ink-100">
             {items.map((student) => (
-              <tr
-                key={student.id}
-                className="group transition hover:bg-primary-50/30"
-              >
+              <tr key={student.id} className="group transition hover:bg-primary-50/30">
                 <td className="px-5 py-3.5">
                   <button
                     type="button"
@@ -92,16 +88,11 @@ export function StudentTable({
                   </Badge>
                 </td>
                 <td className="px-5 py-3.5">
-                  <div className="flex justify-end">
-                    <RowActions
-                      student={student}
-                      canUpdate={canUpdate}
-                      canDelete={canDelete}
-                      onView={onView}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                    />
-                  </div>
+                  <RowActions
+                    onPreview={() => onView(student)}
+                    onEdit={canUpdate ? () => onEdit(student) : undefined}
+                    onDelete={canDelete ? () => onDelete(student) : undefined}
+                  />
                 </td>
               </tr>
             ))}
@@ -109,120 +100,5 @@ export function StudentTable({
         </table>
       </div>
     </div>
-  );
-}
-
-function RowActions({
-  student,
-  canUpdate,
-  canDelete,
-  onView,
-  onEdit,
-  onDelete,
-}: {
-  student: StudentListItem;
-  canUpdate: boolean;
-  canDelete: boolean;
-  onView: (student: StudentListItem) => void;
-  onEdit: (student: StudentListItem) => void;
-  onDelete: (student: StudentListItem) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const menuId = useId();
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDoc);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        aria-label={`Actions for ${student.fullName}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={menuId}
-        onClick={() => setOpen((value) => !value)}
-        className="rounded-lg p-2 text-ink-500 transition hover:bg-ink-100 hover:text-ink-900"
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </button>
-      {open && (
-        <div
-          id={menuId}
-          role="menu"
-          className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-ink-200 bg-surface py-1 shadow-[var(--shadow-lift)]"
-        >
-          <MenuItem
-            icon={Eye}
-            label="View details"
-            onClick={() => {
-              setOpen(false);
-              onView(student);
-            }}
-          />
-          {canUpdate && (
-            <MenuItem
-              icon={Pencil}
-              label="Edit"
-              onClick={() => {
-                setOpen(false);
-                onEdit(student);
-              }}
-            />
-          )}
-          {canDelete && (
-            <MenuItem
-              icon={Trash2}
-              label="Delete"
-              danger
-              onClick={() => {
-                setOpen(false);
-                onDelete(student);
-              }}
-            />
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MenuItem({
-  icon: Icon,
-  label,
-  onClick,
-  danger,
-}: {
-  icon: typeof Eye;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className={`flex w-full items-center gap-2 px-3 py-2 text-sm ${
-        danger ? 'text-danger-600 hover:bg-danger-50' : 'text-ink-700 hover:bg-ink-50'
-      }`}
-    >
-      <Icon className="h-4 w-4" aria-hidden="true" />
-      {label}
-    </button>
   );
 }

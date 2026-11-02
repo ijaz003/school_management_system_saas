@@ -1,6 +1,6 @@
 import { Mail, Phone } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { RowActions } from '@/components/ui/row-actions';
 import type { ParentRecord } from '../hooks/useParents';
 
 function initials(name: string) {
@@ -82,11 +82,10 @@ export function ParentTable({
                   </Badge>
                 </td>
                 <td className="px-5 py-3.5">
-                  <div className="flex justify-end">
-                    <Button variant="outline" size="sm" onClick={() => onManage(parent)}>
-                      Manage
-                    </Button>
-                  </div>
+                  <RowActions
+                    onPreview={() => onManage(parent)}
+                    previewLabel={`Manage ${parent.fullName}`}
+                  />
                 </td>
               </tr>
             ))}

@@ -10,6 +10,7 @@ import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { PageShell } from '@/components/ui/page-shell';
+import { RowActions } from '@/components/ui/row-actions';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import type { TeacherFilters } from '../hooks/keys';
@@ -137,6 +138,7 @@ export function TeachersListPage() {
                       <th className="px-4 py-3 font-semibold sm:px-5">Subject assignments</th>
                       <th className="px-4 py-3 font-semibold sm:px-5">Class teacher</th>
                       <th className="px-4 py-3 font-semibold sm:px-5">Status</th>
+                      <th className="px-4 py-3 text-right font-semibold sm:px-5">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ink-100">
@@ -164,6 +166,15 @@ export function TeachersListPage() {
                           <Badge tone={teacher.isActive ? 'success' : 'neutral'}>
                             {teacher.isActive ? 'Active' : 'Inactive'}
                           </Badge>
+                        </td>
+                        <td
+                          className="px-4 py-4 sm:px-5"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <RowActions
+                            onPreview={() => navigate(`/teachers/${teacher.id}`)}
+                            previewLabel={`View ${teacher.fullName}`}
+                          />
                         </td>
                       </tr>
                     ))}

@@ -3,7 +3,6 @@ import {
   BookMarked,
   Plus,
   Send,
-  Trash2,
   Search,
   CalendarDays,
   GraduationCap,
@@ -26,6 +25,7 @@ import { ListPagination } from '@/components/ui/list-pagination';
 import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { Modal } from '@/components/ui/modal';
 import { PageShell } from '@/components/ui/page-shell';
+import { RowActions } from '@/components/ui/row-actions';
 import { usePermission } from '@/hooks/usePermission';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
@@ -79,6 +79,7 @@ export function DiaryListPage() {
   const canWrite = can('diary.write');
   const [filters, setFilters] = useState<DiaryFilters>({ page: 1, limit: 20 });
   const [creating, setCreating] = useState(false);
+  const [previewing, setPreviewing] = useState<DiaryEntry | null>(null);
   const [deleting, setDeleting] = useState<DiaryEntry | null>(null);
   const classesQuery = useClasses();
   const diaryQuery = useDiaryEntries(filters);
@@ -293,6 +294,7 @@ export function DiaryListPage() {
                 publishing={publishEntry.isPending && publishEntry.variables === entry.id}
                 onPublish={() => publishEntry.mutate(entry.id)}
                 onDelete={() => setDeleting(entry)}
+                onPreview={() => setPreviewing(entry)}
               />
             ))}
           </div>
@@ -312,6 +314,57 @@ export function DiaryListPage() {
       {creating && (
         <CreateDiaryModal classes={classes} onClose={() => setCreating(false)} />
       )}
+
+      {previewing ? (
+        <Modal
+          open
+          onClose={() => setPreviewing(null)}
+          title={previewing.title}
+          description="Diary entry preview"
+          footer={
+            <Button type="button" variant="outline" onClick={() => setPreviewing(null)}>
+              Close
+            </Button>
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Badge tone={previewing.status === 'published' ? 'success' : 'warning'}>
+                {previewing.status}
+              </Badge>
+              {previewing.className ? <Badge tone="primary">{previewing.className}</Badge> : null}
+            </div>
+            {previewing.classwork ? (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                  Classwork
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-ink-800">
+                  {previewing.classwork}
+                </p>
+              </div>
+            ) : null}
+            {previewing.homework ? (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                  Homework
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-ink-800">
+                  {previewing.homework}
+                </p>
+              </div>
+            ) : null}
+            {previewing.remarks ? (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                  Remarks
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-ink-800">{previewing.remarks}</p>
+              </div>
+            ) : null}
+          </div>
+        </Modal>
+      ) : null}
 
       <ConfirmDialog
         open={deleting !== null}
@@ -339,12 +392,14 @@ function DiaryCard({
   publishing,
   onPublish,
   onDelete,
+  onPreview,
 }: {
   entry: DiaryEntry;
   canWrite: boolean;
   publishing: boolean;
   onPublish: () => void;
   onDelete: () => void;
+  onPreview: () => void;
 }) {
   const isPublished = entry.status === 'published';
   const accent = isPublished ? 'bg-emerald-500' : 'bg-amber-500';
@@ -445,32 +500,25 @@ function DiaryCard({
           </div>
 
           {/* actions */}
-          {canWrite && (
-            <div className="flex shrink-0 items-center gap-1.5">
-              {!isPublished && (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={onPublish}
-                  isLoading={publishing}
-                  className="transition active:scale-[0.98]"
-                >
-                  <Send className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                  Publish
-                </Button>
-              )}
+          <div className="flex shrink-0 items-center gap-1.5">
+            {canWrite && !isPublished ? (
               <Button
                 type="button"
                 size="sm"
-                variant="ghost"
-                onClick={onDelete}
-                aria-label={`Delete diary ${entry.title}`}
-                className="text-ink-400 transition hover:text-danger-600"
+                onClick={onPublish}
+                isLoading={publishing}
+                className="transition active:scale-[0.98]"
               >
-                <Trash2 className="h-4 w-4" aria-hidden />
+                <Send className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                Publish
               </Button>
-            </div>
-          )}
+            ) : null}
+            <RowActions
+              onPreview={onPreview}
+              onDelete={canWrite ? onDelete : undefined}
+              deleteLabel={`Delete diary ${entry.title}`}
+            />
+          </div>
         </div>
       </div>
     </article>

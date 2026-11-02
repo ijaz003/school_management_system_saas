@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, CheckCircle2, Library, Plus, Search, Sparkles, Trash2 } from 'lucide-react';
+import { BookOpen, CheckCircle2, Library, Plus, Search, Sparkles } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { Modal } from '@/components/ui/modal';
 import { PageShell } from '@/components/ui/page-shell';
+import { RowActions } from '@/components/ui/row-actions';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { usePermission } from '@/hooks/usePermission';
 import { hasActiveFilters } from '@/lib/list-filters';
@@ -20,6 +21,7 @@ import { useSubjects, type Subject } from '../hooks/useSubjects';
 export function SubjectsListPage() {
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
+  const [previewing, setPreviewing] = useState<Subject | null>(null);
   const [toDelete, setToDelete] = useState<Subject | null>(null);
   const { can } = usePermission();
   const query = useSubjects();
@@ -169,22 +171,15 @@ export function SubjectsListPage() {
                           {subject.usedInClasses} classes · {subject.usedInSections} sections
                         </td>
                         <td className="px-4 py-4 text-right sm:px-5">
-                          {can('classes.delete') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              aria-label={`Delete ${subject.name}`}
-                              title={
-                                inUse
-                                  ? 'Remove the subject from classes and sections before deleting.'
-                                  : 'Delete subject'
-                              }
-                              disabled={inUse || remove.isPending}
-                              onClick={() => handleDelete(subject)}
-                            >
-                              <Trash2 className="h-4 w-4 text-danger-600" aria-hidden="true" />
-                            </Button>
-                          )}
+                          <RowActions
+                            onPreview={() => setPreviewing(subject)}
+                            onDelete={
+                              can('classes.delete') && !inUse
+                                ? () => handleDelete(subject)
+                                : undefined
+                            }
+                            disabled={remove.isPending}
+                          />
                         </td>
                       </tr>
                     );
@@ -206,6 +201,10 @@ export function SubjectsListPage() {
           </Modal>
         )}
 
+        {previewing ? (
+          <SubjectPreviewModal subject={previewing} onClose={() => setPreviewing(null)} />
+        ) : null}
+
         <ConfirmDialog
           open={toDelete !== null}
           title="Delete subject"
@@ -220,5 +219,70 @@ export function SubjectsListPage() {
         />
       </PageShell>
     </AppLayout>
+  );
+}
+
+function SubjectPreviewModal({
+  subject,
+  onClose,
+}: {
+  subject: Subject;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={subject.name}
+      description="Subject details"
+      footer={
+        <Button type="button" variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      }
+    >
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={subject.isElective ? 'warning' : 'primary'}>
+            {subject.isElective ? 'Elective' : 'Core'}
+          </Badge>
+          <code className="rounded bg-ink-100 px-2 py-1 font-mono text-xs text-ink-700">
+            {subject.code}
+          </code>
+        </div>
+        <dl className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Used in classes
+            </dt>
+            <dd className="mt-1 text-sm font-medium text-ink-900">{subject.usedInClasses}</dd>
+          </div>
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Used in sections
+            </dt>
+            <dd className="mt-1 text-sm font-medium text-ink-900">{subject.usedInSections}</dd>
+          </div>
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100 sm:col-span-2">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Created
+            </dt>
+            <dd className="mt-1 text-sm font-medium text-ink-900">
+              {new Date(subject.createdAt).toLocaleString()}
+            </dd>
+          </div>
+        </dl>
+        {subject.description ? (
+          <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Description
+            </p>
+            <p className="mt-1 text-sm text-ink-800">{subject.description}</p>
+          </div>
+        ) : (
+          <p className="text-sm text-ink-500">No description provided.</p>
+        )}
+      </div>
+    </Modal>
   );
 }
