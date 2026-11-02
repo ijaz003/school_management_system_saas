@@ -13,6 +13,7 @@ import { PageShell } from '@/components/ui/page-shell';
 import { RowActions } from '@/components/ui/row-actions';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { hasActiveFilters } from '@/lib/list-filters';
 import { SubjectForm } from '../components/SubjectForm';
 import { useDeleteSubject } from '../hooks/useDeleteSubject';
@@ -229,6 +230,7 @@ function SubjectPreviewModal({
   subject: Subject;
   onClose: () => void;
 }) {
+  const { formatDateTime } = useTenantDateTime();
   return (
     <Modal
       open
@@ -268,7 +270,7 @@ function SubjectPreviewModal({
               Created
             </dt>
             <dd className="mt-1 text-sm font-medium text-ink-900">
-              {new Date(subject.createdAt).toLocaleString()}
+              {formatDateTime(subject.createdAt)}
             </dd>
           </div>
         </dl>

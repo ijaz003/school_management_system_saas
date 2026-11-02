@@ -14,14 +14,15 @@ import {
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { DateInput } from '@/components/ui/date-input';
 import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
-import { Input } from '@/components/ui/input';
 import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useSections } from '@/features/school/classes/hooks/useSections';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import {
   useAttendanceSheet,
   useSaveAttendanceSheet,
@@ -36,16 +37,13 @@ const STATUSES: { value: AttendanceStatus; label: string; className: string }[] 
   { value: 'leave', label: 'Leave', className: 'bg-primary-100 text-primary-800 border-primary-200' },
 ];
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function AttendancePage() {
   const { can } = usePermission();
+  const { todayIso } = useTenantDateTime();
   const canMark = can('attendance.mark');
   const [classId, setClassId] = useState('');
   const [sectionId, setSectionId] = useState('');
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(() => todayIso());
   const [draft, setDraft] = useState<Record<string, AttendanceStatus | null>>({});
 
   const classesQuery = useClasses();
@@ -143,9 +141,9 @@ export function AttendancePage() {
           onClear={() => {
             setClassId('');
             setSectionId('');
-            setDate(today());
+            setDate(todayIso());
           }}
-          clearDisabled={!classId && !sectionId && date === today()}
+          clearDisabled={!classId && !sectionId && date === todayIso()}
         >
           <FilterField id="att-class" label="Class" className="md:col-span-4">
             <select
@@ -179,11 +177,10 @@ export function AttendancePage() {
             </select>
           </FilterField>
           <FilterField id="att-date" label="Date" className="md:col-span-4">
-            <Input
+            <DateInput
               id="att-date"
-              type="date"
               value={date}
-              onChange={(event) => setDate(event.target.value)}
+              onChange={setDate}
             />
           </FilterField>
         </FiltersPanel>

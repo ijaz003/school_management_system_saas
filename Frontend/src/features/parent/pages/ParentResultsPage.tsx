@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { ChildPageShell, QueryError } from '../components/ChildPageShell';
 import { useChildResults } from '../hooks/useParentPortal';
 
@@ -14,6 +15,7 @@ const RESULT_TONE: Record<string, BadgeTone> = {
 
 export function ParentResultsPage() {
   const { studentId = '' } = useParams();
+  const { formatDate } = useTenantDateTime();
   const resultsQuery = useChildResults(studentId);
   const results = resultsQuery.data?.results ?? [];
 
@@ -58,7 +60,7 @@ export function ParentResultsPage() {
                   <p className="text-xs text-ink-500">
                     {[exam.term, exam.academicYear].filter(Boolean).join(' · ') || 'Exam'}
                     {exam.publishedAt &&
-                      ` · Published ${new Date(exam.publishedAt).toLocaleDateString()}`}
+                      ` · Published ${formatDate(exam.publishedAt)}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

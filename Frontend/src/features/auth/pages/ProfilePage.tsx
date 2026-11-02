@@ -154,6 +154,7 @@ export function ProfilePage() {
           tenantId: updated.tenantId,
           permissions: updated.permissions,
           avatarUrl: updated.avatarUrl,
+          tenantLocale: updated.tenantLocale ?? user?.tenantLocale ?? null,
         }),
       );
       void queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });

@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
 import { api } from '@/lib/api';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 
 interface ReportCard {
   school: {
@@ -162,6 +163,7 @@ export function ExamReportCardsPage() {
 }
 
 function ReportCardSheet({ card }: { card: ReportCard }) {
+  const { formatDateTime } = useTenantDateTime();
   return (
     <article className="panel mx-auto max-w-3xl overflow-hidden p-6 sm:p-8 print:max-w-none print:border-0 print:p-0 print:shadow-none">
       <header className="border-b border-ink-200 pb-5 text-center">
@@ -269,7 +271,7 @@ function ReportCardSheet({ card }: { card: ReportCard }) {
         </div>
         <div className="sm:text-right">
           <p className="text-ink-500">Generated</p>
-          <p className="text-ink-700">{new Date(card.generatedAt).toLocaleString()}</p>
+          <p className="text-ink-700">{formatDateTime(card.generatedAt)}</p>
         </div>
       </footer>
     </article>

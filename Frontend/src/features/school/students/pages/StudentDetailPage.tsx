@@ -15,6 +15,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { useDeleteStudent } from '../hooks/useDeleteStudent';
 import { useStudent } from '../hooks/useStudent';
 
@@ -29,6 +30,7 @@ export function StudentDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const { can } = usePermission();
+  const { formatDate } = useTenantDateTime();
   const studentQuery = useStudent(id);
   const deleteStudent = useDeleteStudent();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -129,7 +131,7 @@ export function StudentDetailPage() {
               <InfoRow
                 icon={<CalendarDays className="h-4 w-4" />}
                 label="Date of birth"
-                value={new Date(student.dateOfBirth).toLocaleDateString()}
+                value={formatDate(student.dateOfBirth.slice(0, 10))}
               />
               <InfoRow
                 icon={<GraduationCap className="h-4 w-4" />}
@@ -159,7 +161,7 @@ export function StudentDetailPage() {
               <InfoRow
                 icon={<CalendarDays className="h-4 w-4" />}
                 label="Admission date"
-                value={new Date(student.admissionDate).toLocaleDateString()}
+                value={formatDate(student.admissionDate.slice(0, 10))}
               />
             </div>
           </section>

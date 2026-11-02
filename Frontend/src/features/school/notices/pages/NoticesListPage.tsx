@@ -13,6 +13,7 @@ import { Modal } from '@/components/ui/modal';
 import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import {
   useCreateNotice,
@@ -226,6 +227,7 @@ function NoticeCard({
   onDelete: () => void;
   onPreview: () => void;
 }) {
+  const { formatDateTime } = useTenantDateTime();
   return (
     <article className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-ink-100 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -243,8 +245,8 @@ function NoticeCard({
           <p className="mt-3 text-xs text-ink-400">
             {notice.createdByName ? `By ${notice.createdByName} · ` : ''}
             {notice.publishedAt
-              ? `Published ${new Date(notice.publishedAt).toLocaleString()}`
-              : `Created ${new Date(notice.createdAt).toLocaleString()}`}
+              ? `Published ${formatDateTime(notice.publishedAt)}`
+              : `Created ${formatDateTime(notice.createdAt)}`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

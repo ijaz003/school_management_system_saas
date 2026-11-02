@@ -24,6 +24,7 @@ import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { RowActions } from '@/components/ui/row-actions';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useSections } from '@/features/school/classes/hooks/useSections';
@@ -868,6 +869,7 @@ function PeriodPreviewModal({
   onClose: () => void;
   onEdit: () => void;
 }) {
+  const { formatDateTime } = useTenantDateTime();
   return (
     <Modal
       open
@@ -894,8 +896,8 @@ function PeriodPreviewModal({
       <dl className="grid gap-3 sm:grid-cols-2">
         <PreviewField label="Start" value={period.startTime} />
         <PreviewField label="End" value={period.endTime} />
-        <PreviewField label="Created" value={new Date(period.createdAt).toLocaleString()} />
-        <PreviewField label="Updated" value={new Date(period.updatedAt).toLocaleString()} />
+        <PreviewField label="Created" value={formatDateTime(period.createdAt)} />
+        <PreviewField label="Updated" value={formatDateTime(period.updatedAt)} />
       </dl>
     </Modal>
   );

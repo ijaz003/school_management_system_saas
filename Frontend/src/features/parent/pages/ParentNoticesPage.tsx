@@ -5,10 +5,12 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { PageShell } from '@/components/ui/page-shell';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { QueryError } from '../components/ChildPageShell';
 import { useParentNotices } from '../hooks/useParentPortal';
 
 export function ParentNoticesPage() {
+  const { formatDateTime } = useTenantDateTime();
   const [page, setPage] = useState(1);
   const noticesQuery = useParentNotices(page, 10);
   const items = noticesQuery.data?.items ?? [];
@@ -57,7 +59,7 @@ export function ParentNoticesPage() {
                         dateTime={notice.publishedAt}
                         className="text-xs text-ink-500"
                       >
-                        {new Date(notice.publishedAt).toLocaleDateString()}
+                        {formatDateTime(notice.publishedAt)}
                       </time>
                     )}
                   </div>

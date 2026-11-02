@@ -1,6 +1,11 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { tokenStorage } from '@/lib/api';
 
+export interface TenantLocale {
+  timezone: string;
+  dateFormat: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -11,6 +16,7 @@ export interface User {
   tenantId: string | null;
   permissions: string[];
   avatarUrl?: string;
+  tenantLocale?: TenantLocale | null;
 }
 
 interface AuthState {

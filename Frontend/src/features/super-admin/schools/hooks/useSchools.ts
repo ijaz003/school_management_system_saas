@@ -18,6 +18,14 @@ export interface School {
   maxTeachers: number;
   maxSmsPerMonth: number;
   maxCustomRoles: number;
+  settings?: {
+    timezone?: string;
+    dateFormat?: string;
+    currency?: string;
+    academicYear?: string;
+    gradingSystem?: string;
+    cardAttendanceEnabled?: boolean;
+  } | null;
   createdAt: string;
   trialEndsAt: string | null;
   subscriptionEndsAt: string | null;

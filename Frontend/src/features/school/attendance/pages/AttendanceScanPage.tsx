@@ -18,9 +18,11 @@ import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { api } from '@/lib/api';
 
 interface ScanResult {
@@ -44,6 +46,7 @@ const CAMERA_REGION_ID = 'attendance-qr-reader';
 export function AttendanceScanPage() {
   const { can } = usePermission();
   const canMark = can('attendance.mark');
+  const { todayIso, formatTime } = useTenantDateTime();
 
   const configQuery = useQuery({
     queryKey: ['attendance', 'scan-config'],
@@ -59,7 +62,7 @@ export function AttendanceScanPage() {
   const enabled = Boolean(configQuery.data?.cardAttendanceEnabled);
 
   const [code, setCode] = useState('');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => todayIso());
   const [lastResult, setLastResult] = useState<ScanResult | null>(null);
   const [history, setHistory] = useState<ScanResult[]>([]);
   const [cameraOn, setCameraOn] = useState(false);
@@ -423,12 +426,11 @@ export function AttendanceScanPage() {
                     <CalendarDays className="h-3.5 w-3.5 text-ink-400" aria-hidden />
                     Attendance date
                   </label>
-                  <input
+                  <DateInput
                     id="attendance-date"
-                    type="date"
-                    className="field-select w-full max-w-xs text-[13px]"
+                    className="max-w-xs text-[13px]"
                     value={date}
-                    onChange={(event) => setDate(event.target.value)}
+                    onChange={setDate}
                   />
                 </div>
 
@@ -532,7 +534,7 @@ export function AttendanceScanPage() {
                       {item.alreadyMarked ? 'Duplicate' : item.status}
                     </Badge>
                     <span className="text-[11px] tabular-nums text-ink-400">
-                      {new Date(item.scannedAt).toLocaleTimeString()}
+                      {formatTime(item.scannedAt)}
                     </span>
                   </div>
                 </li>
@@ -599,6 +601,7 @@ function Corner({ className }: { className: string }) {
 }
 
 function ResultCard({ result }: { result: ScanResult }) {
+  const { formatDateTime } = useTenantDateTime();
   const tone = result.alreadyMarked
     ? {
         wrap: 'bg-gradient-to-br from-amber-50 to-white ring-amber-100',
@@ -653,7 +656,7 @@ function ResultCard({ result }: { result: ScanResult }) {
       <p className="flex items-center gap-1 text-[11px] text-ink-500">
         <CalendarDays className="h-3 w-3 text-ink-400" aria-hidden />
         <span className="tabular-nums">
-          {new Date(result.scannedAt).toLocaleString()}
+          {formatDateTime(result.scannedAt)}
         </span>
       </p>
     </div>

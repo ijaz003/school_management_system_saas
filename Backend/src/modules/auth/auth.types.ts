@@ -1,5 +1,10 @@
 import type { User } from './auth.schema.js';
 
+export interface TenantLocale {
+  timezone: string;
+  dateFormat: string;
+}
+
 export interface LoginInput {
   email: string;
   password: string;
@@ -11,7 +16,7 @@ export interface LoginInput {
 export interface LoginOutput {
   accessToken: string;
   refreshToken: string;
-  user: SafeUser;
+  user: AuthUser;
 }
 
 export interface RefreshOutput {
@@ -24,6 +29,10 @@ export type SafeUser = Omit<
   'passwordHash' | 'twoFactorSecret' | 'resetToken' | 'resetTokenExpiry'
 >;
 
+export type AuthUser = SafeUser & {
+  tenantLocale: TenantLocale | null;
+};
+
 export function toSafeUser(user: User): SafeUser {
   const {
     passwordHash: _passwordHash,
@@ -35,6 +44,13 @@ export function toSafeUser(user: User): SafeUser {
 
   void [_passwordHash, _twoFactorSecret, _resetToken, _resetTokenExpiry];
   return safeUser;
+}
+
+export function toAuthUser(user: User, tenantLocale: TenantLocale | null = null): AuthUser {
+  return {
+    ...toSafeUser(user),
+    tenantLocale,
+  };
 }
 
 export interface CreateSuperAdminInput {

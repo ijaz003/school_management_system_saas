@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { useInvoice } from '../hooks/useFees';
 
 function money(amount: number) {
@@ -16,6 +17,7 @@ function money(amount: number) {
 export function FeeVoucherPage() {
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
+  const { formatDate, formatDateTime } = useTenantDateTime();
   const canView = can('fees.invoice.read');
   const invoiceQuery = useInvoice(canView ? id ?? null : null);
 
@@ -104,7 +106,7 @@ export function FeeVoucherPage() {
             <div className="sm:text-right">
               <p className="text-ink-500">Status</p>
               <Badge tone="primary">{invoice.status}</Badge>
-              <p className="mt-2 text-ink-600">Due {invoice.dueDate}</p>
+              <p className="mt-2 text-ink-600">Due {formatDate(invoice.dueDate)}</p>
             </div>
           </div>
 
@@ -134,7 +136,7 @@ export function FeeVoucherPage() {
                       {payment.reference ? ` · ${payment.reference}` : ''}
                     </span>
                     <span className="text-ink-500">
-                      {new Date(payment.paidAt).toLocaleDateString()}
+                      {formatDateTime(payment.paidAt)}
                     </span>
                   </li>
                 ))}

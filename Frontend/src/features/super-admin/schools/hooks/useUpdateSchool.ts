@@ -9,6 +9,10 @@ export interface UpdateSchoolInput {
   address?: string | null;
   logoUrl?: string | null;
   plan?: 'basic' | 'standard' | 'premium';
+  settings?: {
+    timezone?: string;
+    dateFormat?: string;
+  };
 }
 
 interface UpdateSchoolParams {

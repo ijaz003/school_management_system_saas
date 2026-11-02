@@ -18,9 +18,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
+import { NativeSelect } from '@/components/ui/native-select';
 import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
+import { formatDate, formatDateTime } from '@/lib/datetime';
+import {
+  DATE_FORMAT_OPTIONS,
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_TIMEZONE,
+  listTimeZones,
+} from '@/lib/tenant-locale';
 import { useSchoolSettings, useUpdateSchoolSettings } from '../hooks/useSchoolSettings';
+
+const TIMEZONES = listTimeZones();
 
 const schema = z.object({
   name: z.string().trim().min(2).max(200),
@@ -31,7 +41,14 @@ const schema = z.object({
   ownerPhone: z.string().trim().min(7).max(20),
   academicYear: z.string().trim().max(50).optional(),
   gradingSystem: z.string().trim().max(50).optional(),
-  timezone: z.string().trim().max(80).optional(),
+  timezone: z.string().trim().min(1).max(80),
+  dateFormat: z.enum([
+    'DD/MM/YYYY',
+    'MM/DD/YYYY',
+    'YYYY-MM-DD',
+    'DD-MM-YYYY',
+    'D MMM YYYY',
+  ]),
   currency: z.string().trim().max(10).optional(),
   cardAttendanceEnabled: z.boolean().optional(),
 });
@@ -66,7 +83,9 @@ export function SchoolSettingsPage() {
       ownerPhone: data.ownerPhone,
       academicYear: data.settings.academicYear ?? '',
       gradingSystem: data.settings.gradingSystem ?? '',
-      timezone: data.settings.timezone ?? '',
+      timezone: data.settings.timezone || DEFAULT_TIMEZONE,
+      dateFormat: (DATE_FORMAT_OPTIONS.find((o) => o.value === data.settings.dateFormat)?.value ??
+        DEFAULT_DATE_FORMAT) as FormData['dateFormat'],
       currency: data.settings.currency ?? '',
       cardAttendanceEnabled: Boolean(data.settings.cardAttendanceEnabled),
     });
@@ -124,7 +143,8 @@ export function SchoolSettingsPage() {
       settings: {
         academicYear: data.academicYear || undefined,
         gradingSystem: data.gradingSystem || undefined,
-        timezone: data.timezone || undefined,
+        timezone: data.timezone || DEFAULT_TIMEZONE,
+        dateFormat: data.dateFormat || DEFAULT_DATE_FORMAT,
         currency: data.currency || undefined,
         cardAttendanceEnabled: Boolean(data.cardAttendanceEnabled),
       },
@@ -141,10 +161,17 @@ export function SchoolSettingsPage() {
       ownerPhone: school.ownerPhone,
       academicYear: school.settings.academicYear ?? '',
       gradingSystem: school.settings.gradingSystem ?? '',
-      timezone: school.settings.timezone ?? '',
+      timezone: school.settings.timezone || DEFAULT_TIMEZONE,
+      dateFormat: (DATE_FORMAT_OPTIONS.find((o) => o.value === school.settings.dateFormat)?.value ??
+        DEFAULT_DATE_FORMAT) as FormData['dateFormat'],
       currency: school.settings.currency ?? '',
       cardAttendanceEnabled: Boolean(school.settings.cardAttendanceEnabled),
     });
+  };
+
+  const previewLocale = {
+    timezone: watch('timezone') || DEFAULT_TIMEZONE,
+    dateFormat: watch('dateFormat') || DEFAULT_DATE_FORMAT,
   };
 
   return (
@@ -304,8 +331,57 @@ export function SchoolSettingsPage() {
                 placeholder="Percentage"
                 {...register('gradingSystem')}
               />
-              <Input label="Timezone" placeholder="Asia/Karachi" {...register('timezone')} />
               <Input label="Currency" placeholder="PKR" {...register('currency')} />
+            </div>
+          </SettingsSection>
+
+          <SettingsSection
+            icon={<Settings2 className="h-4 w-4" aria-hidden="true" />}
+            title="Timezone & date format"
+            description="All dates and times in the school app follow these settings."
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <NativeSelect
+                id="school-timezone"
+                label="Timezone *"
+                error={errors.timezone?.message}
+                hint="Used for attendance, fees, notices, and reports."
+                {...register('timezone')}
+              >
+                {watch('timezone') && !TIMEZONES.includes(watch('timezone')) ? (
+                  <option value={watch('timezone')}>{watch('timezone')}</option>
+                ) : null}
+                {TIMEZONES.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone.replace(/_/g, ' ')}
+                  </option>
+                ))}
+              </NativeSelect>
+              <NativeSelect
+                id="school-date-format"
+                label="Date format *"
+                error={errors.dateFormat?.message}
+                hint="How calendar dates are shown across the app."
+                {...register('dateFormat')}
+              >
+                {DATE_FORMAT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label} — {option.example}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+            <div className="rounded-xl border border-ink-100 bg-ink-50/60 px-4 py-3 text-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">
+                Live preview
+              </p>
+              <p className="mt-1 font-medium text-ink-950">
+                Date: {formatDate(new Date(), previewLocale)}
+              </p>
+              <p className="mt-0.5 text-ink-700">
+                Date & time: {formatDateTime(new Date(), previewLocale)}
+              </p>
+              <p className="mt-0.5 text-xs text-ink-500">Timezone: {previewLocale.timezone}</p>
             </div>
           </SettingsSection>
 

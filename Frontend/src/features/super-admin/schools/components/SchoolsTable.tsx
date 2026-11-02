@@ -4,6 +4,8 @@ import { Ban, CheckCircle, Edit, Eye, School as SchoolIcon, Trash2 } from 'lucid
 import { useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { formatDate } from '@/lib/datetime';
+import { normalizeLocale } from '@/lib/tenant-locale';
 import { DeleteSchoolDialog } from './DeleteSchoolDialog';
 import { EditSchoolModal } from './EditSchoolModal';
 import { StatusBadge } from './StatusBadge';
@@ -55,7 +57,7 @@ export function SchoolsTable({ schools }: { schools: School[] }) {
                 </td>
                 <td className="px-4 py-4 text-sm capitalize text-ink-700">{school.plan}</td>
                 <td className="px-4 py-4"><StatusBadge status={school.status} /></td>
-                <td className="whitespace-nowrap px-4 py-4 text-sm text-ink-500">{new Date(school.createdAt).toLocaleDateString()}</td>
+                <td className="whitespace-nowrap px-4 py-4 text-sm text-ink-500">{formatDate(school.createdAt, normalizeLocale(school.settings))}</td>
                 <td className="px-4 py-4">
                   <div className="flex flex-wrap items-center justify-end gap-1">
                     <ActionButton

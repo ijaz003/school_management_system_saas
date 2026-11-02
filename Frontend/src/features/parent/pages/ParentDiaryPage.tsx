@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { ChildPageShell, QueryError } from '../components/ChildPageShell';
 import { useChildDiary } from '../hooks/useParentPortal';
 
@@ -19,6 +20,7 @@ function DiarySection({ label, text }: { label: string; text: string | null }) {
 
 export function ParentDiaryPage() {
   const { studentId = '' } = useParams();
+  const { formatDate } = useTenantDateTime();
   const [pageState, setPageState] = useState({ studentId, page: 1 });
   // Pagination resets whenever the child changes.
   const page = pageState.studentId === studentId ? pageState.page : 1;
@@ -66,12 +68,7 @@ export function ParentDiaryPage() {
                     {entry.title}
                   </h2>
                   <time className="text-xs text-ink-500">
-                    {new Date(`${entry.entryDate}T00:00:00`).toLocaleDateString(undefined, {
-                      weekday: 'short',
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
+                    {formatDate(entry.entryDate)}
                   </time>
                 </div>
                 <DiarySection label="Classwork" text={entry.classwork} />

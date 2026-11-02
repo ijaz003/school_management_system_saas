@@ -11,6 +11,7 @@ import { PageLoader } from '@/components/ui/spinner';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useSections } from '@/features/school/classes/hooks/useSections';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { api, buildQueryString } from '@/lib/api';
 
 interface IdCard {
@@ -50,6 +51,7 @@ function IdCardSheet({
   school: { name: string; city: string | null; address: string | null };
   card: IdCard;
 }) {
+  const { formatDate } = useTenantDateTime();
   const qr = useQrDataUrl(card.cardCode);
   return (
     <article className="panel w-full max-w-sm overflow-hidden p-4 print:break-inside-avoid print:border print:border-ink-300 print:shadow-none">
@@ -72,7 +74,7 @@ function IdCardSheet({
             {card.className} · {card.sectionName}
           </p>
           <p className="capitalize text-ink-500">
-            {card.gender} · {card.dateOfBirth}
+            {card.gender} · {formatDate(card.dateOfBirth.slice(0, 10))}
           </p>
           <p className="mt-2 text-xs text-ink-500">Guardian: {card.guardianName}</p>
         </div>

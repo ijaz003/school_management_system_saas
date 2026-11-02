@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { DateInput } from '@/components/ui/date-input';
 import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
 import { ListPagination } from '@/components/ui/list-pagination';
@@ -16,6 +17,7 @@ import { PageLoader } from '@/components/ui/spinner';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useClass } from '@/features/school/classes/hooks/useClass';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import {
   useCreateExam,
@@ -199,6 +201,7 @@ function ExamRow({
   onDelete: () => void;
 }) {
   const navigate = useNavigate();
+  const { formatDate } = useTenantDateTime();
 
   return (
     <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-ink-100">
@@ -210,7 +213,7 @@ function ExamRow({
           </div>
           <h2 className="font-display text-lg font-semibold text-ink-950">{exam.name}</h2>
           <p className="mt-1 text-sm text-ink-700">
-            {exam.startDate} → {exam.endDate}
+            {formatDate(exam.startDate)} → {formatDate(exam.endDate)}
             {exam.term ? ` · ${exam.term}` : ''}
             {exam.academicYear ? ` · ${exam.academicYear}` : ''}
             {` · ${exam.subjectsCount} subject${exam.subjectsCount === 1 ? '' : 's'}`}
@@ -332,17 +335,15 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
             value={academicYear}
             onChange={(event) => setAcademicYear(event.target.value)}
           />
-          <Input
+          <DateInput
             label="Start date *"
-            type="date"
             value={startDate}
-            onChange={(event) => setStartDate(event.target.value)}
+            onChange={setStartDate}
           />
-          <Input
+          <DateInput
             label="End date *"
-            type="date"
             value={endDate}
-            onChange={(event) => setEndDate(event.target.value)}
+            onChange={setEndDate}
           />
         </div>
 

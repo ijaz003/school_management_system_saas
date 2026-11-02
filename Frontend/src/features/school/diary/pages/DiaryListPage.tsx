@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { DateInput } from '@/components/ui/date-input';
 import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
 import { ListPagination } from '@/components/ui/list-pagination';
@@ -27,6 +28,7 @@ import { Modal } from '@/components/ui/modal';
 import { PageShell } from '@/components/ui/page-shell';
 import { RowActions } from '@/components/ui/row-actions';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useSections } from '@/features/school/classes/hooks/useSections';
@@ -43,11 +45,7 @@ import type { DiaryFilters, DiaryStatus } from '../hooks/keys';
 
 const tabularNums: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' };
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function relativeTime(iso: string) {
+function relativeTime(iso: string, formatDate: (value: string) => string) {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1) return 'just now';
@@ -56,20 +54,7 @@ function relativeTime(iso: string) {
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   if (d < 7) return `${d}d ago`;
-  return new Date(iso).toLocaleDateString();
-}
-
-function formatDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
+  return formatDate(iso);
 }
 
 /* ---------- page ---------- */
@@ -217,16 +202,15 @@ export function DiaryListPage() {
             icon={<CalendarDays className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
             className="md:col-span-3"
           >
-            <Input
+            <DateInput
               id="diary-date"
-              type="date"
               aria-label="Filter by date"
               className="w-full"
               value={filters.entryDate ?? ''}
-              onChange={(event) =>
+              onChange={(iso) =>
                 setFilters((current) => ({
                   ...current,
-                  entryDate: event.target.value || undefined,
+                  entryDate: iso || undefined,
                   page: 1,
                 }))
               }
@@ -401,6 +385,7 @@ function DiaryCard({
   onDelete: () => void;
   onPreview: () => void;
 }) {
+  const { formatDate, formatDateTime } = useTenantDateTime();
   const isPublished = entry.status === 'published';
   const accent = isPublished ? 'bg-emerald-500' : 'bg-amber-500';
 
@@ -487,13 +472,13 @@ function DiaryCard({
                   style={tabularNums}
                   title={
                     entry.publishedAt
-                      ? new Date(entry.publishedAt).toLocaleString()
-                      : new Date(entry.createdAt).toLocaleString()
+                      ? formatDateTime(entry.publishedAt)
+                      : formatDateTime(entry.createdAt)
                   }
                 >
                   {entry.publishedAt
-                    ? `Published ${relativeTime(entry.publishedAt)}`
-                    : `Created ${relativeTime(entry.createdAt)}`}
+                    ? `Published ${relativeTime(entry.publishedAt, formatDate)}`
+                    : `Created ${relativeTime(entry.createdAt, formatDate)}`}
                 </span>
               </span>
             </p>
@@ -610,7 +595,8 @@ function CreateDiaryModal({
   onClose: () => void;
 }) {
   const createEntry = useCreateDiaryEntry();
-  const [entryDate, setEntryDate] = useState(todayIso());
+  const { todayIso } = useTenantDateTime();
+  const [entryDate, setEntryDate] = useState(() => todayIso());
   const [classId, setClassId] = useState(classes[0]?.id ?? '');
   const [sectionId, setSectionId] = useState('');
   const [title, setTitle] = useState('');
@@ -709,11 +695,10 @@ function CreateDiaryModal({
           description="Pick the date and target the right class and section."
         >
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input
+            <DateInput
               label="Date *"
-              type="date"
               value={entryDate}
-              onChange={(event) => setEntryDate(event.target.value)}
+              onChange={setEntryDate}
             />
             <div>
               <label

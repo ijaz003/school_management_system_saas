@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { RowActions } from '@/components/ui/row-actions';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import type { StaffMember } from '../hooks/useStaff';
 
 interface StaffTableProps {
@@ -29,6 +30,7 @@ function initials(name: string) {
 
 export function StaffTable({ staff, onEdit, onDelete, onResetPassword, busy = false }: StaffTableProps) {
   const navigate = useNavigate();
+  const { formatDate } = useTenantDateTime();
 
   if (staff.length === 0) {
     return (
@@ -86,7 +88,7 @@ export function StaffTable({ staff, onEdit, onDelete, onResetPassword, busy = fa
                 </Badge>
               </td>
               <td className="whitespace-nowrap px-4 py-4 text-sm text-ink-500 sm:px-5">
-                {new Date(member.createdAt).toLocaleDateString()}
+                {formatDate(member.createdAt)}
               </td>
               <td className="px-4 py-4 sm:px-5">
                 <RowActions

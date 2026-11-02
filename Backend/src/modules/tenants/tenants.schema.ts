@@ -54,7 +54,10 @@ export const tenants = pgTable('tenants', {
     /** Active academic/session year id (FK to session_years). */
     currentSessionYearId?: string;
     gradingSystem?: string;
+    /** IANA timezone, e.g. Asia/Karachi */
     timezone?: string;
+    /** Display date pattern, e.g. DD/MM/YYYY */
+    dateFormat?: string;
     currency?: string;
     /** Optional QR/card scan attendance (keyboard wedge / barcode scanner). */
     cardAttendanceEnabled?: boolean;

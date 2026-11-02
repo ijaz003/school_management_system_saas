@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
 import { useCreateStaff } from '../hooks/useCreateStaff';
 import { useUpdateStaff } from '../hooks/useUpdateStaff';
@@ -114,7 +115,20 @@ export function StaffForm({
         <div className="grid gap-4 md:grid-cols-2">
           <Input label="Subject" placeholder="e.g. Mathematics" error={errors.subject?.message} {...register('subject')} />
           {!isEdit && (
-            <Input label="Joining date" type="date" error={errors.joiningDate?.message} {...register('joiningDate')} />
+            <Controller
+              name="joiningDate"
+              control={control}
+              render={({ field }) => (
+                <DateInput
+                  label="Joining date"
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  error={errors.joiningDate?.message}
+                />
+              )}
+            />
           )}
         </div>
       </section>

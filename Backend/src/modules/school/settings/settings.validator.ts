@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import {
+  DATE_FORMAT_VALUES,
+  isValidIanaTimeZone,
+} from '../../../lib/tenant-locale.js';
 
 export const updateSchoolSettingsSchema = z.object({
   body: z
@@ -13,7 +17,13 @@ export const updateSchoolSettingsSchema = z.object({
         .object({
           academicYear: z.string().trim().max(50).optional(),
           gradingSystem: z.string().trim().max(50).optional(),
-          timezone: z.string().trim().max(80).optional(),
+          timezone: z
+            .string()
+            .trim()
+            .max(80)
+            .refine(isValidIanaTimeZone, 'Invalid timezone')
+            .optional(),
+          dateFormat: z.enum(DATE_FORMAT_VALUES).optional(),
           currency: z.string().trim().max(10).optional(),
           cardAttendanceEnabled: z.boolean().optional(),
         })

@@ -15,16 +15,29 @@ import {
   NotFoundError,
   UnauthorizedError,
 } from '../../lib/errors.js';
+import { normalizeTenantLocale } from '../../lib/tenant-locale.js';
 import { refreshTokens, users } from './auth.schema.js';
 import { tenants } from '../tenants/tenants.schema.js';
 import type {
+  AuthUser,
   CreateSuperAdminInput,
   LoginInput,
   LoginOutput,
   RefreshOutput,
   SafeUser,
 } from './auth.types.js';
-import { toSafeUser } from './auth.types.js';
+import { toAuthUser, toSafeUser } from './auth.types.js';
+
+async function resolveTenantLocale(tenantId: string | null) {
+  if (!tenantId) return null;
+  const [tenant] = await db
+    .select({ settings: tenants.settings })
+    .from(tenants)
+    .where(and(eq(tenants.id, tenantId), isNull(tenants.deletedAt)))
+    .limit(1);
+  if (!tenant) return null;
+  return normalizeTenantLocale(tenant.settings);
+}
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 15 * 60 * 1000;
@@ -140,7 +153,7 @@ export async function loginUser(input: LoginInput): Promise<LoginOutput> {
   return {
     accessToken,
     refreshToken,
-    user: toSafeUser(user),
+    user: toAuthUser(user, await resolveTenantLocale(user.tenantId)),
   };
 }
 
@@ -249,7 +262,7 @@ export async function logoutUser(refreshToken: string): Promise<void> {
     );
 }
 
-export async function getCurrentUser(userId: string): Promise<SafeUser> {
+export async function getCurrentUser(userId: string): Promise<AuthUser> {
   const [user] = await db
     .select()
     .from(users)
@@ -266,13 +279,13 @@ export async function getCurrentUser(userId: string): Promise<SafeUser> {
     throw new NotFoundError('User');
   }
 
-  return toSafeUser(user);
+  return toAuthUser(user, await resolveTenantLocale(user.tenantId));
 }
 
 export async function updateCurrentUserProfile(
   userId: string,
   data: { fullName?: string; phone?: string | null },
-): Promise<SafeUser> {
+): Promise<AuthUser> {
   const [existing] = await db
     .select()
     .from(users)
@@ -291,7 +304,7 @@ export async function updateCurrentUserProfile(
     .returning();
 
   if (!updated) throw new NotFoundError('User');
-  return toSafeUser(updated);
+  return toAuthUser(updated, await resolveTenantLocale(updated.tenantId));
 }
 
 export async function changeCurrentUserPassword(

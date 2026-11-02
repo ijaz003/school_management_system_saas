@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { DateInput } from '@/components/ui/date-input';
 import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
 import { ListPagination } from '@/components/ui/list-pagination';
@@ -14,6 +15,7 @@ import { PageShell } from '@/components/ui/page-shell';
 import { PageLoader } from '@/components/ui/spinner';
 import { RowActions } from '@/components/ui/row-actions';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import {
   useCreateSessionYear,
@@ -31,14 +33,6 @@ interface YearFilters {
   status?: SessionYearStatus | 'current' | '';
   page: number;
   limit: number;
-}
-
-function formatDate(value: string) {
-  return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 function statusTone(year: SessionYear): 'success' | 'primary' | 'neutral' | 'warning' {
@@ -61,6 +55,7 @@ export function SessionYearsPage() {
   const [editing, setEditing] = useState<SessionYear | null>(null);
   const [previewing, setPreviewing] = useState<SessionYear | null>(null);
   const [deleting, setDeleting] = useState<SessionYear | null>(null);
+  const { formatDate } = useTenantDateTime();
 
   const yearsQuery = useSessionYears();
   const setCurrent = useSetCurrentSessionYear();
@@ -385,17 +380,15 @@ function SessionYearFormModal({
           placeholder="2025-2026"
         />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input
+          <DateInput
             label="Start date *"
-            type="date"
             value={startDate}
-            onChange={(event) => setStartDate(event.target.value)}
+            onChange={setStartDate}
           />
-          <Input
+          <DateInput
             label="End date *"
-            type="date"
             value={endDate}
-            onChange={(event) => setEndDate(event.target.value)}
+            onChange={setEndDate}
           />
         </div>
         {mode === 'create' ? (
@@ -440,6 +433,7 @@ function SessionYearPreviewModal({
   year: SessionYear;
   onClose: () => void;
 }) {
+  const { formatDate, formatDateTime } = useTenantDateTime();
   const placementsQuery = useSessionYearPlacements(year.id);
   const placements = placementsQuery.data ?? [];
   const byClass = useMemo(() => {
@@ -484,7 +478,7 @@ function SessionYearPreviewModal({
               Created
             </dt>
             <dd className="mt-1 text-sm font-medium text-ink-900">
-              {new Date(year.createdAt).toLocaleString()}
+              {formatDateTime(year.createdAt)}
             </dd>
           </div>
           <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
@@ -492,7 +486,7 @@ function SessionYearPreviewModal({
               Updated
             </dt>
             <dd className="mt-1 text-sm font-medium text-ink-900">
-              {new Date(year.updatedAt).toLocaleString()}
+              {formatDateTime(year.updatedAt)}
             </dd>
           </div>
         </dl>

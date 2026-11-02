@@ -14,6 +14,11 @@ import {
   generateRandomPassword,
   hashPassword,
 } from '../../lib/password.js';
+import {
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_TIMEZONE,
+  normalizeTenantLocale,
+} from '../../lib/tenant-locale.js';
 import { generateSlug, isReservedSlug } from '../../lib/slug.js';
 import { refreshTokens, users } from '../auth/auth.schema.js';
 import { tenants } from './tenants.schema.js';
@@ -80,6 +85,10 @@ export async function createTenant(
   const passwordHash = await hashPassword(tempPassword);
   const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
   const createdAt = new Date();
+  const locale = normalizeTenantLocale({
+    timezone: input.timezone ?? DEFAULT_TIMEZONE,
+    dateFormat: input.dateFormat ?? DEFAULT_DATE_FORMAT,
+  });
 
   return db.transaction(async (tx) => {
     const [tenant] = await tx
@@ -100,6 +109,11 @@ export async function createTenant(
         maxTeachers: limits.maxTeachers,
         maxSmsPerMonth: limits.maxSms,
         maxCustomRoles: limits.maxRoles,
+        settings: {
+          timezone: locale.timezone,
+          dateFormat: locale.dateFormat,
+          currency: 'PKR',
+        },
       })
       .returning();
 
@@ -211,12 +225,23 @@ export async function getTenantBySlug(slug: string) {
 }
 
 export async function updateTenant(id: string, input: UpdateTenantInput) {
-  await getTenantById(id);
+  const existing = await getTenantById(id);
   const nextPlan = input.plan;
+  const { settings: settingsPatch, ...rest } = input;
+  const nextSettings = settingsPatch
+    ? {
+        ...(existing.settings ?? {}),
+        ...normalizeTenantLocale({
+          timezone: settingsPatch.timezone ?? existing.settings?.timezone,
+          dateFormat: settingsPatch.dateFormat ?? existing.settings?.dateFormat,
+        }),
+      }
+    : undefined;
 
   return db.transaction(async (tx) => {
     const updateData = {
-      ...input,
+      ...rest,
+      ...(nextSettings ? { settings: nextSettings } : {}),
       ...(nextPlan
         ? {
             allowedPermissions: [...PLAN_PERMISSIONS[nextPlan]],

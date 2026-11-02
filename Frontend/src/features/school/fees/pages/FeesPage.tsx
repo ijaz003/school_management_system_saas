@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
+import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { Modal } from '@/components/ui/modal';
@@ -15,6 +16,7 @@ import { PageShell } from '@/components/ui/page-shell';
 import { RowActions } from '@/components/ui/row-actions';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { buildQueryString } from '@/lib/api';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import { downloadFile } from '@/lib/download';
@@ -408,6 +410,7 @@ function InvoiceRow({
   onPay: () => void;
   onOpen: () => void;
 }) {
+  const { formatDate } = useTenantDateTime();
   const payable =
     canRecordPayment &&
     (invoice.status === 'issued' || invoice.status === 'partial') &&
@@ -429,7 +432,7 @@ function InvoiceRow({
             {invoice.sectionName ? `-${invoice.sectionName}` : ''}
           </p>
           <p className="mt-2 text-sm text-ink-700/70">
-            Due {invoice.dueDate} · Paid {formatMoney(invoice.amountPaid)} of{' '}
+            Due {formatDate(invoice.dueDate)} · Paid {formatMoney(invoice.amountPaid)} of{' '}
             {formatMoney(invoice.amount)} · Balance {formatMoney(invoice.balance)}
           </p>
         </div>
@@ -610,11 +613,10 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
           />
-          <Input
+          <DateInput
             label="Due date *"
-            type="date"
             value={dueDate}
-            onChange={(event) => setDueDate(event.target.value)}
+            onChange={setDueDate}
           />
         </div>
         <Input label="Notes" value={notes} onChange={(event) => setNotes(event.target.value)} />
@@ -717,11 +719,10 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
           value={periodLabel}
           onChange={(event) => setPeriodLabel(event.target.value)}
         />
-        <Input
+        <DateInput
           label="Due date *"
-          type="date"
           value={dueDate}
-          onChange={(event) => setDueDate(event.target.value)}
+          onChange={setDueDate}
         />
       </div>
     </Modal>
@@ -930,6 +931,7 @@ function InvoiceDetailModal({
   onClose: () => void;
   onRequestVoid: (paymentId: string) => void;
 }) {
+  const { formatDate, formatDateTime } = useTenantDateTime();
   const invoiceQuery = useInvoice(invoiceId);
   const invoice = invoiceQuery.data;
 
@@ -979,7 +981,7 @@ function InvoiceDetailModal({
             </div>
             <div>
               <dt className="text-ink-700/70">Due date</dt>
-              <dd className="font-medium text-ink-950">{invoice.dueDate}</dd>
+              <dd className="font-medium text-ink-950">{formatDate(invoice.dueDate)}</dd>
             </div>
           </dl>
 
@@ -999,7 +1001,7 @@ function InvoiceDetailModal({
                         {formatMoney(payment.amount)} · {payment.method}
                       </p>
                       <p className="text-xs text-ink-700/60">
-                        {new Date(payment.paidAt).toLocaleString()}
+                        {formatDateTime(payment.paidAt)}
                         {payment.recordedByName ? ` · ${payment.recordedByName}` : ''}
                         {payment.reference ? ` · ${payment.reference}` : ''}
                       </p>

@@ -4,10 +4,11 @@ import { useParams } from 'react-router-dom';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { DateInput } from '@/components/ui/date-input';
 import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
-import { Input } from '@/components/ui/input';
 import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { TableSkeleton } from '@/components/ui/skeleton';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { ChildPageShell, QueryError } from '../components/ChildPageShell';
 import { useChildAttendance, type AttendanceStatus } from '../hooks/useParentPortal';
 
@@ -20,6 +21,7 @@ const STATUS_TONE: Record<AttendanceStatus, BadgeTone> = {
 
 export function ParentAttendancePage() {
   const { studentId = '' } = useParams();
+  const { formatDate } = useTenantDateTime();
   const [range, setRange] = useState<{ from?: string; to?: string }>({});
   const rangeError =
     range.from && range.to && range.from > range.to ? '“From” must be on or before “To”.' : '';
@@ -39,24 +41,22 @@ export function ParentAttendancePage() {
         clearDisabled={!range.from && !range.to}
       >
         <FilterField id="att-from" label="From" className="md:col-span-3">
-          <Input
+          <DateInput
             id="att-from"
-            type="date"
             value={range.from ?? ''}
             max={range.to}
-            onChange={(event) =>
-              setRange((current) => ({ ...current, from: event.target.value || undefined }))
+            onChange={(iso) =>
+              setRange((current) => ({ ...current, from: iso || undefined }))
             }
           />
         </FilterField>
         <FilterField id="att-to" label="To" className="md:col-span-3">
-          <Input
+          <DateInput
             id="att-to"
-            type="date"
             value={range.to ?? ''}
             min={range.from}
-            onChange={(event) =>
-              setRange((current) => ({ ...current, to: event.target.value || undefined }))
+            onChange={(iso) =>
+              setRange((current) => ({ ...current, to: iso || undefined }))
             }
           />
         </FilterField>
@@ -79,8 +79,7 @@ export function ParentAttendancePage() {
       ) : data ? (
         <>
           <p className="text-xs text-ink-500">
-            Showing {new Date(`${data.from}T00:00:00`).toLocaleDateString()} –{' '}
-            {new Date(`${data.to}T00:00:00`).toLocaleDateString()}
+            Showing {formatDate(data.from)} – {formatDate(data.to)}
           </p>
           <MetricGrid>
             <MetricCard
@@ -137,12 +136,7 @@ export function ParentAttendancePage() {
                     {data.records.map((record) => (
                       <tr key={record.id} className="transition hover:bg-primary-50/30">
                         <td className="px-5 py-3.5 font-medium text-ink-900">
-                          {new Date(`${record.date}T00:00:00`).toLocaleDateString(undefined, {
-                            weekday: 'short',
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
+                          {formatDate(record.date)}
                         </td>
                         <td className="px-5 py-3.5">
                           <Badge tone={STATUS_TONE[record.status] ?? 'neutral'}>

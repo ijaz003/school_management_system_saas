@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { DateInput } from '@/components/ui/date-input';
 import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { Input } from '@/components/ui/input';
 import { ListPagination } from '@/components/ui/list-pagination';
@@ -14,6 +15,7 @@ import { PageShell } from '@/components/ui/page-shell';
 import { RowActions } from '@/components/ui/row-actions';
 import { PageLoader } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import {
   useCreateExpense,
@@ -42,12 +44,9 @@ function formatMoney(amount: number) {
   }).format(amount);
 }
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function ExpensesPage() {
   const { can } = usePermission();
+  const { formatDate } = useTenantDateTime();
   const canCreate = can('expenses.create');
   const canUpdate = can('expenses.update');
   const canDelete = can('expenses.delete');
@@ -233,30 +232,28 @@ export function ExpensesPage() {
                 </select>
               </FilterField>
               <FilterField id="expense-from" label="From" className="md:col-span-4">
-                <Input
+                <DateInput
                   id="expense-from"
-                  type="date"
                   aria-label="From date"
                   value={filters.fromDate ?? ''}
-                  onChange={(event) =>
+                  onChange={(iso) =>
                     setFilters((current) => ({
                       ...current,
-                      fromDate: event.target.value || undefined,
+                      fromDate: iso || undefined,
                       page: 1,
                     }))
                   }
                 />
               </FilterField>
               <FilterField id="expense-to" label="To" className="md:col-span-4">
-                <Input
+                <DateInput
                   id="expense-to"
-                  type="date"
                   aria-label="To date"
                   value={filters.toDate ?? ''}
-                  onChange={(event) =>
+                  onChange={(iso) =>
                     setFilters((current) => ({
                       ...current,
-                      toDate: event.target.value || undefined,
+                      toDate: iso || undefined,
                       page: 1,
                     }))
                   }
@@ -308,7 +305,7 @@ export function ExpensesPage() {
                           {expense.title}
                         </p>
                         <p className="mt-1 text-sm text-ink-600">
-                          {formatMoney(expense.amount)} · {expense.expenseDate}
+                          {formatMoney(expense.amount)} · {formatDate(expense.expenseDate)}
                           {expense.vendor ? ` · ${expense.vendor}` : ''}
                         </p>
                         {expense.notes ? (
@@ -513,6 +510,7 @@ function ExpenseFormModal({
   categories: ExpenseCategory[];
   onClose: () => void;
 }) {
+  const { todayIso } = useTenantDateTime();
   const createExpense = useCreateExpense();
   const updateExpense = useUpdateExpense();
   const isEdit = Boolean(expense);
@@ -588,11 +586,10 @@ function ExpenseFormModal({
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
           />
-          <Input
+          <DateInput
             label="Date *"
-            type="date"
             value={expenseDate}
-            onChange={(event) => setExpenseDate(event.target.value)}
+            onChange={setExpenseDate}
           />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -766,6 +763,7 @@ function ExpensePreviewModal({
   expense: Expense;
   onClose: () => void;
 }) {
+  const { formatDate } = useTenantDateTime();
   return (
     <Modal
       open
@@ -793,7 +791,7 @@ function ExpensePreviewModal({
           </div>
           <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
             <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">Date</dt>
-            <dd className="mt-1 text-sm font-medium text-ink-900">{expense.expenseDate}</dd>
+            <dd className="mt-1 text-sm font-medium text-ink-900">{formatDate(expense.expenseDate)}</dd>
           </div>
           <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
             <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
@@ -834,6 +832,7 @@ function CategoryPreviewModal({
   category: ExpenseCategory;
   onClose: () => void;
 }) {
+  const { formatDateTime } = useTenantDateTime();
   return (
     <Modal
       open
@@ -856,7 +855,7 @@ function CategoryPreviewModal({
               Created
             </dt>
             <dd className="mt-1 text-sm font-medium text-ink-900">
-              {new Date(category.createdAt).toLocaleString()}
+              {formatDateTime(category.createdAt)}
             </dd>
           </div>
           <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100">
@@ -864,7 +863,7 @@ function CategoryPreviewModal({
               Updated
             </dt>
             <dd className="mt-1 text-sm font-medium text-ink-900">
-              {new Date(category.updatedAt).toLocaleString()}
+              {formatDateTime(category.updatedAt)}
             </dd>
           </div>
         </dl>

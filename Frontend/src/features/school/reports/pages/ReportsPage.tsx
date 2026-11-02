@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { BarChart3, ClipboardList, DollarSign } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
+import { DateInput } from '@/components/ui/date-input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { PageShell } from '@/components/ui/page-shell';
@@ -12,6 +13,7 @@ import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useSections } from '@/features/school/classes/hooks/useSections';
 import { useExams } from '@/features/school/exams/hooks/useExams';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import {
   useAcademicReport,
   useAttendanceReport,
@@ -20,23 +22,14 @@ import {
 
 type Tab = 'fees' | 'attendance' | 'academic';
 
-function monthStart() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
-    .toISOString()
-    .slice(0, 10);
-}
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function money(value: number) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
 }
 
 export function ReportsPage() {
   const { can } = usePermission();
+  const { todayIso } = useTenantDateTime();
+  const monthStart = () => `${todayIso().slice(0, 7)}-01`;
   const canFees = can('reports.fees') || can('fees.invoice.read');
   const canAttendance =
     can('reports.attendance') || can('attendance.read') || can('attendance.report');
@@ -54,14 +47,14 @@ export function ReportsPage() {
   }, [canFees, canAttendance, canAcademic]);
 
   const [tab, setTab] = useState<Tab>(availableTabs[0] ?? 'fees');
-  const [from, setFrom] = useState(monthStart);
-  const [to, setTo] = useState(today);
+  const [from, setFrom] = useState(() => monthStart());
+  const [to, setTo] = useState(() => todayIso());
   const [classId, setClassId] = useState('');
   const [sectionId, setSectionId] = useState('');
   const [examId, setExamId] = useState('');
 
-  const [defaultFrom] = useState(monthStart);
-  const [defaultTo] = useState(today);
+  const [defaultFrom] = useState(() => monthStart());
+  const [defaultTo] = useState(() => todayIso());
   const dateFiltersActive =
     (tab === 'fees' || tab === 'attendance') &&
     (from !== defaultFrom || to !== defaultTo);
@@ -156,21 +149,19 @@ export function ReportsPage() {
           {(tab === 'fees' || tab === 'attendance') && (
             <>
               <FilterField id="report-from" label="From" className="md:col-span-3">
-                <input
+                <DateInput
                   id="report-from"
-                  type="date"
-                  className="field-select w-full text-[13px]"
+                  className="text-[13px]"
                   value={from}
-                  onChange={(event) => setFrom(event.target.value)}
+                  onChange={setFrom}
                 />
               </FilterField>
               <FilterField id="report-to" label="To" className="md:col-span-3">
-                <input
+                <DateInput
                   id="report-to"
-                  type="date"
-                  className="field-select w-full text-[13px]"
+                  className="text-[13px]"
                   value={to}
-                  onChange={(event) => setTo(event.target.value)}
+                  onChange={setTo}
                 />
               </FilterField>
             </>
@@ -438,6 +429,7 @@ function AcademicReportView({
 }: {
   query: ReturnType<typeof useAcademicReport>;
 }) {
+  const { formatDate } = useTenantDateTime();
   if (query.isPending) {
     return (
       <div className="panel">
@@ -473,7 +465,7 @@ function AcademicReportView({
           </div>
           <h2 className="font-display text-lg font-semibold text-ink-950">{data.exam.name}</h2>
           <p className="mt-1 text-sm text-ink-500">
-            {data.exam.startDate} → {data.exam.endDate}
+            {formatDate(data.exam.startDate)} → {formatDate(data.exam.endDate)}
             {data.exam.term ? ` · ${data.exam.term}` : ''}
           </p>
         </div>

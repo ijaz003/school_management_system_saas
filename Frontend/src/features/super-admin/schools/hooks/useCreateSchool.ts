@@ -12,6 +12,8 @@ export interface CreateSchoolInput {
   city?: string;
   address?: string;
   plan: 'basic' | 'standard' | 'premium';
+  timezone?: string;
+  dateFormat?: string;
 }
 
 export interface CreateSchoolResponse {

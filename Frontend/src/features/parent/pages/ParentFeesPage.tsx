@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { MetricCard, MetricGrid } from '@/components/ui/metric-card';
 import { TableSkeleton } from '@/components/ui/skeleton';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { ChildPageShell, QueryError } from '../components/ChildPageShell';
 import { useChildFees } from '../hooks/useParentPortal';
 
@@ -23,6 +24,7 @@ function formatAmount(value: number) {
 
 export function ParentFeesPage() {
   const { studentId = '' } = useParams();
+  const { formatDate } = useTenantDateTime();
   const [pageState, setPageState] = useState({ studentId, page: 1 });
   // Pagination resets whenever the child changes.
   const page = pageState.studentId === studentId ? pageState.page : 1;
@@ -111,7 +113,7 @@ export function ParentFeesPage() {
                         )}
                       </td>
                       <td className="px-5 py-3.5 text-ink-700">
-                        {new Date(`${invoice.dueDate}T00:00:00`).toLocaleDateString()}
+                        {formatDate(invoice.dueDate)}
                       </td>
                       <td className="px-5 py-3.5 text-right text-ink-900">
                         {formatAmount(invoice.amount)}

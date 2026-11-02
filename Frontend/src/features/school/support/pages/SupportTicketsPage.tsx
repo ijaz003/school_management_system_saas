@@ -28,6 +28,7 @@ import { Modal } from '@/components/ui/modal';
 import { PageShell } from '@/components/ui/page-shell';
 import { RowActions } from '@/components/ui/row-actions';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import {
   formatCategory,
@@ -52,7 +53,7 @@ type Scope = 'school' | 'platform';
 
 const tabularNums: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' };
 
-function relativeTime(iso: string) {
+function relativeTime(iso: string, formatDate: (value: string) => string) {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1) return 'just now';
@@ -61,7 +62,7 @@ function relativeTime(iso: string) {
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   if (d < 7) return `${d}d ago`;
-  return new Date(iso).toLocaleDateString();
+  return formatDate(iso);
 }
 
 const statusAccent: Record<SupportStatus, string> = {
@@ -365,6 +366,7 @@ function TicketRow({
   showSchool: boolean;
 }) {
   const navigate = useNavigate();
+  const { formatDate, formatDateTime } = useTenantDateTime();
 
   return (
     <li className="relative px-4 py-4 transition-colors hover:bg-ink-50/50 sm:px-5">
@@ -428,11 +430,11 @@ function TicketRow({
             </span>
             <span
               className="inline-flex items-center gap-1"
-              title={new Date(ticket.lastMessageAt).toLocaleString()}
+              title={formatDateTime(ticket.lastMessageAt)}
               style={tabularNums}
             >
               <Clock className="h-3 w-3 text-ink-400" aria-hidden />
-              Updated {relativeTime(ticket.lastMessageAt)}
+              Updated {relativeTime(ticket.lastMessageAt, formatDate)}
             </span>
           </div>
         </button>

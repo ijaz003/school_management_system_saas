@@ -7,7 +7,16 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { NativeSelect } from '@/components/ui/native-select';
+import {
+  DATE_FORMAT_OPTIONS,
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_TIMEZONE,
+  listTimeZones,
+} from '@/lib/tenant-locale';
 import { useCreateSchool, type CreateSchoolResponse } from '../hooks/useCreateSchool';
+
+const TIMEZONES = listTimeZones();
 
 const createSchoolSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters').max(200),
@@ -18,6 +27,14 @@ const createSchoolSchema = z.object({
   city: z.string().trim().max(100).optional(),
   address: z.string().trim().max(500).optional(),
   plan: z.enum(['basic', 'standard', 'premium']),
+  timezone: z.string().trim().min(1).max(80),
+  dateFormat: z.enum([
+    'DD/MM/YYYY',
+    'MM/DD/YYYY',
+    'YYYY-MM-DD',
+    'DD-MM-YYYY',
+    'D MMM YYYY',
+  ]),
 });
 
 type FormData = z.infer<typeof createSchoolSchema>;
@@ -35,7 +52,11 @@ export function SchoolForm() {
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(createSchoolSchema),
-    defaultValues: { plan: 'basic' },
+    defaultValues: {
+      plan: 'basic',
+      timezone: DEFAULT_TIMEZONE,
+      dateFormat: DEFAULT_DATE_FORMAT,
+    },
   });
   const name = useWatch({ control, name: 'name' });
   const selectedPlan = useWatch({ control, name: 'plan' });
@@ -120,6 +141,35 @@ export function SchoolForm() {
           <Input label="Owner name *" placeholder="e.g. Ahmed Khan" error={errors.ownerName?.message} {...register('ownerName')} />
           <Input label="Email *" type="email" autoComplete="email" placeholder="owner@example.com" error={errors.ownerEmail?.message} {...register('ownerEmail')} />
           <Input label="Phone *" type="tel" placeholder="Phone number" error={errors.ownerPhone?.message} {...register('ownerPhone')} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>Timezone & date format</CardTitle></CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <NativeSelect
+            id="create-school-timezone"
+            label="Timezone *"
+            error={errors.timezone?.message}
+            {...register('timezone')}
+          >
+            {TIMEZONES.map((zone) => (
+              <option key={zone} value={zone}>
+                {zone.replace(/_/g, ' ')}
+              </option>
+            ))}
+          </NativeSelect>
+          <NativeSelect
+            id="create-school-date-format"
+            label="Date format *"
+            error={errors.dateFormat?.message}
+            {...register('dateFormat')}
+          >
+            {DATE_FORMAT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} — {option.example}
+              </option>
+            ))}
+          </NativeSelect>
         </CardContent>
       </Card>
       <Card>

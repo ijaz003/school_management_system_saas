@@ -13,6 +13,8 @@ export interface CreateTenantInput {
   address?: string;
   plan?: Plan;
   customPermissions?: string[];
+  timezone?: string;
+  dateFormat?: string;
 }
 
 export interface CreateTenantOutput {
@@ -32,6 +34,10 @@ export interface UpdateTenantInput {
   logoUrl?: string;
   plan?: Plan;
   status?: TenantStatus;
+  settings?: {
+    timezone?: string;
+    dateFormat?: string;
+  };
 }
 
 export interface ListTenantsFilters {

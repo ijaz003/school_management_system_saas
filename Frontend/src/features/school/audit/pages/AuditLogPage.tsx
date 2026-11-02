@@ -9,27 +9,18 @@ import {
 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Badge } from '@/components/ui/badge';
+import { DateInput } from '@/components/ui/date-input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FilterField, FiltersPanel } from '@/components/ui/filters-panel';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { PageShell } from '@/components/ui/page-shell';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { useAuditLogs } from '../hooks/useAuditLogs';
 
 /* ---------- helpers ---------- */
 
-function monthStart() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
-    .toISOString()
-    .slice(0, 10);
-}
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function formatRelative(value: string) {
+function formatRelative(value: string, formatDate: (value: string) => string) {
   const date = new Date(value);
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
@@ -39,11 +30,7 @@ function formatRelative(value: string) {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return formatDate(value);
 }
 
 function initials(name?: string | null) {
@@ -88,6 +75,9 @@ const ENTITY_OPTIONS = [
 
 export function AuditLogPage() {
   const { can } = usePermission();
+  const { todayIso, formatDate, formatDateTime } = useTenantDateTime();
+  const today = todayIso;
+  const monthStart = () => `${todayIso().slice(0, 7)}-01`;
   const canView =
     can('audit.read') || can('settings.users.manage') || can('settings.school.edit');
 
@@ -95,8 +85,8 @@ export function AuditLogPage() {
   const [limit, setLimit] = useState(30);
   const [action, setAction] = useState('');
   const [entityType, setEntityType] = useState('');
-  const [from, setFrom] = useState(monthStart);
-  const [to, setTo] = useState(today);
+  const [from, setFrom] = useState(() => monthStart());
+  const [to, setTo] = useState(() => today());
 
   const query = useAuditLogs(
     {
@@ -112,7 +102,8 @@ export function AuditLogPage() {
 
   const hasFilters = useMemo(
     () => Boolean(action || entityType || from !== monthStart() || to !== today()),
-    [action, entityType, from, to],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [action, entityType, from, to, todayIso],
   );
 
   const resetFilters = () => {
@@ -171,14 +162,13 @@ export function AuditLogPage() {
             icon={<CalendarDays className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
             className="md:col-span-3"
           >
-            <input
+            <DateInput
               id="audit-from"
-              type="date"
-              className="field-select w-full text-[13px]"
+              className="text-[13px]"
               value={from}
               max={to || undefined}
-              onChange={(event) => {
-                setFrom(event.target.value);
+              onChange={(iso) => {
+                setFrom(iso);
                 setPage(1);
               }}
             />
@@ -190,14 +180,13 @@ export function AuditLogPage() {
             icon={<CalendarDays className="h-3.5 w-3.5 text-ink-400" aria-hidden />}
             className="md:col-span-3"
           >
-            <input
+            <DateInput
               id="audit-to"
-              type="date"
-              className="field-select w-full text-[13px]"
+              className="text-[13px]"
               value={to}
               min={from || undefined}
-              onChange={(event) => {
-                setTo(event.target.value);
+              onChange={(iso) => {
+                setTo(iso);
                 setPage(1);
               }}
             />
@@ -340,10 +329,10 @@ export function AuditLogPage() {
                         <Dot />
                         <time
                           dateTime={item.createdAt}
-                          title={new Date(item.createdAt).toLocaleString()}
+                          title={formatDateTime(item.createdAt)}
                           className="tabular-nums"
                         >
-                          {formatRelative(item.createdAt)}
+                          {formatRelative(item.createdAt, formatDate)}
                         </time>
                       </p>
                     </div>

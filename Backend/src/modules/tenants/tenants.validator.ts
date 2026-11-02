@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import {
+  DATE_FORMAT_VALUES,
+  isValidIanaTimeZone,
+} from '../../lib/tenant-locale.js';
 
 const planSchema = z.enum(['basic', 'standard', 'premium']);
 const statusSchema = z.enum(['trial', 'active', 'suspended', 'cancelled']);
@@ -12,6 +16,14 @@ const slugSchema = z
     'Slug can only contain lowercase letters, numbers, and single hyphens',
   );
 
+const timezoneSchema = z
+  .string()
+  .trim()
+  .max(80)
+  .refine(isValidIanaTimeZone, 'Invalid timezone');
+
+const dateFormatSchema = z.enum(DATE_FORMAT_VALUES);
+
 export const createTenantSchema = z.object({
   body: z.object({
     name: z.string().trim().min(2).max(200),
@@ -23,6 +35,8 @@ export const createTenantSchema = z.object({
     address: z.string().trim().max(500).optional(),
     plan: planSchema.optional(),
     customPermissions: z.array(z.string().trim().min(1)).optional(),
+    timezone: timezoneSchema.optional(),
+    dateFormat: dateFormatSchema.optional(),
   }),
 });
 
@@ -38,6 +52,12 @@ export const updateTenantSchema = z.object({
       logoUrl: z.string().url().nullable().optional(),
       plan: planSchema.optional(),
       status: statusSchema.optional(),
+      settings: z
+        .object({
+          timezone: timezoneSchema.optional(),
+          dateFormat: dateFormatSchema.optional(),
+        })
+        .optional(),
     })
     .refine((body) => Object.keys(body).length > 0, {
       message: 'At least one field must be provided',

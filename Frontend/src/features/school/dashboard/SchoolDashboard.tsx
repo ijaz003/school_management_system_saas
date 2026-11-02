@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { StatCard } from '@/components/ui/stat-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { useAppSelector } from '@/store/hooks';
 import { selectUser } from '@/store/selectors/permissions';
 import { useDashboardStats } from './hooks/useDashboardStats';
@@ -24,6 +25,7 @@ function formatMoney(amount: number) {
 export function SchoolDashboard() {
   const user = useAppSelector(selectUser);
   const { can } = usePermission();
+  const { formatDate, formatNowDate } = useTenantDateTime();
   const firstName = user?.fullName.split(' ')[0] || 'there';
   const statsQuery = useDashboardStats(true);
   const stats = statsQuery.data;
@@ -71,12 +73,7 @@ export function SchoolDashboard() {
         <PageHeader
           eyebrow="Overview"
           title={`Welcome back, ${firstName}`}
-          description={new Date().toLocaleDateString(undefined, {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}
+          description={formatNowDate()}
         />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -188,9 +185,7 @@ export function SchoolDashboard() {
                       <p className="mt-0.5 line-clamp-1 text-sm text-ink-500">{notice.body}</p>
                     </div>
                     <span className="shrink-0 text-xs text-ink-400">
-                      {notice.publishedAt
-                        ? new Date(notice.publishedAt).toLocaleDateString()
-                        : '—'}
+                      {notice.publishedAt ? formatDate(notice.publishedAt) : '—'}
                     </span>
                   </li>
                 ))}

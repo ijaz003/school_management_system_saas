@@ -6,11 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { useStaffMember } from '../hooks/useStaffMember';
 
 export function StaffDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const { formatDate } = useTenantDateTime();
   const staffQuery = useStaffMember(id);
   const staff = staffQuery.data;
 
@@ -106,7 +108,7 @@ export function StaffDetailPage() {
               <InfoRow
                 icon={<CalendarDays className="h-4 w-4" />}
                 label="Joining date"
-                value={new Date(joinedDate).toLocaleDateString()}
+                value={formatDate(joinedDate)}
               />
             </div>
           </section>

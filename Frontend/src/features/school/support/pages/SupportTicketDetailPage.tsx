@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import {
   formatCategory,
   formatPriority,
@@ -39,7 +40,7 @@ type Scope = 'school' | 'platform';
 
 const tabularNums: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' };
 
-function relativeTime(iso: string) {
+function relativeTime(iso: string, formatDate: (value: string) => string) {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1) return 'just now';
@@ -48,7 +49,7 @@ function relativeTime(iso: string) {
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   if (d < 7) return `${d}d ago`;
-  return new Date(iso).toLocaleDateString();
+  return formatDate(iso);
 }
 
 function initials(name?: string | null) {
@@ -65,6 +66,7 @@ function initials(name?: string | null) {
 export function SupportTicketDetailPage({ scope }: { scope: Scope }) {
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
+  const { formatDate, formatDateTime } = useTenantDateTime();
   const canReply =
     scope === 'platform' || (scope === 'school' && can('support.create'));
   const detailQuery = useSupportTicket(scope, id);
@@ -112,10 +114,10 @@ export function SupportTicketDetailPage({ scope }: { scope: Scope }) {
   const threadMeta = useMemo(() => {
     if (!ticket) return null;
     return {
-      opened: new Date(ticket.createdAt).toLocaleString(),
-      lastActivity: new Date(ticket.lastMessageAt).toLocaleString(),
+      opened: formatDateTime(ticket.createdAt),
+      lastActivity: formatDateTime(ticket.lastMessageAt),
     };
-  }, [ticket]);
+  }, [ticket, formatDateTime]);
 
   return (
     <AppLayout>
@@ -217,7 +219,7 @@ export function SupportTicketDetailPage({ scope }: { scope: Scope }) {
               <span className="ml-auto flex items-center gap-1 text-[11px] text-ink-400">
                 <Clock className="h-3 w-3" aria-hidden />
                 <span style={tabularNums}>
-                  Updated {relativeTime(ticket.lastMessageAt)}
+                  Updated {relativeTime(ticket.lastMessageAt, formatDate)}
                 </span>
               </span>
             </div>
@@ -483,6 +485,7 @@ export function SupportTicketDetailPage({ scope }: { scope: Scope }) {
 /* ---------- message bubble ---------- */
 
 function MessageBubble({ message }: { message: SupportMessage }) {
+  const { formatDate, formatDateTime } = useTenantDateTime();
   const isPlatform = message.authorRole === 'super_admin';
   const isInternal = message.isInternal;
 
@@ -555,10 +558,10 @@ function MessageBubble({ message }: { message: SupportMessage }) {
               )}
               <span
                 className="ml-auto text-[10.5px] text-ink-400"
-                title={new Date(message.createdAt).toLocaleString()}
+                title={formatDateTime(message.createdAt)}
                 style={tabularNums}
               >
-                {relativeTime(message.createdAt)}
+                {relativeTime(message.createdAt, formatDate)}
               </span>
             </div>
 

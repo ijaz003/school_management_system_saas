@@ -1,6 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '../../../config/database.js';
 import { ForbiddenError, NotFoundError } from '../../../lib/errors.js';
+import { normalizeTenantLocale } from '../../../lib/tenant-locale.js';
 import { tenants } from '../../tenants/tenants.schema.js';
 
 export interface SchoolSettingsUpdate {
@@ -15,12 +16,15 @@ export interface SchoolSettingsUpdate {
     currentSessionYearId?: string;
     gradingSystem?: string;
     timezone?: string;
+    dateFormat?: string;
     currency?: string;
     cardAttendanceEnabled?: boolean;
   };
 }
 
 function toSchoolSettings(tenant: typeof tenants.$inferSelect) {
+  const settings = tenant.settings ?? {};
+  const locale = normalizeTenantLocale(settings);
   return {
     id: tenant.id,
     name: tenant.name,
@@ -33,7 +37,11 @@ function toSchoolSettings(tenant: typeof tenants.$inferSelect) {
     ownerPhone: tenant.ownerPhone,
     plan: tenant.plan,
     status: tenant.status,
-    settings: tenant.settings ?? {},
+    settings: {
+      ...settings,
+      timezone: locale.timezone,
+      dateFormat: locale.dateFormat,
+    },
     maxStudents: tenant.maxStudents,
     maxTeachers: tenant.maxTeachers,
     updatedAt: tenant.updatedAt,
@@ -61,9 +69,15 @@ export async function updateSchoolSettings(tenantId: string, data: SchoolSetting
     throw new ForbiddenError('School is not active');
   }
 
-  const nextSettings = {
+  const mergedSettings = {
     ...(tenant.settings ?? {}),
     ...(data.settings ?? {}),
+  };
+  const locale = normalizeTenantLocale(mergedSettings);
+  const nextSettings = {
+    ...mergedSettings,
+    timezone: locale.timezone,
+    dateFormat: locale.dateFormat,
   };
 
   const [updated] = await db

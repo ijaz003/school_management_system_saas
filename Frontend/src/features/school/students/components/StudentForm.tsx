@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useSections } from '@/features/school/classes/hooks/useSections';
 import { useCreateStudent } from '../hooks/useCreateStudent';
@@ -45,6 +47,7 @@ export function StudentForm({
   onCancel?: () => void;
 }) {
   const isEdit = Boolean(student);
+  const { todayIso } = useTenantDateTime();
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
   const classesQuery = useClasses();
@@ -73,7 +76,7 @@ export function StudentForm({
       guardianEmail: student?.guardianEmail ?? '',
       guardianRelation: student?.guardianRelation ?? '',
       status: student?.status ?? 'active',
-      admissionDate: student?.admissionDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+      admissionDate: student?.admissionDate?.slice(0, 10) ?? todayIso(),
       notes: student?.notes ?? '',
     },
   });
@@ -155,11 +158,19 @@ export function StudentForm({
               <option value="other">Other</option>
             </select>
           </div>
-          <Input
-            label="Date of birth *"
-            type="date"
-            error={errors.dateOfBirth?.message}
-            {...register('dateOfBirth')}
+          <Controller
+            name="dateOfBirth"
+            control={control}
+            render={({ field }) => (
+              <DateInput
+                label="Date of birth *"
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                name={field.name}
+                error={errors.dateOfBirth?.message}
+              />
+            )}
           />
           <Input label="Blood group" placeholder="e.g. B+" {...register('bloodGroup')} />
           <Input label="Phone" placeholder="Student phone" {...register('phone')} />
@@ -170,11 +181,19 @@ export function StudentForm({
             error={errors.email?.message}
             {...register('email')}
           />
-          <Input
-            label="Admission date"
-            type="date"
-            error={errors.admissionDate?.message}
-            {...register('admissionDate')}
+          <Controller
+            name="admissionDate"
+            control={control}
+            render={({ field }) => (
+              <DateInput
+                label="Admission date"
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                name={field.name}
+                error={errors.admissionDate?.message}
+              />
+            )}
           />
         </div>
         <div>

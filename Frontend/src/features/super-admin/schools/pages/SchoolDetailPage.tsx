@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
+import { formatDate } from '@/lib/datetime';
+import { normalizeLocale } from '@/lib/tenant-locale';
 import { DeleteSchoolDialog } from '../components/DeleteSchoolDialog';
 import { EditSchoolModal } from '../components/EditSchoolModal';
 import { StatusBadge } from '../components/StatusBadge';
@@ -55,7 +57,7 @@ export function SchoolDetailPage() {
   }
 
   const dateValue = (value: string | null) =>
-    value ? new Date(value).toLocaleDateString() : '—';
+    value ? formatDate(value, normalizeLocale(school.settings)) : '—';
 
   return (
     <AppLayout>
@@ -109,6 +111,8 @@ export function SchoolDetailPage() {
             <InfoRow label="City" value={school.city ?? '—'} />
             <InfoRow label="Address" value={school.address ?? '—'} />
             <InfoRow label="Plan" value={school.plan} />
+            <InfoRow label="Timezone" value={school.settings?.timezone ?? 'Asia/Karachi'} />
+            <InfoRow label="Date format" value={school.settings?.dateFormat ?? 'DD/MM/YYYY'} />
             <InfoRow label="Max students" value={String(school.maxStudents)} />
             <InfoRow label="Max teachers" value={String(school.maxTeachers)} />
             <InfoRow label="Monthly SMS limit" value={String(school.maxSmsPerMonth)} />

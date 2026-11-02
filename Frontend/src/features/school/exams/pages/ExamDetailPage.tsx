@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageLoader } from '@/components/ui/spinner';
 import { useSections } from '@/features/school/classes/hooks/useSections';
 import { usePermission } from '@/hooks/usePermission';
+import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { downloadFile } from '@/lib/download';
 import {
   useExam,
@@ -38,6 +39,7 @@ type DraftMark = {
 export function ExamDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
+  const { formatDate } = useTenantDateTime();
   const canEnterMarks = can('exams.marks.enter');
   const canPublish = can('exams.result.publish');
   const canOpenMarks = can('exams.schedule.create') || canEnterMarks;
@@ -184,7 +186,7 @@ export function ExamDetailPage() {
           eyebrow={exam.className}
           title={exam.name}
           description={[
-            `${exam.startDate} → ${exam.endDate}`,
+            `${formatDate(exam.startDate)} → ${formatDate(exam.endDate)}`,
             exam.term,
           ]
             .filter(Boolean)
