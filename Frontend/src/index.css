@@ -113,12 +113,24 @@
   }
 
   .nav-link {
-    @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-ink-600 transition;
-    @apply hover:bg-ink-100/80 hover:text-ink-950;
+    @apply flex items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-ink-600 transition-colors;
+    @apply hover:bg-primary-50/70 hover:text-primary-800;
+  }
+
+  .nav-link svg {
+    @apply text-ink-400 transition-colors;
+  }
+
+  .nav-link:hover svg {
+    @apply text-primary-700;
   }
 
   .nav-link-active {
-    @apply bg-primary-50 text-primary-800 shadow-none ring-1 ring-primary-100;
+    @apply border-primary-100 bg-primary-50 font-semibold text-primary-800 shadow-soft;
+  }
+
+  .nav-link-active svg {
+    @apply text-primary-700;
   }
 
   .login-card {

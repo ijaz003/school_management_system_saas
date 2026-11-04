@@ -30,7 +30,7 @@ export function SidebarItem({
       title={label}
       className={cn('nav-link', isActive && 'nav-link-active')}
     >
-      <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden="true" strokeWidth={1.75} />
+      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" strokeWidth={1.75} />
       <span className="truncate">{label}</span>
     </Link>
   );

@@ -229,7 +229,7 @@ export function Sidebar() {
 
   const contents = (
     <>
-      <div className="flex items-center justify-between border-b border-ink-100 px-4 py-4">
+      <div className="flex items-center justify-between border-b border-ink-200/80 px-4 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-700 text-white shadow-sm">
             <GraduationCap className="h-5 w-5" aria-hidden="true" />
@@ -254,7 +254,7 @@ export function Sidebar() {
       <nav aria-label="Main navigation" className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
         {visibleGroups.map((group) => (
           <div key={group.label}>
-            <p className="mb-1.5 px-3 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-ink-400">
+            <p className="mb-1.5 px-3 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-ink-500">
               {group.label}
             </p>
             <div className="space-y-0.5">
@@ -266,13 +266,13 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-ink-100 px-4 py-3 text-xs text-ink-400">v1.0.0</div>
+      <div className="border-t border-ink-200/80 px-4 py-3 text-xs font-medium text-ink-400">v1.0.0</div>
     </>
   );
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-ink-200/80 bg-surface lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-ink-200/80 bg-surface shadow-[1px_0_3px_rgb(15_23_42_/_0.03)] lg:flex">
         {contents}
       </aside>
       {sidebarOpen && (
@@ -282,7 +282,7 @@ export function Sidebar() {
             onClick={closeSidebar}
             aria-label="Close navigation overlay"
           />
-          <aside className="relative flex w-72 max-w-[85vw] flex-col bg-surface shadow-[var(--shadow-lift)]">
+          <aside className="relative flex w-72 max-w-[85vw] flex-col border-r border-ink-200/80 bg-surface shadow-[var(--shadow-lift)]">
             {contents}
           </aside>
         </div>
