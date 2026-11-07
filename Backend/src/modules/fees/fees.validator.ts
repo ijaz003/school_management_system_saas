@@ -81,6 +81,7 @@ export const listInvoicesSchema = z.object({
     status: z.enum(INVOICE_STATUSES).optional(),
     studentId: z.string().uuid().optional(),
     classId: z.string().uuid().optional(),
+    sectionId: z.string().uuid().optional(),
   }),
 });
 

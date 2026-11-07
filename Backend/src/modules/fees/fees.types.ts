@@ -53,6 +53,7 @@ export interface ListInvoicesFilters {
   status?: InvoiceStatus;
   studentId?: string;
   classId?: string;
+  sectionId?: string;
 }
 
 export interface CreateInvoiceInput {

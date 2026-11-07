@@ -9,6 +9,7 @@ export interface InvoiceFilters {
   status?: InvoiceStatus;
   studentId?: string;
   classId?: string;
+  sectionId?: string;
 }
 
 export interface StructureFilters {

@@ -84,6 +84,7 @@ export function FeesPage() {
   const deleteStructure = useDeleteFeeStructure();
   const voidPayment = useVoidPayment();
   const classesQuery = useClasses();
+  const invoiceSectionsQuery = useSections(filters.classId ?? '');
 
   const items = invoicesQuery.data?.items ?? [];
   const pagination = invoicesQuery.data?.pagination;
@@ -154,7 +155,7 @@ export function FeesPage() {
         {tab === 'invoices' ? (
           <>
             <FiltersPanel
-              description="Find invoices by student, status, or class."
+              description="Find invoices by student, status, class, or section."
               pageLimit={filters.limit ?? 20}
               onPageLimitChange={(limit) =>
                 setFilters((current) => ({ ...current, limit, page: 1 }))
@@ -215,6 +216,7 @@ export function FeesPage() {
                     setFilters((current) => ({
                       ...current,
                       classId: event.target.value || undefined,
+                      sectionId: undefined,
                       page: 1,
                     }))
                   }
@@ -223,6 +225,31 @@ export function FeesPage() {
                   {(classesQuery.data ?? []).map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+              <FilterField id="invoice-section-filter" label="Section" className="md:col-span-4">
+                <select
+                  id="invoice-section-filter"
+                  aria-label="Filter by section"
+                  className="field-select"
+                  value={filters.sectionId ?? ''}
+                  disabled={!filters.classId || invoiceSectionsQuery.isPending}
+                  onChange={(event) =>
+                    setFilters((current) => ({
+                      ...current,
+                      sectionId: event.target.value || undefined,
+                      page: 1,
+                    }))
+                  }
+                >
+                  <option value="">
+                    {filters.classId ? 'All sections' : 'Select a class first'}
+                  </option>
+                  {(invoiceSectionsQuery.data ?? []).map((section) => (
+                    <option key={section.id} value={section.id}>
+                      {section.name}
                     </option>
                   ))}
                 </select>

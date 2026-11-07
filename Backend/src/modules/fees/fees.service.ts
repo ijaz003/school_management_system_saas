@@ -363,11 +363,12 @@ async function getInvoiceMapped(invoiceId: string, tenantId: string) {
 }
 
 export async function listInvoices(filters: ListInvoicesFilters) {
-  const { tenantId, page = 1, limit = 20, search, status, studentId, classId } = filters;
+  const { tenantId, page = 1, limit = 20, search, status, studentId, classId, sectionId } = filters;
   const conditions = [eq(feeInvoices.tenantId, tenantId), isNull(feeInvoices.deletedAt)];
   if (status) conditions.push(eq(feeInvoices.status, status));
   if (studentId) conditions.push(eq(feeInvoices.studentId, studentId));
   if (classId) conditions.push(eq(students.classId, classId));
+  if (sectionId) conditions.push(eq(students.sectionId, sectionId));
   if (search) {
     const escaped = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
     const searchFilter = or(
