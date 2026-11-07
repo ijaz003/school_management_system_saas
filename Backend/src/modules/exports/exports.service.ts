@@ -176,6 +176,14 @@ export async function exportExamMarksCsv(examId: string, tenantId: string) {
     throw new BadRequestError('This exam has no subjects to export');
   }
 
+  const studentConditions = [
+    eq(students.tenantId, tenantId),
+    eq(students.classId, exam.classId),
+    eq(students.status, 'active'),
+    isNull(students.deletedAt),
+  ];
+  if (exam.sectionId) studentConditions.push(eq(students.sectionId, exam.sectionId));
+
   const studentRows = await db
     .select({
       id: students.id,
@@ -185,14 +193,7 @@ export async function exportExamMarksCsv(examId: string, tenantId: string) {
     })
     .from(students)
     .innerJoin(sections, eq(students.sectionId, sections.id))
-    .where(
-      and(
-        eq(students.tenantId, tenantId),
-        eq(students.classId, exam.classId),
-        eq(students.status, 'active'),
-        isNull(students.deletedAt),
-      ),
-    )
+    .where(and(...studentConditions))
     .orderBy(asc(sections.name), asc(students.fullName))
     .limit(EXPORT_LIMIT);
 

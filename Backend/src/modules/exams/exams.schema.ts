@@ -13,6 +13,7 @@ import {
 import { tenants } from '../tenants/tenants.schema.js';
 import { users } from '../auth/auth.schema.js';
 import { classes } from '../classes/classes.schema.js';
+import { sections } from '../sections/sections.schema.js';
 import { subjects } from '../subjects/subjects.schema.js';
 import { students } from '../students/students.schema.js';
 
@@ -27,6 +28,9 @@ export const exams = pgTable(
     classId: uuid('class_id')
       .notNull()
       .references(() => classes.id, { onDelete: 'restrict' }),
+    sectionId: uuid('section_id').references(() => sections.id, {
+      onDelete: 'restrict',
+    }),
     term: varchar('term', { length: 50 }),
     academicYear: varchar('academic_year', { length: 20 }),
     startDate: date('start_date').notNull(),
@@ -43,6 +47,7 @@ export const exams = pgTable(
   (table) => ({
     tenantIdx: index('exams_tenant_idx').on(table.tenantId),
     classIdx: index('exams_class_idx').on(table.classId),
+    sectionIdx: index('exams_section_idx').on(table.sectionId),
     statusIdx: index('exams_status_idx').on(table.tenantId, table.status),
   }),
 );

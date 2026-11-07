@@ -24,6 +24,7 @@ export const createExamSchema = z.object({
     .object({
       name: z.string().trim().min(2).max(150),
       classId: z.string().uuid(),
+      sectionId: z.string().uuid(),
       term: z.string().trim().max(50).optional(),
       academicYear: z.string().trim().max(20).optional(),
       startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

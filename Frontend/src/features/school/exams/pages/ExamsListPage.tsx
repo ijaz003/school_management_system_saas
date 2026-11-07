@@ -15,7 +15,7 @@ import { PageShell } from '@/components/ui/page-shell';
 import { RowActions } from '@/components/ui/row-actions';
 import { PageLoader } from '@/components/ui/spinner';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
-import { useClass } from '@/features/school/classes/hooks/useClass';
+import { useSections } from '@/features/school/classes/hooks/useSections';
 import { usePermission } from '@/hooks/usePermission';
 import { useTenantDateTime } from '@/hooks/useTenantDateTime';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
@@ -210,6 +210,7 @@ function ExamRow({
           <div className="mb-2 flex flex-wrap gap-2">
             <Badge tone={statusTones[exam.status]}>{exam.status.replace('_', ' ')}</Badge>
             <Badge tone="primary">{exam.className}</Badge>
+            {exam.sectionName && <Badge tone="neutral">{exam.sectionName}</Badge>}
           </div>
           <h2 className="font-display text-lg font-semibold text-ink-950">{exam.name}</h2>
           <p className="mt-1 text-sm text-ink-700">
@@ -235,6 +236,7 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
   const classesQuery = useClasses();
   const [name, setName] = useState('');
   const [classId, setClassId] = useState('');
+  const [sectionId, setSectionId] = useState('');
   const [term, setTerm] = useState('');
   const [academicYear, setAcademicYear] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -243,8 +245,9 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
     Record<string, { selected: boolean; maxMarks: string; passMarks: string }>
   >({});
 
-  const classQuery = useClass(classId);
-  const classSubjects = classQuery.data?.subjects ?? [];
+  const sectionsQuery = useSections(classId);
+  const selectedSection = sectionsQuery.data?.find((section) => section.id === sectionId);
+  const sectionSubjects = selectedSection?.subjects ?? [];
 
   const toggleSubject = (subjectId: string) => {
     setSubjectDraft((current) => {
@@ -261,8 +264,8 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
   };
 
   const submit = () => {
-    if (!name.trim() || !classId || !startDate || !endDate) return;
-    const subjects = classSubjects
+    if (!name.trim() || !classId || !sectionId || !startDate || !endDate) return;
+    const subjects = sectionSubjects
       .filter((subject) => subjectDraft[subject.id]?.selected)
       .map((subject) => ({
         subjectId: subject.id,
@@ -274,6 +277,7 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
       {
         name: name.trim(),
         classId,
+        sectionId,
         term: term.trim() || undefined,
         academicYear: academicYear.trim() || undefined,
         startDate,
@@ -290,7 +294,7 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
       open
       onClose={onClose}
       title="New exam"
-      description="Create a schedule for a class and optionally attach subjects."
+      description="Create a schedule for a section and optionally attach subjects."
       size="lg"
       closeDisabled={createExam.isPending}
       footer={
@@ -298,7 +302,12 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
           <Button type="button" variant="outline" onClick={onClose} disabled={createExam.isPending}>
             Cancel
           </Button>
-          <Button type="button" onClick={submit} isLoading={createExam.isPending}>
+          <Button
+            type="button"
+            onClick={submit}
+            isLoading={createExam.isPending}
+            disabled={!name.trim() || !classId || !sectionId || !startDate || !endDate}
+          >
             Create exam
           </Button>
         </>
@@ -316,6 +325,7 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
             value={classId}
             onChange={(event) => {
               setClassId(event.target.value);
+              setSectionId('');
               setSubjectDraft({});
             }}
           >
@@ -327,6 +337,33 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
             ))}
           </select>
         </div>
+        {classId && (
+          <div>
+            <label htmlFor="exam-section" className="mb-1.5 block text-sm font-medium text-ink-800">
+              Section *
+            </label>
+            <select
+              id="exam-section"
+              className="field-select"
+              value={sectionId}
+              onChange={(event) => {
+                setSectionId(event.target.value);
+                setSubjectDraft({});
+              }}
+              disabled={sectionsQuery.isPending}
+            >
+              <option value="">Select section</option>
+              {(sectionsQuery.data ?? []).map((section) => (
+                <option key={section.id} value={section.id}>
+                  {section.name}
+                </option>
+              ))}
+            </select>
+            {!sectionsQuery.isPending && (sectionsQuery.data ?? []).length === 0 && (
+              <p className="mt-1 text-sm text-danger-600">Create a section for this class first.</p>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label="Term" value={term} onChange={(event) => setTerm(event.target.value)} />
           <Input
@@ -347,18 +384,18 @@ function CreateExamModal({ onClose }: { onClose: () => void }) {
           />
         </div>
 
-        {classId && (
+        {sectionId && (
           <div>
             <p className="mb-2 text-sm font-medium text-ink-800">Subjects</p>
-            {classQuery.isPending ? (
-              <p className="text-sm text-ink-700/70">Loading class subjects…</p>
-            ) : classSubjects.length === 0 ? (
+            {sectionsQuery.isPending ? (
+              <p className="text-sm text-ink-700/70">Loading section subjects…</p>
+            ) : sectionSubjects.length === 0 ? (
               <p className="text-sm text-ink-700/70">
-                No subjects on this class. Assign subjects in Settings → Classes first.
+                No subjects assigned to this section. Assign subjects in Settings → Classes first.
               </p>
             ) : (
               <ul className="max-h-56 space-y-2 overflow-y-auto rounded-xl border border-ink-100 p-3">
-                {classSubjects.map((subject) => {
+                {sectionSubjects.map((subject) => {
                   const draft = subjectDraft[subject.id];
                   return (
                     <li key={subject.id} className="rounded-lg bg-ink-50/60 p-3">

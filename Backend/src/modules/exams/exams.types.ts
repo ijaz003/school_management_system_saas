@@ -23,6 +23,7 @@ export interface CreateExamInput {
   data: {
     name: string;
     classId: string;
+    sectionId: string;
     term?: string;
     academicYear?: string;
     startDate: string;

@@ -60,12 +60,13 @@ export function ExamDetailPage() {
 
   const [examSubjectId, setExamSubjectId] = useState('');
   const [sectionId, setSectionId] = useState('');
+  const selectedSectionId = exam?.sectionId ?? sectionId;
   const [draft, setDraft] = useState<Record<string, DraftMark>>({});
   const [tab, setTab] = useState<'marks' | 'results'>('marks');
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const sheetQuery = useMarksSheet(id, examSubjectId, sectionId);
+  const sheetQuery = useMarksSheet(id, examSubjectId, selectedSectionId);
 
   useEffect(() => {
     setExamSubjectId('');
@@ -139,7 +140,7 @@ export function ExamDetailPage() {
   };
 
   const handleSave = () => {
-    if (!id || !examSubjectId || !sectionId) return;
+    if (!id || !examSubjectId || !selectedSectionId) return;
     const payload = records.map((record) => {
       const row = draft[record.studentId];
       const isAbsent = Boolean(row?.isAbsent);
@@ -165,7 +166,7 @@ export function ExamDetailPage() {
     saveMarks.mutate({
       examId: id,
       examSubjectId,
-      sectionId,
+      sectionId: selectedSectionId,
       records: payload,
     });
   };
@@ -183,7 +184,7 @@ export function ExamDetailPage() {
         </div>
 
         <PageHeader
-          eyebrow={exam.className}
+          eyebrow={`${exam.className}${exam.sectionName ? ` · ${exam.sectionName}` : ''}`}
           title={exam.name}
           description={[
             `${formatDate(exam.startDate)} → ${formatDate(exam.endDate)}`,
@@ -294,19 +295,22 @@ export function ExamDetailPage() {
               <select
                 aria-label="Section"
                 className="field-select md:col-span-6"
-                value={sectionId}
+                value={selectedSectionId}
+                disabled={Boolean(exam.sectionId)}
                 onChange={(event) => setSectionId(event.target.value)}
               >
                 <option value="">Select section</option>
-                {(sectionsQuery.data ?? []).map((section) => (
+                {(sectionsQuery.data ?? [])
+                  .filter((section) => !exam.sectionId || section.id === exam.sectionId)
+                  .map((section) => (
                   <option key={section.id} value={section.id}>
                     {section.name}
                   </option>
-                ))}
+                  ))}
               </select>
             </section>
 
-            {examSubjectId && sectionId && (
+            {examSubjectId && selectedSectionId && (
               <>
                 {canEnterMarks && !readOnly && records.length > 0 && (
                   <div className="flex justify-end">

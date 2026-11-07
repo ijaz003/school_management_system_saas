@@ -3,6 +3,7 @@ import { db } from '../../config/database.js';
 import { BadRequestError, NotFoundError } from '../../lib/errors.js';
 import { classes } from '../classes/classes.schema.js';
 import { classSubjects } from '../class-subjects/class-subjects.schema.js';
+import { sectionSubjects } from '../section-subjects/section-subjects.schema.js';
 import { sections } from '../sections/sections.schema.js';
 import { students } from '../students/students.schema.js';
 import { subjects } from '../subjects/subjects.schema.js';
@@ -52,6 +53,7 @@ async function requireSectionForClass(
       id: sections.id,
       name: sections.name,
       classId: sections.classId,
+      useClassSubjects: sections.useClassSubjects,
     })
     .from(sections)
     .where(
@@ -91,6 +93,8 @@ async function getExamMapped(examId: string, tenantId: string) {
       name: exams.name,
       classId: exams.classId,
       className: classes.name,
+      sectionId: exams.sectionId,
+      sectionName: sections.name,
       term: exams.term,
       academicYear: exams.academicYear,
       startDate: exams.startDate,
@@ -104,6 +108,7 @@ async function getExamMapped(examId: string, tenantId: string) {
     })
     .from(exams)
     .innerJoin(classes, eq(exams.classId, classes.id))
+    .leftJoin(sections, eq(exams.sectionId, sections.id))
     .leftJoin(users, eq(exams.createdBy, users.id))
     .where(and(eq(exams.id, examId), eq(exams.tenantId, tenantId), isNull(exams.deletedAt)))
     .limit(1);
@@ -117,6 +122,7 @@ async function replaceSubjects(
   examId: string,
   tenantId: string,
   classId: string,
+  sectionId: string | null,
   subjectInputs: CreateExamInput['data']['subjects'],
 ) {
   if (!subjectInputs || subjectInputs.length === 0) return;
@@ -126,7 +132,21 @@ async function replaceSubjects(
     throw new BadRequestError('Duplicate subjects are not allowed');
   }
 
-  const allowed = await db
+  const section = sectionId
+    ? await requireSectionForClass(sectionId, classId, tenantId)
+    : null;
+  const allowed = section && !section.useClassSubjects
+    ? await db
+        .select({ subjectId: sectionSubjects.subjectId })
+        .from(sectionSubjects)
+        .where(
+          and(
+            eq(sectionSubjects.tenantId, tenantId),
+            eq(sectionSubjects.sectionId, section.id),
+            inArray(sectionSubjects.subjectId, subjectIds),
+          ),
+        )
+    : await db
     .select({ subjectId: classSubjects.subjectId })
     .from(classSubjects)
     .where(
@@ -137,7 +157,7 @@ async function replaceSubjects(
       ),
     );
   if (allowed.length !== subjectIds.length) {
-    throw new BadRequestError('One or more subjects are not assigned to this class');
+    throw new BadRequestError('One or more subjects are not assigned to this section');
   }
 
   await db
@@ -176,6 +196,8 @@ export async function listExams(filters: ListExamsFilters) {
         name: exams.name,
         classId: exams.classId,
         className: classes.name,
+        sectionId: exams.sectionId,
+        sectionName: sections.name,
         term: exams.term,
         academicYear: exams.academicYear,
         startDate: exams.startDate,
@@ -190,6 +212,7 @@ export async function listExams(filters: ListExamsFilters) {
       })
       .from(exams)
       .innerJoin(classes, eq(exams.classId, classes.id))
+      .leftJoin(sections, eq(exams.sectionId, sections.id))
       .where(where)
       .orderBy(desc(exams.createdAt))
       .limit(limit)
@@ -210,6 +233,7 @@ export async function getExamById(examId: string, tenantId: string) {
 
 export async function createExam(input: CreateExamInput) {
   await requireClass(input.data.classId, input.tenantId);
+  await requireSectionForClass(input.data.sectionId, input.data.classId, input.tenantId);
 
   const [created] = await db
     .insert(exams)
@@ -217,6 +241,7 @@ export async function createExam(input: CreateExamInput) {
       tenantId: input.tenantId,
       name: input.data.name.trim(),
       classId: input.data.classId,
+      sectionId: input.data.sectionId,
       term: input.data.term?.trim() || null,
       academicYear: input.data.academicYear?.trim() || null,
       startDate: input.data.startDate,
@@ -233,6 +258,7 @@ export async function createExam(input: CreateExamInput) {
       created.id,
       input.tenantId,
       input.data.classId,
+      input.data.sectionId,
       input.data.subjects,
     );
   } catch (error) {
@@ -289,7 +315,13 @@ export async function setExamSubjects(input: SetExamSubjectsInput) {
   if (exam.status === 'published') {
     throw new BadRequestError('Cannot change subjects on a published exam');
   }
-  await replaceSubjects(exam.id, input.tenantId, exam.classId, input.subjects);
+  await replaceSubjects(
+    exam.id,
+    input.tenantId,
+    exam.classId,
+    exam.sectionId,
+    input.subjects,
+  );
   if (exam.status === 'draft') {
     await db
       .update(exams)
@@ -344,6 +376,9 @@ export async function getMarksSheet(input: GetMarksSheetInput) {
     exam.classId,
     input.tenantId,
   );
+  if (exam.sectionId && exam.sectionId !== section.id) {
+    throw new BadRequestError('This exam is assigned to a different section');
+  }
 
   const [examSubject] = await db
     .select({
@@ -448,6 +483,9 @@ export async function saveMarks(input: SaveMarksInput) {
     exam.classId,
     input.tenantId,
   );
+  if (exam.sectionId && exam.sectionId !== section.id) {
+    throw new BadRequestError('This exam is assigned to a different section');
+  }
 
   const [examSubject] = await db
     .select()
@@ -542,6 +580,14 @@ export async function getExamResults(examId: string, tenantId: string) {
   const exam = await getExamMapped(examId, tenantId);
   const subjectIds = exam.subjects.map((subject) => subject.id);
 
+  const studentConditions = [
+    eq(students.tenantId, tenantId),
+    eq(students.classId, exam.classId),
+    eq(students.status, 'active'),
+    isNull(students.deletedAt),
+  ];
+  if (exam.sectionId) studentConditions.push(eq(students.sectionId, exam.sectionId));
+
   const studentRows = await db
     .select({
       id: students.id,
@@ -551,14 +597,7 @@ export async function getExamResults(examId: string, tenantId: string) {
     })
     .from(students)
     .innerJoin(sections, eq(students.sectionId, sections.id))
-    .where(
-      and(
-        eq(students.tenantId, tenantId),
-        eq(students.classId, exam.classId),
-        eq(students.status, 'active'),
-        isNull(students.deletedAt),
-      ),
-    )
+    .where(and(...studentConditions))
     .orderBy(asc(sections.name), asc(students.fullName));
 
   const marks =

@@ -18,6 +18,8 @@ export interface ExamListItem {
   name: string;
   classId: string;
   className: string;
+  sectionId: string | null;
+  sectionName: string | null;
   term: string | null;
   academicYear: string | null;
   startDate: string;
@@ -93,6 +95,7 @@ export function useCreateExam() {
     mutationFn: async (data: {
       name: string;
       classId: string;
+      sectionId: string;
       term?: string;
       academicYear?: string;
       startDate: string;
