@@ -21,6 +21,7 @@ import { buildQueryString } from '@/lib/api';
 import { hasActiveFilters, resetListFilters } from '@/lib/list-filters';
 import { downloadFile } from '@/lib/download';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
+import { useSections } from '@/features/school/classes/hooks/useSections';
 import { useStudents } from '@/features/school/students/hooks/useStudents';
 import {
   useCreateFeeStructure,
@@ -297,7 +298,10 @@ export function FeesPage() {
                     {structure.name}
                   </h2>
                   <p className="mt-1 text-sm text-ink-600">
-                    {structure.className ?? 'All classes'} · {formatMoney(structure.amount)}
+                    {structure.className ?? 'All classes'}
+                    {structure.sectionName ? ` · Section ${structure.sectionName}` : ''}
+                    {' · '}
+                    {formatMoney(structure.amount)}
                   </p>
                   {structure.description && (
                     <p className="mt-2 text-sm text-ink-500">{structure.description}</p>
@@ -593,7 +597,10 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
             <option value="">Custom amount</option>
             {structures.map((structure) => (
               <option key={structure.id} value={structure.id}>
-                {structure.name} — {formatMoney(structure.amount)}
+                {structure.name}
+                {structure.className ? ` · ${structure.className}` : ''}
+                {structure.sectionName ? ` · ${structure.sectionName}` : ''}
+                {` — ${formatMoney(structure.amount)}`}
               </option>
             ))}
           </select>
@@ -631,10 +638,12 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
   const classesQuery = useClasses();
   const [feeStructureId, setFeeStructureId] = useState('');
   const [classId, setClassId] = useState('');
+  const [sectionId, setSectionId] = useState('');
   const [periodLabel, setPeriodLabel] = useState('');
   const [dueDate, setDueDate] = useState('');
 
   const structures = structuresQuery.data ?? [];
+  const sectionsQuery = useSections(classId);
   const selected = useMemo(
     () => structures.find((item) => item.id === feeStructureId),
     [structures, feeStructureId],
@@ -648,6 +657,7 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
         periodLabel: periodLabel.trim(),
         dueDate,
         classId: classId || selected?.classId || undefined,
+        sectionId: sectionId || selected?.sectionId || undefined,
       },
       { onSuccess: onClose },
     );
@@ -658,7 +668,7 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
       open
       onClose={onClose}
       title="Generate invoices"
-      description="Create invoices for all active students in a class."
+      description="Create invoices for active students in a class or selected section."
       size="lg"
       closeDisabled={generate.isPending}
       footer={
@@ -685,6 +695,7 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
               setFeeStructureId(event.target.value);
               const structure = structures.find((item) => item.id === event.target.value);
               if (structure?.classId) setClassId(structure.classId);
+              if (structure) setSectionId(structure.sectionId ?? '');
             }}
           >
             <option value="">Select structure</option>
@@ -703,12 +714,35 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
             id="gen-class"
             className="field-select"
             value={classId}
-            onChange={(event) => setClassId(event.target.value)}
+            disabled={Boolean(selected?.classId)}
+            onChange={(event) => {
+              setClassId(event.target.value);
+              setSectionId('');
+            }}
           >
             <option value="">Select class</option>
             {(classesQuery.data ?? []).map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="gen-section" className="mb-1.5 block text-sm font-medium text-ink-800">
+            Section
+          </label>
+          <select
+            id="gen-section"
+            className="field-select"
+            value={sectionId}
+            disabled={!classId || sectionsQuery.isPending || Boolean(selected?.sectionId)}
+            onChange={(event) => setSectionId(event.target.value)}
+          >
+            <option value="">All sections</option>
+            {(sectionsQuery.data ?? []).map((section) => (
+              <option key={section.id} value={section.id}>
+                {section.name}
               </option>
             ))}
           </select>
@@ -734,9 +768,11 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
   const classesQuery = useClasses();
   const [name, setName] = useState('');
   const [classId, setClassId] = useState('');
+  const [sectionId, setSectionId] = useState('');
   const [amount, setAmount] = useState('');
   const [frequency, setFrequency] = useState<FeeFrequency>('monthly');
   const [description, setDescription] = useState('');
+  const sectionsQuery = useSections(classId);
 
   const submit = () => {
     const parsed = Number(amount);
@@ -745,6 +781,7 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
       {
         name: name.trim(),
         classId: classId || null,
+        sectionId: sectionId || null,
         amount: parsed,
         frequency,
         description: description.trim() || null,
@@ -758,7 +795,7 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
       open
       onClose={onClose}
       title="New fee structure"
-      description="Define a reusable fee amount for a class."
+      description="Define a reusable fee amount for a class and optional section."
       size="lg"
       closeDisabled={create.isPending}
       footer={
@@ -782,7 +819,10 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
             id="structure-class"
             className="field-select"
             value={classId}
-            onChange={(event) => setClassId(event.target.value)}
+            onChange={(event) => {
+              setClassId(event.target.value);
+              setSectionId('');
+            }}
           >
             <option value="">Any class</option>
             {(classesQuery.data ?? []).map((item) => (
@@ -792,6 +832,33 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
             ))}
           </select>
         </div>
+        {classId && (
+          <div>
+            <label
+              htmlFor="structure-section"
+              className="mb-1.5 block text-sm font-medium text-ink-800"
+            >
+              Section
+            </label>
+            <select
+              id="structure-section"
+              className="field-select"
+              value={sectionId}
+              onChange={(event) => setSectionId(event.target.value)}
+              disabled={sectionsQuery.isPending}
+            >
+              <option value="">All sections in class</option>
+              {(sectionsQuery.data ?? []).map((section) => (
+                <option key={section.id} value={section.id}>
+                  {section.name}
+                </option>
+              ))}
+            </select>
+            {sectionsQuery.error && (
+              <p className="mt-1 text-sm text-danger-600">{sectionsQuery.error.message}</p>
+            )}
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Amount *"

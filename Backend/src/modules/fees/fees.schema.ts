@@ -12,6 +12,7 @@ import {
 import { tenants } from '../tenants/tenants.schema.js';
 import { users } from '../auth/auth.schema.js';
 import { classes } from '../classes/classes.schema.js';
+import { sections } from '../sections/sections.schema.js';
 import { students } from '../students/students.schema.js';
 
 export const feeStructures = pgTable(
@@ -25,6 +26,9 @@ export const feeStructures = pgTable(
     classId: uuid('class_id').references(() => classes.id, {
       onDelete: 'set null',
     }),
+    sectionId: uuid('section_id').references(() => sections.id, {
+      onDelete: 'set null',
+    }),
     amount: integer('amount').notNull(),
     frequency: varchar('frequency', { length: 20 }).default('monthly').notNull(),
     description: text('description'),
@@ -36,6 +40,7 @@ export const feeStructures = pgTable(
   (table) => ({
     tenantIdx: index('fee_structures_tenant_idx').on(table.tenantId),
     classIdx: index('fee_structures_class_idx').on(table.classId),
+    sectionIdx: index('fee_structures_section_idx').on(table.sectionId),
   }),
 );
 

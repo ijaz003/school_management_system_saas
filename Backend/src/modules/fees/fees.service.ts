@@ -87,11 +87,34 @@ async function requireClass(classId: string, tenantId: string) {
   return row;
 }
 
+async function requireSectionForClass(
+  sectionId: string,
+  classId: string,
+  tenantId: string,
+) {
+  const [section] = await db
+    .select({ id: sections.id })
+    .from(sections)
+    .where(
+      and(
+        eq(sections.id, sectionId),
+        eq(sections.classId, classId),
+        eq(sections.tenantId, tenantId),
+        isNull(sections.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!section) throw new BadRequestError('Section must belong to the selected class');
+  return section;
+}
+
 function mapStructure(row: {
   id: string;
   name: string;
   classId: string | null;
   className: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
   amount: number;
   frequency: string;
   description: string | null;
@@ -104,6 +127,8 @@ function mapStructure(row: {
     name: row.name,
     classId: row.classId,
     className: row.className,
+    sectionId: row.sectionId,
+    sectionName: row.sectionName,
     amount: row.amount,
     frequency: row.frequency,
     description: row.description,
@@ -170,6 +195,8 @@ export async function listFeeStructures(filters: ListFeeStructuresFilters) {
       name: feeStructures.name,
       classId: feeStructures.classId,
       className: classes.name,
+      sectionId: feeStructures.sectionId,
+      sectionName: sections.name,
       amount: feeStructures.amount,
       frequency: feeStructures.frequency,
       description: feeStructures.description,
@@ -179,6 +206,7 @@ export async function listFeeStructures(filters: ListFeeStructuresFilters) {
     })
     .from(feeStructures)
     .leftJoin(classes, eq(feeStructures.classId, classes.id))
+    .leftJoin(sections, eq(feeStructures.sectionId, sections.id))
     .where(and(...conditions))
     .orderBy(desc(feeStructures.createdAt));
 
@@ -189,6 +217,12 @@ export async function createFeeStructure(input: CreateFeeStructureInput) {
   if (input.data.classId) {
     await requireClass(input.data.classId, input.tenantId);
   }
+  if (input.data.sectionId) {
+    if (!input.data.classId) {
+      throw new BadRequestError('A class is required when assigning a section');
+    }
+    await requireSectionForClass(input.data.sectionId, input.data.classId, input.tenantId);
+  }
 
   const [created] = await db
     .insert(feeStructures)
@@ -196,6 +230,7 @@ export async function createFeeStructure(input: CreateFeeStructureInput) {
       tenantId: input.tenantId,
       name: input.data.name.trim(),
       classId: input.data.classId ?? null,
+      sectionId: input.data.sectionId ?? null,
       amount: input.data.amount,
       frequency: input.data.frequency ?? 'monthly',
       description: input.data.description?.trim() || null,
@@ -209,6 +244,8 @@ export async function createFeeStructure(input: CreateFeeStructureInput) {
       name: feeStructures.name,
       classId: feeStructures.classId,
       className: classes.name,
+      sectionId: feeStructures.sectionId,
+      sectionName: sections.name,
       amount: feeStructures.amount,
       frequency: feeStructures.frequency,
       description: feeStructures.description,
@@ -218,6 +255,7 @@ export async function createFeeStructure(input: CreateFeeStructureInput) {
     })
     .from(feeStructures)
     .leftJoin(classes, eq(feeStructures.classId, classes.id))
+    .leftJoin(sections, eq(feeStructures.sectionId, sections.id))
     .where(eq(feeStructures.id, created.id))
     .limit(1);
   if (!row) throw new NotFoundError('Fee structure');
@@ -229,12 +267,20 @@ export async function updateFeeStructure(input: UpdateFeeStructureInput) {
   if (input.data.classId) {
     await requireClass(input.data.classId, input.tenantId);
   }
+  const classId = input.data.classId !== undefined ? input.data.classId : existing.classId;
+  const sectionId =
+    input.data.sectionId !== undefined ? input.data.sectionId : existing.sectionId;
+  if (sectionId) {
+    if (!classId) throw new BadRequestError('A class is required when assigning a section');
+    await requireSectionForClass(sectionId, classId, input.tenantId);
+  }
 
   await db
     .update(feeStructures)
     .set({
       ...(input.data.name !== undefined ? { name: input.data.name.trim() } : {}),
       ...(input.data.classId !== undefined ? { classId: input.data.classId } : {}),
+      ...(input.data.sectionId !== undefined ? { sectionId: input.data.sectionId } : {}),
       ...(input.data.amount !== undefined ? { amount: input.data.amount } : {}),
       ...(input.data.frequency !== undefined ? { frequency: input.data.frequency } : {}),
       ...(input.data.description !== undefined
@@ -251,6 +297,8 @@ export async function updateFeeStructure(input: UpdateFeeStructureInput) {
       name: feeStructures.name,
       classId: feeStructures.classId,
       className: classes.name,
+      sectionId: feeStructures.sectionId,
+      sectionName: sections.name,
       amount: feeStructures.amount,
       frequency: feeStructures.frequency,
       description: feeStructures.description,
@@ -260,6 +308,7 @@ export async function updateFeeStructure(input: UpdateFeeStructureInput) {
     })
     .from(feeStructures)
     .leftJoin(classes, eq(feeStructures.classId, classes.id))
+    .leftJoin(sections, eq(feeStructures.sectionId, sections.id))
     .where(eq(feeStructures.id, existing.id))
     .limit(1);
   if (!row) throw new NotFoundError('Fee structure');
@@ -415,6 +464,12 @@ export async function createInvoice(input: CreateInvoiceInput) {
   if (feeStructureId) {
     const structure = await requireStructure(feeStructureId, input.tenantId);
     if (!structure.isActive) throw new BadRequestError('Fee structure is inactive');
+    if (structure.classId && structure.classId !== student.classId) {
+      throw new BadRequestError('Fee structure is assigned to a different class');
+    }
+    if (structure.sectionId && structure.sectionId !== student.sectionId) {
+      throw new BadRequestError('Fee structure is assigned to a different section');
+    }
     amount = amount ?? structure.amount;
     title = title || structure.name;
   }
@@ -455,6 +510,14 @@ export async function generateInvoices(input: GenerateInvoicesInput) {
     throw new BadRequestError('classId is required when the fee structure is not class-specific');
   }
   await requireClass(classId, input.tenantId);
+  if (structure.classId && structure.classId !== classId) {
+    throw new BadRequestError('Fee structure is assigned to a different class');
+  }
+  if (structure.sectionId && input.data.sectionId && structure.sectionId !== input.data.sectionId) {
+    throw new BadRequestError('Fee structure is assigned to a different section');
+  }
+  const sectionId = structure.sectionId ?? input.data.sectionId;
+  if (sectionId) await requireSectionForClass(sectionId, classId, input.tenantId);
 
   const studentConditions = [
     eq(students.tenantId, input.tenantId),
@@ -462,9 +525,7 @@ export async function generateInvoices(input: GenerateInvoicesInput) {
     eq(students.status, 'active'),
     isNull(students.deletedAt),
   ];
-  if (input.data.sectionId) {
-    studentConditions.push(eq(students.sectionId, input.data.sectionId));
-  }
+  if (sectionId) studentConditions.push(eq(students.sectionId, sectionId));
 
   const targetStudents = await db
     .select({ id: students.id })

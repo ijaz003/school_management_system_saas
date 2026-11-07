@@ -11,6 +11,7 @@ export const createFeeStructureSchema = z.object({
   body: z.object({
     name: z.string().trim().min(2).max(150),
     classId: z.string().uuid().nullable().optional(),
+    sectionId: z.string().uuid().nullable().optional(),
     amount: moneyAmount,
     frequency: z.enum(FEE_FREQUENCIES).optional(),
     description: z.string().trim().max(2000).nullable().optional(),
@@ -23,6 +24,7 @@ export const updateFeeStructureSchema = z.object({
     .object({
       name: z.string().trim().min(2).max(150).optional(),
       classId: z.string().uuid().nullable().optional(),
+      sectionId: z.string().uuid().nullable().optional(),
       amount: moneyAmount.optional(),
       frequency: z.enum(FEE_FREQUENCIES).optional(),
       description: z.string().trim().max(2000).nullable().optional(),

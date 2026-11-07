@@ -24,6 +24,7 @@ export interface CreateFeeStructureInput {
   data: {
     name: string;
     classId?: string | null;
+    sectionId?: string | null;
     amount: number;
     frequency?: FeeFrequency;
     description?: string | null;
@@ -36,6 +37,7 @@ export interface UpdateFeeStructureInput {
   data: {
     name?: string;
     classId?: string | null;
+    sectionId?: string | null;
     amount?: number;
     frequency?: FeeFrequency;
     description?: string | null;

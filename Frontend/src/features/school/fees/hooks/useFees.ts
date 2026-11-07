@@ -15,6 +15,8 @@ export interface FeeStructure {
   name: string;
   classId: string | null;
   className: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
   amount: number;
   frequency: FeeFrequency;
   description: string | null;
@@ -80,6 +82,7 @@ export function useCreateFeeStructure() {
     mutationFn: async (data: {
       name: string;
       classId?: string | null;
+      sectionId?: string | null;
       amount: number;
       frequency?: FeeFrequency;
       description?: string | null;
@@ -106,6 +109,7 @@ export function useUpdateFeeStructure() {
       id: string;
       name?: string;
       classId?: string | null;
+      sectionId?: string | null;
       amount?: number;
       frequency?: FeeFrequency;
       description?: string | null;
