@@ -38,7 +38,7 @@ async function requireTeacher(teacherId: string, tenantId: string) {
       and(
         eq(users.id, teacherId),
         eq(users.tenantId, tenantId),
-        eq(users.role, 'teacher'),
+        // eq(users.role, 'teacher'),
         isNull(users.deletedAt),
       ),
     )
@@ -57,7 +57,7 @@ export async function listTeachers(filters: ListTeachersFilters) {
   const { tenantId, page = 1, limit = 20, search, isActive } = filters;
   const conditions = [
     eq(users.tenantId, tenantId),
-    eq(users.role, 'teacher'),
+    // eq(users.role, 'teacher'),
     isNull(users.deletedAt),
   ];
   if (isActive !== undefined) conditions.push(eq(users.isActive, isActive));

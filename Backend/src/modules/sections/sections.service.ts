@@ -59,7 +59,7 @@ async function validateTeacher(tenantId: string, teacherId?: string | null) {
     .where(and(
       eq(users.id, teacherId),
       eq(users.tenantId, tenantId),
-      eq(users.role, 'teacher'),
+      // eq(users.role, 'teacher'),
       eq(users.isActive, true),
       isNull(users.deletedAt),
     ))
