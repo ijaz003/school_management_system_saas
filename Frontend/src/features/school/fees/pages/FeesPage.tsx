@@ -694,14 +694,17 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
             onChange={(event) => {
               setFeeStructureId(event.target.value);
               const structure = structures.find((item) => item.id === event.target.value);
-              if (structure?.classId) setClassId(structure.classId);
-              if (structure) setSectionId(structure.sectionId ?? '');
+              setClassId(structure?.classId ?? '');
+              setSectionId(structure?.sectionId ?? '');
             }}
           >
             <option value="">Select structure</option>
             {structures.map((structure) => (
               <option key={structure.id} value={structure.id}>
-                {structure.name} — {formatMoney(structure.amount)}
+                {structure.name}
+                {structure.className ? ` · ${structure.className}` : ''}
+                {structure.sectionName ? ` · ${structure.sectionName}` : ''}
+                {` — ${formatMoney(structure.amount)}`}
               </option>
             ))}
           </select>
