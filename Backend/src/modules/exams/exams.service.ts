@@ -87,34 +87,37 @@ async function loadExamSubjects(examId: string, tenantId: string) {
 }
 
 async function getExamMapped(examId: string, tenantId: string) {
-  const [row] = await db
-    .select({
-      id: exams.id,
-      name: exams.name,
-      classId: exams.classId,
-      className: classes.name,
-      sectionId: exams.sectionId,
-      sectionName: sections.name,
-      term: exams.term,
-      academicYear: exams.academicYear,
-      startDate: exams.startDate,
-      endDate: exams.endDate,
-      status: exams.status,
-      publishedAt: exams.publishedAt,
-      createdBy: exams.createdBy,
-      createdByName: users.fullName,
-      createdAt: exams.createdAt,
-      updatedAt: exams.updatedAt,
-    })
-    .from(exams)
-    .innerJoin(classes, eq(exams.classId, classes.id))
-    .leftJoin(sections, eq(exams.sectionId, sections.id))
-    .leftJoin(users, eq(exams.createdBy, users.id))
-    .where(and(eq(exams.id, examId), eq(exams.tenantId, tenantId), isNull(exams.deletedAt)))
-    .limit(1);
+  const [rows, subjectRows] = await Promise.all([
+    db
+      .select({
+        id: exams.id,
+        name: exams.name,
+        classId: exams.classId,
+        className: classes.name,
+        sectionId: exams.sectionId,
+        sectionName: sections.name,
+        term: exams.term,
+        academicYear: exams.academicYear,
+        startDate: exams.startDate,
+        endDate: exams.endDate,
+        status: exams.status,
+        publishedAt: exams.publishedAt,
+        createdBy: exams.createdBy,
+        createdByName: users.fullName,
+        createdAt: exams.createdAt,
+        updatedAt: exams.updatedAt,
+      })
+      .from(exams)
+      .innerJoin(classes, eq(exams.classId, classes.id))
+      .leftJoin(sections, eq(exams.sectionId, sections.id))
+      .leftJoin(users, eq(exams.createdBy, users.id))
+      .where(and(eq(exams.id, examId), eq(exams.tenantId, tenantId), isNull(exams.deletedAt)))
+      .limit(1),
+    loadExamSubjects(examId, tenantId),
+  ]);
+  const [row] = rows;
   if (!row) throw new NotFoundError('Exam');
 
-  const subjectRows = await loadExamSubjects(examId, tenantId);
   return { ...row, subjects: subjectRows };
 }
 
@@ -371,43 +374,53 @@ export async function publishExam(examId: string, tenantId: string) {
 
 export async function getMarksSheet(input: GetMarksSheetInput) {
   const exam = await requireExam(input.examId, input.tenantId);
-  const section = await requireSectionForClass(
-    input.sectionId,
-    exam.classId,
-    input.tenantId,
-  );
+  const [section, examSubjectRows] = await Promise.all([
+    requireSectionForClass(input.sectionId, exam.classId, input.tenantId),
+    db
+      .select({
+        id: examSubjects.id,
+        subjectId: examSubjects.subjectId,
+        subjectName: subjects.name,
+        maxMarks: examSubjects.maxMarks,
+        passMarks: examSubjects.passMarks,
+        examDate: examSubjects.examDate,
+      })
+      .from(examSubjects)
+      .innerJoin(subjects, eq(examSubjects.subjectId, subjects.id))
+      .where(
+        and(
+          eq(examSubjects.id, input.examSubjectId),
+          eq(examSubjects.examId, exam.id),
+          eq(examSubjects.tenantId, input.tenantId),
+        ),
+      )
+      .limit(1),
+  ]);
   if (exam.sectionId && exam.sectionId !== section.id) {
     throw new BadRequestError('This exam is assigned to a different section');
   }
-
-  const [examSubject] = await db
-    .select({
-      id: examSubjects.id,
-      subjectId: examSubjects.subjectId,
-      subjectName: subjects.name,
-      maxMarks: examSubjects.maxMarks,
-      passMarks: examSubjects.passMarks,
-      examDate: examSubjects.examDate,
-    })
-    .from(examSubjects)
-    .innerJoin(subjects, eq(examSubjects.subjectId, subjects.id))
-    .where(
-      and(
-        eq(examSubjects.id, input.examSubjectId),
-        eq(examSubjects.examId, exam.id),
-        eq(examSubjects.tenantId, input.tenantId),
-      ),
-    )
-    .limit(1);
+  const [examSubject] = examSubjectRows;
   if (!examSubject) throw new NotFoundError('Exam subject');
 
-  const studentRows = await db
+  const records = await db
     .select({
-      id: students.id,
+      studentId: students.id,
       fullName: students.fullName,
       admissionNo: students.admissionNo,
+      marksObtained: examMarks.marksObtained,
+      isAbsent: examMarks.isAbsent,
+      remarks: examMarks.remarks,
+      markId: examMarks.id,
     })
     .from(students)
+    .leftJoin(
+      examMarks,
+      and(
+        eq(examMarks.studentId, students.id),
+        eq(examMarks.tenantId, input.tenantId),
+        eq(examMarks.examSubjectId, examSubject.id),
+      ),
+    )
     .where(
       and(
         eq(students.tenantId, input.tenantId),
@@ -417,43 +430,6 @@ export async function getMarksSheet(input: GetMarksSheetInput) {
       ),
     )
     .orderBy(asc(students.fullName));
-
-  const existing = studentRows.length
-    ? await db
-        .select({
-          id: examMarks.id,
-          studentId: examMarks.studentId,
-          marksObtained: examMarks.marksObtained,
-          isAbsent: examMarks.isAbsent,
-          remarks: examMarks.remarks,
-        })
-        .from(examMarks)
-        .where(
-          and(
-            eq(examMarks.tenantId, input.tenantId),
-            eq(examMarks.examSubjectId, examSubject.id),
-            inArray(
-              examMarks.studentId,
-              studentRows.map((student) => student.id),
-            ),
-          ),
-        )
-    : [];
-
-  const byStudent = new Map(existing.map((row) => [row.studentId, row]));
-
-  const records = studentRows.map((student) => {
-    const mark = byStudent.get(student.id);
-    return {
-      studentId: student.id,
-      fullName: student.fullName,
-      admissionNo: student.admissionNo,
-      marksObtained: mark?.marksObtained ?? null,
-      isAbsent: mark?.isAbsent ?? false,
-      remarks: mark?.remarks ?? null,
-      markId: mark?.id ?? null,
-    };
-  });
 
   return {
     exam: {
@@ -478,26 +454,25 @@ export async function saveMarks(input: SaveMarksInput) {
     throw new BadRequestError('Open marks entry before saving marks');
   }
 
-  const section = await requireSectionForClass(
-    input.sectionId,
-    exam.classId,
-    input.tenantId,
-  );
+  const [section, examSubjectRows] = await Promise.all([
+    requireSectionForClass(input.sectionId, exam.classId, input.tenantId),
+    db
+      .select()
+      .from(examSubjects)
+      .where(
+        and(
+          eq(examSubjects.id, input.examSubjectId),
+          eq(examSubjects.examId, exam.id),
+          eq(examSubjects.tenantId, input.tenantId),
+        ),
+      )
+      .limit(1),
+  ]);
   if (exam.sectionId && exam.sectionId !== section.id) {
     throw new BadRequestError('This exam is assigned to a different section');
   }
 
-  const [examSubject] = await db
-    .select()
-    .from(examSubjects)
-    .where(
-      and(
-        eq(examSubjects.id, input.examSubjectId),
-        eq(examSubjects.examId, exam.id),
-        eq(examSubjects.tenantId, input.tenantId),
-      ),
-    )
-    .limit(1);
+  const [examSubject] = examSubjectRows;
   if (!examSubject) throw new NotFoundError('Exam subject');
 
   const studentIds = input.records.map((record) => record.studentId);
@@ -517,7 +492,7 @@ export async function saveMarks(input: SaveMarksInput) {
     throw new BadRequestError('One or more students are invalid for this section');
   }
 
-  for (const record of input.records) {
+  const markValues = input.records.map((record) => {
     const isAbsent = record.isAbsent === true;
     if (!isAbsent) {
       if (record.marksObtained === undefined || record.marksObtained === null) {
@@ -529,36 +504,32 @@ export async function saveMarks(input: SaveMarksInput) {
         );
       }
     }
-  }
+    return {
+      tenantId: input.tenantId,
+      examSubjectId: examSubject.id,
+      studentId: record.studentId,
+      marksObtained: isAbsent ? null : (record.marksObtained ?? null),
+      isAbsent,
+      remarks: record.remarks?.trim() || null,
+      enteredBy: input.enteredBy,
+      updatedAt: new Date(),
+    };
+  });
 
   await db.transaction(async (tx) => {
-    for (const record of input.records) {
-      const isAbsent = record.isAbsent === true;
-      const values = {
-        tenantId: input.tenantId,
-        examSubjectId: examSubject.id,
-        studentId: record.studentId,
-        marksObtained: isAbsent ? null : (record.marksObtained ?? null),
-        isAbsent,
-        remarks: record.remarks?.trim() || null,
-        enteredBy: input.enteredBy,
-        updatedAt: new Date(),
-      };
-
-      await tx
-        .insert(examMarks)
-        .values(values)
-        .onConflictDoUpdate({
-          target: [examMarks.examSubjectId, examMarks.studentId],
-          set: {
-            marksObtained: values.marksObtained,
-            isAbsent: values.isAbsent,
-            remarks: values.remarks,
-            enteredBy: values.enteredBy,
-            updatedAt: values.updatedAt,
-          },
-        });
-    }
+    await tx
+      .insert(examMarks)
+      .values(markValues)
+      .onConflictDoUpdate({
+        target: [examMarks.examSubjectId, examMarks.studentId],
+        set: {
+          marksObtained: sql`excluded.marks_obtained`,
+          isAbsent: sql`excluded.is_absent`,
+          remarks: sql`excluded.remarks`,
+          enteredBy: sql`excluded.entered_by`,
+          updatedAt: sql`excluded.updated_at`,
+        },
+      });
 
     if (exam.status === 'scheduled') {
       await tx
@@ -576,7 +547,11 @@ export async function saveMarks(input: SaveMarksInput) {
   });
 }
 
-export async function getExamResults(examId: string, tenantId: string) {
+export async function getExamResults(
+  examId: string,
+  tenantId: string,
+  studentId?: string,
+) {
   const exam = await getExamMapped(examId, tenantId);
   const subjectIds = exam.subjects.map((subject) => subject.id);
 
@@ -587,6 +562,7 @@ export async function getExamResults(examId: string, tenantId: string) {
     isNull(students.deletedAt),
   ];
   if (exam.sectionId) studentConditions.push(eq(students.sectionId, exam.sectionId));
+  if (studentId) studentConditions.push(eq(students.id, studentId));
 
   const studentRows = await db
     .select({
@@ -600,8 +576,9 @@ export async function getExamResults(examId: string, tenantId: string) {
     .where(and(...studentConditions))
     .orderBy(asc(sections.name), asc(students.fullName));
 
+  const studentIds = studentRows.map((student) => student.id);
   const marks =
-    subjectIds.length === 0
+    subjectIds.length === 0 || studentIds.length === 0
       ? []
       : await db
           .select({
@@ -615,20 +592,26 @@ export async function getExamResults(examId: string, tenantId: string) {
             and(
               eq(examMarks.tenantId, tenantId),
               inArray(examMarks.examSubjectId, subjectIds),
+              inArray(examMarks.studentId, studentIds),
             ),
           );
 
-  const markMap = new Map(
-    marks.map((row) => [`${row.studentId}:${row.examSubjectId}`, row]),
-  );
+  const marksByStudent = new Map<string, Map<string, (typeof marks)[number]>>();
+  for (const mark of marks) {
+    let studentMarks = marksByStudent.get(mark.studentId);
+    if (!studentMarks) {
+      studentMarks = new Map();
+      marksByStudent.set(mark.studentId, studentMarks);
+    }
+    studentMarks.set(mark.examSubjectId, mark);
+  }
 
+  const totalMax = exam.subjects.reduce((total, subject) => total + subject.maxMarks, 0);
   const results = studentRows.map((student) => {
     let totalObtained = 0;
-    let totalMax = 0;
     let absentCount = 0;
     const subjectResults = exam.subjects.map((subject) => {
-      const mark = markMap.get(`${student.id}:${subject.id}`);
-      totalMax += subject.maxMarks;
+      const mark = marksByStudent.get(student.id)?.get(subject.id);
       if (mark?.isAbsent) {
         absentCount += 1;
         return {
@@ -670,7 +653,59 @@ export async function getExamResults(examId: string, tenantId: string) {
   return { exam, results };
 }
 
-export async function getExamReportCards(examId: string, tenantId: string) {
+type ExamResultsData = Awaited<ReturnType<typeof getExamResults>>;
+
+function mapReportCard(
+  exam: ExamResultsData['exam'],
+  result: ExamResultsData['results'][number],
+  tenant:
+    | { name: string; city: string | null; address: string | null; logoUrl: string | null }
+    | undefined,
+) {
+  let gradedCount = 0;
+  let passedAll = true;
+  for (const subject of result.subjects) {
+    if (subject.isAbsent || subject.marksObtained === null) continue;
+    gradedCount++;
+    if (!subject.passed) passedAll = false;
+  }
+
+  return {
+    school: {
+      name: tenant?.name ?? 'School',
+      city: tenant?.city ?? null,
+      address: tenant?.address ?? null,
+      logoUrl: tenant?.logoUrl ?? null,
+    },
+    exam: {
+      id: exam.id,
+      name: exam.name,
+      className: exam.className,
+      term: exam.term,
+      academicYear: exam.academicYear,
+      startDate: exam.startDate,
+      endDate: exam.endDate,
+      status: exam.status,
+    },
+    student: {
+      id: result.studentId,
+      fullName: result.fullName,
+      admissionNo: result.admissionNo,
+      sectionName: result.sectionName,
+    },
+    subjects: result.subjects,
+    totals: {
+      obtained: result.totalObtained,
+      max: result.totalMax,
+      percentage: result.percentage,
+      absentCount: result.absentCount,
+      result: passedAll && gradedCount > 0 ? 'Pass' : gradedCount === 0 ? 'Incomplete' : 'Fail',
+    },
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+async function getTenantForReportCard(tenantId: string) {
   const [tenant] = await db
     .select({
       name: tenants.name,
@@ -681,51 +716,15 @@ export async function getExamReportCards(examId: string, tenantId: string) {
     .from(tenants)
     .where(eq(tenants.id, tenantId))
     .limit(1);
+  return tenant;
+}
 
-  const { exam, results } = await getExamResults(examId, tenantId);
-
-  const cards = results.map((result) => {
-    const graded = result.subjects.filter(
-      (subject) => !subject.isAbsent && subject.marksObtained !== null,
-    );
-    const passedAll =
-      graded.length > 0 && graded.every((subject) => subject.passed);
-    return {
-      school: {
-        name: tenant?.name ?? 'School',
-        city: tenant?.city ?? null,
-        address: tenant?.address ?? null,
-        logoUrl: tenant?.logoUrl ?? null,
-      },
-      exam: {
-        id: exam.id,
-        name: exam.name,
-        className: exam.className,
-        term: exam.term,
-        academicYear: exam.academicYear,
-        startDate: exam.startDate,
-        endDate: exam.endDate,
-        status: exam.status,
-      },
-      student: {
-        id: result.studentId,
-        fullName: result.fullName,
-        admissionNo: result.admissionNo,
-        sectionName: result.sectionName,
-      },
-      subjects: result.subjects,
-      totals: {
-        obtained: result.totalObtained,
-        max: result.totalMax,
-        percentage: result.percentage,
-        absentCount: result.absentCount,
-        result: passedAll ? 'Pass' : graded.length === 0 ? 'Incomplete' : 'Fail',
-      },
-      generatedAt: new Date().toISOString(),
-    };
-  });
-
-  return { exam, cards };
+export async function getExamReportCards(examId: string, tenantId: string) {
+  const [{ exam, results }, tenant] = await Promise.all([
+    getExamResults(examId, tenantId),
+    getTenantForReportCard(tenantId),
+  ]);
+  return { exam, cards: results.map((result) => mapReportCard(exam, result, tenant)) };
 }
 
 export async function getStudentReportCard(
@@ -733,8 +732,12 @@ export async function getStudentReportCard(
   studentId: string,
   tenantId: string,
 ) {
-  const { cards, exam } = await getExamReportCards(examId, tenantId);
-  const card = cards.find((item) => item.student.id === studentId);
-  if (!card) throw new NotFoundError('Report card');
+  const [{ exam, results }, tenant] = await Promise.all([
+    getExamResults(examId, tenantId, studentId),
+    getTenantForReportCard(tenantId),
+  ]);
+  const result = results[0];
+  if (!result) throw new NotFoundError('Report card');
+  const card = mapReportCard(exam, result, tenant);
   return { exam, card };
 }
