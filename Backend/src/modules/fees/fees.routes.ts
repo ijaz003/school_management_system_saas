@@ -15,6 +15,7 @@ import {
   listFeeStructuresSchema,
   listInvoicesSchema,
   paymentIdSchema,
+  previewInvoiceSchema,
   recordPaymentSchema,
   structureIdSchema,
   updateFeeHeadSchema,
@@ -84,6 +85,12 @@ router.get(
   can('fees.invoice.read'),
   validate(listInvoicesSchema),
   feesController.listInvoices,
+);
+router.get(
+  '/invoices/preview',
+  can('fees.invoice.create'),
+  validate(previewInvoiceSchema),
+  feesController.previewInvoice,
 );
 router.post(
   '/invoices/generate',

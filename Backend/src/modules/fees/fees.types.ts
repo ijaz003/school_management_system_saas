@@ -15,6 +15,8 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const FEE_HEAD_TYPES = ['monthly', 'term', 'annual', 'one_time'] as const;
 export type FeeHeadType = (typeof FEE_HEAD_TYPES)[number];
+export const SCHEDULE_TYPES = ['monthly', 'specific_months', 'one_time'] as const;
+export type ScheduleType = (typeof SCHEDULE_TYPES)[number];
 
 export interface ListFeeHeadsFilters {
   tenantId: string;
@@ -55,12 +57,37 @@ export interface ListFeeStructuresFilters {
 export interface FeeStructureItemInput {
   feeHeadId: string;
   amount: number;
+  scheduleType?: ScheduleType;
+  months?: number[];
+  academicYear?: string;
 }
 
-export interface FeeStructureItemResponse extends FeeStructureItemInput {
+export interface FeeStructureItemResponse {
   id: string;
+  feeHeadId: string;
   feeHeadName: string;
   feeHeadCode: string;
+  amount: number;
+  scheduleType: ScheduleType;
+  months: number[];
+  academicYear: string | null;
+}
+
+export interface FeeStructurePreviewItem {
+  id: string;
+  feeHeadId: string;
+  feeHeadName: string;
+  amount: number;
+  scheduleType: ScheduleType;
+  months: number[];
+  academicYear: string | null;
+  isIncluded: boolean;
+}
+
+export interface FeeStructurePreview {
+  periodLabel: string;
+  totalAmount: number;
+  items: FeeStructurePreviewItem[];
 }
 
 export interface CreateFeeStructureInput {
@@ -126,6 +153,12 @@ export interface GenerateInvoicesInput {
     sectionId?: string;
     notes?: string;
   };
+}
+
+export interface PreviewInvoiceInput {
+  structureId: string;
+  tenantId: string;
+  periodLabel: string;
 }
 
 export interface RecordPaymentInput {

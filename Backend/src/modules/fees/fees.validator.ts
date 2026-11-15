@@ -4,6 +4,7 @@ import {
   FEE_FREQUENCIES,
   INVOICE_STATUSES,
   PAYMENT_METHODS,
+  SCHEDULE_TYPES,
 } from './fees.types.js';
 
 const moneyAmount = z.coerce.number().int().positive().max(100_000_000);
@@ -56,13 +57,38 @@ export const feeHeadIdSchema = z.object({
   params: z.object({ id: z.string().uuid() }),
 });
 
-const feeStructureItemsSchema = z
-  .array(
-    z.object({
-      feeHeadId: z.string().uuid(),
-      amount: moneyAmount,
-    }),
+const feeStructureItemSchema = z
+  .object({
+    feeHeadId: z.string().uuid(),
+    amount: moneyAmount,
+    scheduleType: z.enum(SCHEDULE_TYPES).default('monthly'),
+    months: z.array(z.number().int().min(1).max(12)).max(12).optional(),
+    academicYear: z.string().trim().min(1).max(50).optional(),
+  })
+  .refine(
+    (item) => item.scheduleType === 'monthly' || (item.months?.length ?? 0) > 0,
+    {
+      message: 'Select one or more months for this schedule',
+      path: ['months'],
+    },
   )
+  .refine(
+    (item) => item.scheduleType !== 'one_time' || item.months?.length === 1,
+    {
+      message: 'A one-time schedule requires exactly one month',
+      path: ['months'],
+    },
+  )
+  .refine(
+    (item) => !item.months || new Set(item.months).size === item.months.length,
+    {
+      message: 'Duplicate months are not allowed',
+      path: ['months'],
+    },
+  );
+
+const feeStructureItemsSchema = z
+  .array(feeStructureItemSchema)
   .min(1, 'At least one fee head is required')
   .max(100, 'A fee structure can contain at most 100 fee heads')
   .refine(
@@ -137,6 +163,13 @@ export const generateInvoicesSchema = z.object({
     classId: z.string().uuid().optional(),
     sectionId: z.string().uuid().optional(),
     notes: z.string().trim().max(2000).optional(),
+  }),
+});
+
+export const previewInvoiceSchema = z.object({
+  query: z.object({
+    structureId: z.string().uuid(),
+    periodLabel: z.string().trim().min(1).max(100),
   }),
 });
 

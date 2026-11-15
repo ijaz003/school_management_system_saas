@@ -7,6 +7,7 @@ import {
   listFeeHeadsSchema,
   listFeeStructuresSchema,
   listInvoicesSchema,
+  previewInvoiceSchema,
 } from './fees.validator.js';
 import * as feesService from './fees.service.js';
 
@@ -158,6 +159,17 @@ export const feesController = {
     const context = getSchoolContext(req);
     const invoice = await feesService.getInvoiceById(getId(req), context.tenantId);
     return ApiResponse.success(res, invoice, 'Invoice fetched');
+  }),
+
+  previewInvoice: asyncHandler(async (req: Request, res: Response) => {
+    const context = getSchoolContext(req);
+    const { query } = previewInvoiceSchema.parse({ query: req.query });
+    const preview = await feesService.previewInvoice({
+      structureId: query.structureId,
+      periodLabel: query.periodLabel,
+      tenantId: context.tenantId,
+    });
+    return ApiResponse.success(res, preview, 'Invoice preview fetched');
   }),
 
   createInvoice: asyncHandler(async (req: Request, res: Response) => {

@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -16,6 +17,7 @@ import { users } from '../auth/auth.schema.js';
 import { classes } from '../classes/classes.schema.js';
 import { sections } from '../sections/sections.schema.js';
 import { students } from '../students/students.schema.js';
+import type { ScheduleType } from './fees.types.js';
 
 export const feeStructures = pgTable(
   'fee_structures',
@@ -147,11 +149,52 @@ export const feeStructureItems = pgTable(
       .notNull()
       .references(() => feeHeads.id, { onDelete: 'restrict' }),
     amount: integer('amount').notNull(),
+    scheduleType: varchar('schedule_type', { length: 20 })
+      .$type<ScheduleType>()
+      .default('monthly')
+      .notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => ({
     structureIdx: index('fee_structure_items_structure_idx').on(table.structureId),
     headIdx: index('fee_structure_items_head_idx').on(table.feeHeadId),
+    scheduleTypeCheck: check(
+      'fee_structure_items_schedule_type_check',
+      sql`${table.scheduleType} IN ('monthly', 'specific_months', 'one_time')`,
+    ),
+  }),
+);
+
+export const feeStructureItemSchedules = pgTable(
+  'fee_structure_item_schedules',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    structureItemId: uuid('structure_item_id')
+      .notNull()
+      .references(() => feeStructureItems.id, { onDelete: 'cascade' }),
+    month: integer('month').notNull(),
+    academicYear: varchar('academic_year', { length: 50 }),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    itemIdx: index('fee_structure_item_schedules_item_idx').on(
+      table.tenantId,
+      table.structureItemId,
+    ),
+    uniqueScheduleIdx: uniqueIndex('fee_structure_item_schedules_unique_idx').on(
+      table.tenantId,
+      table.structureItemId,
+      table.month,
+      sql`coalesce(${table.academicYear}, '')`,
+    ),
+    monthCheck: check(
+      'fee_structure_item_schedules_month_check',
+      sql`${table.month} BETWEEN 1 AND 12`,
+    ),
   }),
 );
 
@@ -187,5 +230,7 @@ export type FeeHead = typeof feeHeads.$inferSelect;
 export type NewFeeHead = typeof feeHeads.$inferInsert;
 export type FeeStructureItem = typeof feeStructureItems.$inferSelect;
 export type NewFeeStructureItem = typeof feeStructureItems.$inferInsert;
+export type FeeStructureItemSchedule = typeof feeStructureItemSchedules.$inferSelect;
+export type NewFeeStructureItemSchedule = typeof feeStructureItemSchedules.$inferInsert;
 export type FeeInvoiceItem = typeof feeInvoiceItems.$inferSelect;
 export type NewFeeInvoiceItem = typeof feeInvoiceItems.$inferInsert;

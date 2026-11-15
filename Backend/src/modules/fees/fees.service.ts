@@ -2,9 +2,11 @@ import {
   and,
   desc,
   eq,
+  gte,
   ilike,
   inArray,
   isNull,
+  lte,
   ne,
   or,
   sql,
@@ -15,12 +17,14 @@ import { classes } from '../classes/classes.schema.js';
 import { sections } from '../sections/sections.schema.js';
 import { students } from '../students/students.schema.js';
 import { users } from '../auth/auth.schema.js';
+import { sessionYears } from '../session-years/session-years.schema.js';
 import {
   feeHeads,
   feeInvoiceItems,
   feeInvoices,
   feePayments,
   feeStructureItems,
+  feeStructureItemSchedules,
   feeStructures,
 } from './fees.schema.js';
 import type {
@@ -31,13 +35,17 @@ import type {
   ListFeeHeadsFilters,
   ListFeeStructuresFilters,
   ListInvoicesFilters,
+  FeeStructurePreview,
   RecordPaymentInput,
   FeeStructureItemResponse,
+  ScheduleType,
+  PreviewInvoiceInput,
   UpdateFeeHeadInput,
   UpdateFeeStructureInput,
 } from './fees.types.js';
 
 const MAX_STRUCTURE_AMOUNT = 2_147_483_647;
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 function deriveInvoiceStatus(amount: number, amountPaid: number, current: string) {
   if (current === 'cancelled' || current === 'draft') return current;
@@ -242,6 +250,47 @@ export async function listFeeHeads(filters: ListFeeHeadsFilters) {
     .orderBy(feeHeads.name);
 }
 
+async function saveStructureItems(
+  tx: DbTransaction,
+  structureId: string,
+  tenantId: string,
+  items: CreateFeeStructureInput['data']['items'],
+) {
+  const createdItems = await tx
+    .insert(feeStructureItems)
+    .values(
+      items.map((item) => ({
+        tenantId,
+        structureId,
+        feeHeadId: item.feeHeadId,
+        amount: item.amount,
+        scheduleType: item.scheduleType ?? 'monthly',
+      })),
+    )
+    .returning({
+      id: feeStructureItems.id,
+      feeHeadId: feeStructureItems.feeHeadId,
+    });
+
+  const itemIdByFeeHead = new Map(
+    createdItems.map((item) => [item.feeHeadId, item.id]),
+  );
+  const scheduleRows = items.flatMap((item) => {
+    if ((item.scheduleType ?? 'monthly') === 'monthly') return [];
+    const structureItemId = itemIdByFeeHead.get(item.feeHeadId);
+    if (!structureItemId) throw new BadRequestError('Could not save fee structure item');
+    return (item.months ?? []).map((month) => ({
+      tenantId,
+      structureItemId,
+      month,
+      academicYear: item.academicYear?.trim() || null,
+    }));
+  });
+  if (scheduleRows.length > 0) {
+    await tx.insert(feeStructureItemSchedules).values(scheduleRows);
+  }
+}
+
 async function validateFeeHeads(feeHeadIds: string[], tenantId: string) {
   const uniqueIds = [...new Set(feeHeadIds)];
   if (uniqueIds.length !== feeHeadIds.length || uniqueIds.length === 0) {
@@ -264,17 +313,65 @@ async function validateFeeHeads(feeHeadIds: string[], tenantId: string) {
   }
 }
 
+type StructureItemRow = {
+  id: string;
+  structureId: string;
+  feeHeadId: string;
+  feeHeadName: string;
+  feeHeadCode: string;
+  amount: number;
+  scheduleType: ScheduleType;
+};
+
+async function addItemSchedules<T extends StructureItemRow>(
+  items: T[],
+  tenantId: string,
+): Promise<Array<T & Pick<FeeStructureItemResponse, 'months' | 'academicYear'>>> {
+  if (items.length === 0) return [];
+  const schedules = await db
+    .select({
+      structureItemId: feeStructureItemSchedules.structureItemId,
+      month: feeStructureItemSchedules.month,
+      academicYear: feeStructureItemSchedules.academicYear,
+    })
+    .from(feeStructureItemSchedules)
+    .where(
+      and(
+        eq(feeStructureItemSchedules.tenantId, tenantId),
+        eq(feeStructureItemSchedules.isActive, true),
+        inArray(feeStructureItemSchedules.structureItemId, items.map((item) => item.id)),
+      ),
+    )
+    .orderBy(feeStructureItemSchedules.month);
+
+  const schedulesByItem = new Map<string, { months: number[]; academicYear: string | null }>();
+  for (const schedule of schedules) {
+    const current = schedulesByItem.get(schedule.structureItemId) ?? {
+      months: [],
+      academicYear: schedule.academicYear,
+    };
+    current.months.push(schedule.month);
+    schedulesByItem.set(schedule.structureItemId, current);
+  }
+  return items.map((item) => ({
+    ...item,
+    ...(schedulesByItem.get(item.id) ?? { months: [], academicYear: null }),
+  }));
+}
+
 async function loadStructureItems(
   structureId: string,
   tenantId: string,
 ): Promise<FeeStructureItemResponse[]> {
-  return db
+  const items = await db
     .select({
       id: feeStructureItems.id,
+      structureId: feeStructureItems.structureId,
       feeHeadId: feeStructureItems.feeHeadId,
       feeHeadName: feeHeads.name,
       feeHeadCode: feeHeads.code,
       amount: feeStructureItems.amount,
+      scheduleType: feeStructureItems.scheduleType,
     })
     .from(feeStructureItems)
     .innerJoin(
@@ -291,6 +388,106 @@ async function loadStructureItems(
       ),
     )
     .orderBy(feeHeads.name);
+  const itemsWithSchedules = await addItemSchedules(items, tenantId);
+  return itemsWithSchedules.map(({ structureId: _structureId, ...item }) => item);
+}
+
+function parsePeriod(periodLabel: string) {
+  const match =
+    /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\b/i.exec(
+      periodLabel,
+    );
+  if (!match) {
+    throw new BadRequestError(
+      `Could not parse a month from "${periodLabel}". Use a label like "October 2026".`,
+    );
+  }
+  const monthByPrefix: Record<string, number> = {
+    jan: 1,
+    feb: 2,
+    mar: 3,
+    apr: 4,
+    may: 5,
+    jun: 6,
+    jul: 7,
+    aug: 8,
+    sep: 9,
+    oct: 10,
+    nov: 11,
+    dec: 12,
+  };
+  const year = /\b(?:19|20)\d{2}\b/.exec(periodLabel)?.[0];
+  return { month: monthByPrefix[match[1]!.toLowerCase().slice(0, 3)]!, year };
+}
+
+async function resolvePeriodAcademicYear(
+  tenantId: string,
+  periodLabel: string,
+  required: boolean,
+) {
+  const { month, year } = parsePeriod(periodLabel);
+  if (!year) {
+    if (required) throw new BadRequestError('Include a calendar year in the period label');
+    return { month, academicYear: null, calendarYear: null };
+  }
+  const periodDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const [sessionYear] = await db
+    .select({ name: sessionYears.name })
+    .from(sessionYears)
+    .where(
+      and(
+        eq(sessionYears.tenantId, tenantId),
+        lte(sessionYears.startDate, periodDate),
+        gte(sessionYears.endDate, periodDate),
+        isNull(sessionYears.deletedAt),
+      ),
+    )
+    .limit(1);
+  return { month, academicYear: sessionYear?.name ?? null, calendarYear: year };
+}
+
+async function getApplicableItemsForPeriod(
+  structureId: string,
+  tenantId: string,
+  periodLabel: string,
+  fallbackAmount = 0,
+) {
+  const items = await loadStructureItems(structureId, tenantId);
+  if (items.length === 0) {
+    return { periodLabel, totalAmount: fallbackAmount, items: [] };
+  }
+  const hasScheduledItems = items.some((item) => item.scheduleType !== 'monthly');
+  if (!hasScheduledItems) {
+    return {
+      periodLabel,
+      totalAmount: items.reduce((total, item) => total + item.amount, 0),
+      items: items.map((item) => ({ ...item, isIncluded: true })),
+    };
+  }
+
+  const { month, academicYear, calendarYear } = await resolvePeriodAcademicYear(
+    tenantId,
+    periodLabel,
+    items.some((item) => item.academicYear !== null),
+  );
+  const previewItems = items.map((item) => {
+    const yearMatches =
+      !item.academicYear ||
+      item.academicYear === academicYear ||
+      item.academicYear === calendarYear;
+    const isIncluded =
+      item.scheduleType === 'monthly' ||
+      (yearMatches && item.months.includes(month));
+    return { ...item, isIncluded };
+  });
+  return {
+    periodLabel,
+    totalAmount: previewItems.reduce(
+      (total, item) => total + (item.isIncluded ? item.amount : 0),
+      0,
+    ),
+    items: previewItems,
+  };
 }
 
 async function getStructureWithItems(structureId: string, tenantId: string) {
@@ -462,6 +659,7 @@ export async function listFeeStructures(filters: ListFeeStructuresFilters) {
       feeHeadName: feeHeads.name,
       feeHeadCode: feeHeads.code,
       amount: feeStructureItems.amount,
+      scheduleType: feeStructureItems.scheduleType,
     })
     .from(feeStructureItems)
     .innerJoin(
@@ -478,17 +676,12 @@ export async function listFeeStructures(filters: ListFeeStructuresFilters) {
       ),
     )
     .orderBy(feeHeads.name);
+  const itemsWithSchedules = await addItemSchedules(items, filters.tenantId);
   const itemsByStructure = new Map<string, FeeStructureItemResponse[]>();
-  for (const item of items) {
-    const structureItems = itemsByStructure.get(item.structureId) ?? [];
-    structureItems.push({
-      id: item.id,
-      feeHeadId: item.feeHeadId,
-      feeHeadName: item.feeHeadName,
-      feeHeadCode: item.feeHeadCode,
-      amount: item.amount,
-    });
-    itemsByStructure.set(item.structureId, structureItems);
+  for (const { structureId, ...item } of itemsWithSchedules) {
+    const structureItems = itemsByStructure.get(structureId) ?? [];
+    structureItems.push(item);
+    itemsByStructure.set(structureId, structureItems);
   }
   return rows.map((row) => ({
     ...mapStructure(row),
@@ -528,14 +721,7 @@ export async function createFeeStructure(input: CreateFeeStructureInput) {
       .returning({ id: feeStructures.id });
     if (!created) throw new BadRequestError('Could not create fee structure');
 
-    await tx.insert(feeStructureItems).values(
-      input.data.items.map((item) => ({
-        tenantId: input.tenantId,
-        structureId: created.id,
-        feeHeadId: item.feeHeadId,
-        amount: item.amount,
-      })),
-    );
+    await saveStructureItems(tx, created.id, input.tenantId, input.data.items);
     return created.id;
   });
   return getStructureWithItems(structureId, input.tenantId);
@@ -591,14 +777,7 @@ export async function updateFeeStructure(input: UpdateFeeStructureInput) {
             eq(feeStructureItems.tenantId, input.tenantId),
           ),
         );
-      await tx.insert(feeStructureItems).values(
-        input.data.items.map((item) => ({
-          tenantId: input.tenantId,
-          structureId: existing.id,
-          feeHeadId: item.feeHeadId,
-          amount: item.amount,
-        })),
-      );
+      await saveStructureItems(tx, existing.id, input.tenantId, input.data.items);
     }
   });
   return getStructureWithItems(existing.id, input.tenantId);
@@ -776,37 +955,30 @@ export async function createInvoice(input: CreateInvoiceInput) {
   if (feeStructureId) {
     const structure = await requireStructure(feeStructureId, input.tenantId);
     if (!structure.isActive) throw new BadRequestError('Fee structure is inactive');
-    if (input.data.amount !== undefined && input.data.amount !== structure.amount) {
-      throw new BadRequestError('Invoice amount must match the selected fee structure');
-    }
     if (structure.classId && structure.classId !== student.classId) {
       throw new BadRequestError('Fee structure is assigned to a different class');
     }
     if (structure.sectionId && structure.sectionId !== student.sectionId) {
       throw new BadRequestError('Fee structure is assigned to a different section');
     }
-    amount = structure.amount;
+    const preview = await getApplicableItemsForPeriod(
+      structure.id,
+      input.tenantId,
+      input.data.periodLabel ?? '',
+      structure.amount,
+    );
+    if (input.data.amount !== undefined && input.data.amount !== preview.totalAmount) {
+      throw new BadRequestError('Invoice amount must match the selected fee structure and period');
+    }
+    amount = preview.totalAmount;
     title = title || structure.name;
-    lineItems = await db
-      .select({
-        feeHeadId: feeStructureItems.feeHeadId,
-        name: feeHeads.name,
-        amount: feeStructureItems.amount,
-      })
-      .from(feeStructureItems)
-      .innerJoin(
-        feeHeads,
-        and(
-          eq(feeStructureItems.feeHeadId, feeHeads.id),
-          eq(feeHeads.tenantId, input.tenantId),
-        ),
-      )
-      .where(
-        and(
-          eq(feeStructureItems.structureId, structure.id),
-          eq(feeStructureItems.tenantId, input.tenantId),
-        ),
-      );
+    lineItems = preview.items
+      .filter((item) => item.isIncluded)
+      .map((item) => ({
+        feeHeadId: item.feeHeadId,
+        name: item.feeHeadName,
+        amount: item.amount,
+      }));
   }
 
   if (amount === undefined || amount <= 0) {
@@ -868,6 +1040,16 @@ export async function generateInvoices(input: GenerateInvoicesInput) {
   }
   const sectionId = structure.sectionId ?? input.data.sectionId;
   if (sectionId) await requireSectionForClass(sectionId, classId, input.tenantId);
+  const preview = await getApplicableItemsForPeriod(
+    structure.id,
+    input.tenantId,
+    input.data.periodLabel,
+    structure.amount,
+  );
+  if (preview.totalAmount <= 0) {
+    throw new BadRequestError(`No fee heads are scheduled for ${input.data.periodLabel}`);
+  }
+  const applicableItems = preview.items.filter((item) => item.isIncluded);
 
   const studentConditions = [
     eq(students.tenantId, input.tenantId),
@@ -926,7 +1108,7 @@ export async function generateInvoices(input: GenerateInvoicesInput) {
           feeStructureId: structure.id,
           title,
           periodLabel,
-          amount: structure.amount,
+          amount: preview.totalAmount,
           amountPaid: 0,
           dueDate: input.data.dueDate,
           status: 'issued',
@@ -936,35 +1118,14 @@ export async function generateInvoices(input: GenerateInvoicesInput) {
       )
       .returning({ id: feeInvoices.id });
 
-    const structureItems = await tx
-      .select({
-        feeHeadId: feeStructureItems.feeHeadId,
-        amount: feeStructureItems.amount,
-        name: feeHeads.name,
-      })
-      .from(feeStructureItems)
-      .innerJoin(
-        feeHeads,
-        and(
-          eq(feeStructureItems.feeHeadId, feeHeads.id),
-          eq(feeHeads.tenantId, input.tenantId),
-        ),
-      )
-      .where(
-        and(
-          eq(feeStructureItems.structureId, structure.id),
-          eq(feeStructureItems.tenantId, input.tenantId),
-        ),
-      );
-
-    if (structureItems.length > 0 && createdInvoices.length > 0) {
+    if (applicableItems.length > 0 && createdInvoices.length > 0) {
       await tx.insert(feeInvoiceItems).values(
         createdInvoices.flatMap((invoice) =>
-          structureItems.map((item) => ({
+          applicableItems.map((item) => ({
             tenantId: input.tenantId,
             invoiceId: invoice.id,
             feeHeadId: item.feeHeadId,
-            name: item.name,
+            name: item.feeHeadName,
             amount: item.amount,
           })),
         ),
@@ -977,6 +1138,16 @@ export async function generateInvoices(input: GenerateInvoicesInput) {
       invoiceIds: createdInvoices.map((invoice) => invoice.id),
     };
   });
+}
+
+export async function previewInvoice(input: PreviewInvoiceInput): Promise<FeeStructurePreview> {
+  const structure = await requireStructure(input.structureId, input.tenantId);
+  return getApplicableItemsForPeriod(
+    structure.id,
+    input.tenantId,
+    input.periodLabel,
+    structure.amount,
+  );
 }
 
 export async function issueInvoice(invoiceId: string, tenantId: string) {

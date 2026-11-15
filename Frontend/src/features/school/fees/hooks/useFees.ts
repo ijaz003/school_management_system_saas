@@ -10,6 +10,8 @@ import {
   type InvoiceFilters,
   type InvoiceStatus,
   type PaymentMethod,
+  type FeeStructureItemInput,
+  type ScheduleType,
   type StructureFilters,
 } from './keys';
 
@@ -35,6 +37,15 @@ export interface FeeStructureItem {
   feeHeadName: string;
   feeHeadCode: string;
   amount: number;
+  scheduleType: ScheduleType;
+  months: number[];
+  academicYear: string | null;
+}
+
+export interface FeeStructurePreview {
+  periodLabel: string;
+  totalAmount: number;
+  items: Array<FeeStructureItem & { isIncluded: boolean }>;
 }
 
 export interface FeePayment {
@@ -186,7 +197,7 @@ export function useCreateFeeStructure() {
       sectionId?: string | null;
       frequency?: FeeFrequency;
       description?: string | null;
-      items: Array<{ feeHeadId: string; amount: number }>;
+      items: FeeStructureItemInput[];
     }) => {
       const response = await api.post<FeeStructure>('/school/fees/structures', data);
       if (!response.data?.id) throw new Error('Fee structure was not created');
@@ -214,7 +225,7 @@ export function useUpdateFeeStructure() {
       frequency?: FeeFrequency;
       description?: string | null;
       isActive?: boolean;
-      items?: Array<{ feeHeadId: string; amount: number }>;
+      items?: FeeStructureItemInput[];
     }) => {
       const response = await api.patch<FeeStructure>(`/school/fees/structures/${id}`, data);
       if (!response.data) throw new Error('Fee structure was not updated');
@@ -225,6 +236,24 @@ export function useUpdateFeeStructure() {
       void queryClient.invalidateQueries({ queryKey: feeKeys.structures() });
     },
     onError: (error: Error) => toast.error(error.message || 'Failed to update structure'),
+  });
+}
+
+export function useFeeStructurePreview(
+  structureId: string,
+  periodLabel: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: feeKeys.invoicePreview(structureId, periodLabel),
+    enabled: enabled && Boolean(structureId) && Boolean(periodLabel.trim()),
+    queryFn: async () => {
+      const response = await api.get<FeeStructurePreview>(
+        `/school/fees/invoices/preview${buildQueryString({ structureId, periodLabel })}`,
+      );
+      if (!response.data) throw new Error('The server returned no invoice preview');
+      return response.data;
+    },
   });
 }
 

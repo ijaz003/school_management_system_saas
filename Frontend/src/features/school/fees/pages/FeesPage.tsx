@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Banknote, Download, Plus, Printer, Receipt, Search, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,10 +23,12 @@ import { downloadFile } from '@/lib/download';
 import { useClasses } from '@/features/school/classes/hooks/useClasses';
 import { useSections } from '@/features/school/classes/hooks/useSections';
 import { useStudents } from '@/features/school/students/hooks/useStudents';
+import { useSessionYears } from '@/features/school/session-years/hooks/useSessionYears';
 import {
   useCreateFeeStructure,
   useCreateInvoice,
   useDeleteFeeStructure,
+  useFeeStructurePreview,
   useFeeStructures,
   useGenerateInvoices,
   useFeeHeads,
@@ -37,11 +39,13 @@ import {
   type FeeInvoice,
   type FeeStructure,
 } from '../hooks/useFees';
+import { MONTHS } from '../hooks/keys';
 import type {
   FeeFrequency,
   InvoiceFilters,
   InvoiceStatus,
   PaymentMethod,
+  ScheduleType,
 } from '../hooks/keys';
 
 function formatMoney(amount: number) {
@@ -89,7 +93,7 @@ export function FeesPage() {
 
   const items = invoicesQuery.data?.items ?? [];
   const pagination = invoicesQuery.data?.pagination;
-  const structures = structuresQuery.data ?? [];
+  const structures = useMemo(() => structuresQuery.data ?? [], [structuresQuery.data]);
 
   const handleExportInvoices = async () => {
     setExporting(true);
@@ -528,7 +532,22 @@ function StructurePreviewModal({
               {structure.items.map((item) => (
                 <li key={item.id} className="flex justify-between gap-3 py-2">
                   <span className="text-ink-800">
-                    {item.feeHeadName} <span className="text-ink-500">({item.feeHeadCode})</span>
+                    {item.feeHeadName}{' '}
+                    <span className="text-ink-500">({item.feeHeadCode})</span>
+                    <span className="ml-2 text-xs capitalize text-ink-500">
+                      {item.scheduleType.replace('_', ' ')}
+                    </span>
+                    {item.months.length > 0 && (
+                      <span className="ml-2 text-xs text-ink-500">
+                        {item.months
+                          .map((month) => MONTHS.find((option) => option.value === month)?.label)
+                          .filter(Boolean)
+                          .join(', ')}
+                      </span>
+                    )}
+                    {item.academicYear && (
+                      <span className="ml-2 text-xs text-ink-500">{item.academicYear}</span>
+                    )}
                   </span>
                   <span className="font-medium text-ink-900">{formatMoney(item.amount)}</span>
                 </li>
@@ -686,17 +705,29 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
   const [classId, setClassId] = useState('');
   const [sectionId, setSectionId] = useState('');
   const [periodLabel, setPeriodLabel] = useState('');
+  const [debouncedPeriodLabel, setDebouncedPeriodLabel] = useState('');
   const [dueDate, setDueDate] = useState('');
 
-  const structures = structuresQuery.data ?? [];
+  const structures = useMemo(() => structuresQuery.data ?? [], [structuresQuery.data]);
   const sectionsQuery = useSections(classId);
   const selected = useMemo(
     () => structures.find((item) => item.id === feeStructureId),
     [structures, feeStructureId],
   );
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setDebouncedPeriodLabel(periodLabel.trim()),
+      350,
+    );
+    return () => window.clearTimeout(timer);
+  }, [periodLabel]);
+  const previewQuery = useFeeStructurePreview(feeStructureId, debouncedPeriodLabel);
+  const preview = previewQuery.data;
 
   const submit = () => {
-    if (!feeStructureId || !periodLabel.trim() || !dueDate) return;
+    if (!feeStructureId || !periodLabel.trim() || !dueDate || !preview || preview.totalAmount <= 0) {
+      return;
+    }
     generate.mutate(
       {
         feeStructureId,
@@ -722,8 +753,19 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
           <Button type="button" variant="outline" onClick={onClose} disabled={generate.isPending}>
             Cancel
           </Button>
-          <Button type="button" onClick={submit} isLoading={generate.isPending}>
-            Generate
+          <Button
+            type="button"
+            onClick={submit}
+            isLoading={generate.isPending}
+            disabled={
+              !preview ||
+              preview.totalAmount <= 0 ||
+              !dueDate ||
+              previewQuery.isPending ||
+              debouncedPeriodLabel !== periodLabel.trim()
+            }
+          >
+            Generate invoices
           </Button>
         </>
       }
@@ -798,10 +840,62 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
         </div>
         <Input
           label="Period label *"
-          placeholder="e.g. March 2026"
+          placeholder="e.g. October 2026"
           value={periodLabel}
           onChange={(event) => setPeriodLabel(event.target.value)}
         />
+        <p className="-mt-3 text-xs text-ink-500">
+          Include a month name, such as October 2026, to preview scheduled items.
+        </p>
+        {feeStructureId && periodLabel.trim() && (
+          <section className="rounded-xl bg-ink-50 p-4 ring-1 ring-ink-200">
+            <h3 className="mb-2 text-sm font-semibold text-ink-900">
+              Preview for {periodLabel.trim()}
+            </h3>
+            {previewQuery.isPending || debouncedPeriodLabel !== periodLabel.trim() ? (
+              <PageLoader compact />
+            ) : previewQuery.error ? (
+              <p className="text-sm text-danger-700">{previewQuery.error.message}</p>
+            ) : preview ? (
+              <>
+                {preview.items.length === 0 ? (
+                  <p className="text-sm text-ink-700">
+                    Legacy structure total: {formatMoney(preview.totalAmount)}
+                  </p>
+                ) : (
+                  <ul className="space-y-1.5 text-sm">
+                    {preview.items.map((item) => (
+                      <li key={item.id} className="flex justify-between gap-3">
+                        <span className={item.isIncluded ? 'text-ink-800' : 'text-ink-400 line-through'}>
+                          {item.isIncluded ? 'Included · ' : 'Skipped · '}
+                          {item.feeHeadName}
+                        </span>
+                        <span
+                          className={
+                            item.isIncluded
+                              ? 'font-medium text-ink-900'
+                              : 'text-ink-400 line-through'
+                          }
+                        >
+                          {formatMoney(item.amount)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="mt-3 flex justify-between border-t border-ink-200 pt-3 text-sm font-semibold">
+                  <span>Total per student</span>
+                  <span>{formatMoney(preview.totalAmount)}</span>
+                </div>
+                {preview.totalAmount === 0 && (
+                  <p className="mt-2 text-sm text-danger-700">
+                    No fee items are scheduled for this period. Invoice generation is disabled.
+                  </p>
+                )}
+              </>
+            ) : null}
+          </section>
+        )}
         <DateInput
           label="Due date *"
           value={dueDate}
@@ -813,13 +907,23 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
 }
 
 function CreateStructureModal({ onClose }: { onClose: () => void }) {
+  type StructureItemDraft = {
+    feeHeadId: string;
+    amount: string;
+    scheduleType: ScheduleType;
+    months: number[];
+    academicYear: string;
+  };
   const create = useCreateFeeStructure();
   const classesQuery = useClasses();
   const feeHeadsQuery = useFeeHeads({ activeOnly: true });
+  const sessionYearsQuery = useSessionYears();
   const [name, setName] = useState('');
   const [classId, setClassId] = useState('');
   const [sectionId, setSectionId] = useState('');
-  const [items, setItems] = useState([{ feeHeadId: '', amount: '' }]);
+  const [items, setItems] = useState<StructureItemDraft[]>([
+    { feeHeadId: '', amount: '', scheduleType: 'monthly', months: [], academicYear: '' },
+  ]);
   const [frequency, setFrequency] = useState<FeeFrequency>('monthly');
   const [description, setDescription] = useState('');
   const sectionsQuery = useSections(classId);
@@ -828,6 +932,9 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
   const parsedItems = items.map((item) => ({
     feeHeadId: item.feeHeadId,
     amount: Number(item.amount),
+    scheduleType: item.scheduleType,
+    ...(item.scheduleType !== 'monthly' ? { months: item.months } : {}),
+    ...(item.academicYear.trim() ? { academicYear: item.academicYear.trim() } : {}),
   }));
   const total = parsedItems.reduce((sum, item) => sum + (Number.isFinite(item.amount) ? item.amount : 0), 0);
   const validItems =
@@ -836,7 +943,10 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
       (item) =>
         item.feeHeadId &&
         Number.isSafeInteger(Number(item.amount)) &&
-        Number(item.amount) > 0,
+        Number(item.amount) > 0 &&
+        (item.scheduleType === 'monthly' ||
+          (item.scheduleType === 'specific_months' && item.months.length > 0) ||
+          (item.scheduleType === 'one_time' && item.months.length === 1)),
     ) &&
     new Set(selectedFeeHeadIds).size === items.length &&
     total <= 2_147_483_647;
@@ -939,7 +1049,18 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => setItems((current) => [...current, { feeHeadId: '', amount: '' }])}
+              onClick={() =>
+                setItems((current) => [
+                  ...current,
+                  {
+                    feeHeadId: '',
+                    amount: '',
+                    scheduleType: 'monthly',
+                    months: [],
+                    academicYear: '',
+                  },
+                ])
+              }
               disabled={feeHeads.length === 0}
             >
               <Plus className="h-4 w-4" aria-hidden="true" /> Add item
@@ -955,8 +1076,9 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
             </p>
           ) : (
             items.map((item, index) => (
-              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                <div>
+              <div key={index} className="space-y-3 rounded-xl border border-ink-200 p-3">
+                <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                  <div>
                   <label
                     htmlFor={`structure-head-${index}`}
                     className="mb-1 block text-xs font-medium text-ink-700"
@@ -986,30 +1108,149 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
                       </option>
                     ))}
                   </select>
+                  </div>
+                  <Input
+                    label="Amount"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={item.amount}
+                    onChange={(event) =>
+                      setItems((current) =>
+                        current.map((row, rowIndex) =>
+                          rowIndex === index ? { ...row, amount: event.target.value } : row,
+                        ),
+                      )
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="self-end"
+                    aria-label={`Remove fee item ${index + 1}`}
+                    disabled={items.length === 1}
+                    onClick={() =>
+                      setItems((current) => current.filter((_, rowIndex) => rowIndex !== index))
+                    }
+                  >
+                    Remove
+                  </Button>
                 </div>
-                <Input
-                  label="Amount"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={item.amount}
-                  onChange={(event) =>
-                    setItems((current) =>
-                      current.map((row, rowIndex) =>
-                        rowIndex === index ? { ...row, amount: event.target.value } : row,
-                      ),
-                    )
-                  }
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="self-end"
-                  aria-label={`Remove fee item ${index + 1}`}
-                  onClick={() => setItems((current) => current.filter((_, rowIndex) => rowIndex !== index))}
-                >
-                  Remove
-                </Button>
+                <div>
+                  <label
+                    htmlFor={`structure-schedule-${index}`}
+                    className="mb-1 block text-xs font-medium text-ink-700"
+                  >
+                    Schedule
+                  </label>
+                  <select
+                    id={`structure-schedule-${index}`}
+                    className="field-select"
+                    value={item.scheduleType}
+                    onChange={(event) => {
+                      const scheduleType = event.target.value as ScheduleType;
+                      setItems((current) =>
+                        current.map((row, rowIndex) =>
+                          rowIndex === index
+                            ? {
+                                ...row,
+                                scheduleType,
+                                months: scheduleType === 'monthly' ? [] : row.months,
+                                academicYear:
+                                  scheduleType === 'monthly' ? '' : row.academicYear,
+                              }
+                            : row,
+                        ),
+                      );
+                    }}
+                  >
+                    <option value="monthly">Monthly (every month)</option>
+                    <option value="specific_months">Specific months</option>
+                    <option value="one_time">One time</option>
+                  </select>
+                </div>
+                {item.scheduleType !== 'monthly' && (
+                  <>
+                    <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                      {MONTHS.map((month) => {
+                        const selected = item.months.includes(month.value);
+                        return (
+                          <button
+                            key={month.value}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() =>
+                              setItems((current) =>
+                                current.map((row, rowIndex) => {
+                                  if (rowIndex !== index) return row;
+                                  if (
+                                    row.scheduleType === 'one_time' &&
+                                    !row.months.includes(month.value)
+                                  ) {
+                                    return { ...row, months: [month.value] };
+                                  }
+                                  return {
+                                    ...row,
+                                    months: selected
+                                      ? row.months.filter((value) => value !== month.value)
+                                      : [...row.months, month.value].sort((a, b) => a - b),
+                                  };
+                                }),
+                              )
+                            }
+                            className={`rounded-lg border px-3 py-2 text-xs font-medium ${
+                              selected
+                                ? 'border-primary-600 bg-primary-600 text-white'
+                                : 'border-ink-200 bg-white text-ink-700'
+                            }`}
+                          >
+                            {month.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={`structure-academic-year-${index}`}
+                        className="mb-1 block text-xs font-medium text-ink-700"
+                      >
+                        Academic session (optional)
+                      </label>
+                      <select
+                        id={`structure-academic-year-${index}`}
+                        className="field-select"
+                        value={item.academicYear}
+                        disabled={sessionYearsQuery.isPending}
+                        onChange={(event) =>
+                          setItems((current) =>
+                            current.map((row, rowIndex) =>
+                              rowIndex === index
+                                ? { ...row, academicYear: event.target.value }
+                                : row,
+                            ),
+                          )
+                        }
+                      >
+                        <option value="">All academic sessions</option>
+                        {(sessionYearsQuery.data ?? []).map((sessionYear) => (
+                          <option key={sessionYear.id} value={sessionYear.name}>
+                            {sessionYear.name}
+                          </option>
+                        ))}
+                      </select>
+                      {sessionYearsQuery.error && (
+                        <p className="mt-1 text-xs text-danger-600">
+                          {sessionYearsQuery.error.message}
+                        </p>
+                      )}
+                    </div>
+                    {item.scheduleType === 'one_time' && item.months.length !== 1 && (
+                      <p className="text-xs text-danger-600">
+                        Select exactly one month for a one-time fee.
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
             ))
           )}
