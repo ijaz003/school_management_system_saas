@@ -1,11 +1,59 @@
 import { z } from 'zod';
 import {
+  FEE_HEAD_TYPES,
   FEE_FREQUENCIES,
   INVOICE_STATUSES,
   PAYMENT_METHODS,
 } from './fees.types.js';
 
 const moneyAmount = z.coerce.number().int().positive().max(100_000_000);
+const feeHeadCode = z
+  .string()
+  .trim()
+  .min(2)
+  .max(30)
+  .toUpperCase()
+  .regex(/^[A-Z0-9_]+$/, 'Code must contain uppercase letters, numbers, or underscores');
+
+export const createFeeHeadSchema = z.object({
+  body: z.object({
+    name: z.string().trim().min(2).max(150),
+    code: feeHeadCode,
+    type: z.enum(FEE_HEAD_TYPES).optional(),
+    description: z.string().trim().max(500).optional(),
+    isMandatory: z.boolean().optional(),
+  }),
+});
+
+export const updateFeeHeadSchema = z.object({
+  params: z.object({ id: z.string().uuid() }),
+  body: z
+    .object({
+      name: z.string().trim().min(2).max(150).optional(),
+      code: feeHeadCode.optional(),
+      type: z.enum(FEE_HEAD_TYPES).optional(),
+      description: z.string().trim().max(500).nullable().optional(),
+      isMandatory: z.boolean().optional(),
+      isActive: z.boolean().optional(),
+    })
+    .refine((body) => Object.keys(body).length > 0, {
+      message: 'At least one field must be provided',
+    }),
+});
+
+export const listFeeHeadsSchema = z.object({
+  query: z.object({
+    search: z.string().trim().max(200).optional(),
+    activeOnly: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => (value === undefined ? undefined : value === 'true')),
+  }),
+});
+
+export const feeHeadIdSchema = z.object({
+  params: z.object({ id: z.string().uuid() }),
+});
 
 export const createFeeStructureSchema = z.object({
   body: z.object({

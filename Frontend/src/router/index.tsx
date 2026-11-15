@@ -27,6 +27,7 @@ import { StudentIdCardsPage } from '@/features/school/students/pages/StudentIdCa
 import { NoticesListPage } from '@/features/school/notices/pages/NoticesListPage';
 import { DiaryListPage } from '@/features/school/diary/pages/DiaryListPage';
 import { FeesPage } from '@/features/school/fees/pages/FeesPage';
+import { FeeHeadsPage } from '@/features/school/fees/pages/FeeHeadsPage';
 import { FeeVoucherPage } from '@/features/school/fees/pages/FeeVoucherPage';
 import { ExpensesPage } from '@/features/school/expenses/pages/ExpensesPage';
 import { TimetablePage } from '@/features/school/timetable/pages/TimetablePage';
@@ -223,6 +224,19 @@ function FeesRoute() {
   return <Outlet />;
 }
 
+function FeeHeadsRoute() {
+  const user = useAppSelector(selectUser);
+  const { can } = usePermission();
+  const allowed =
+    can('settings.feeheads.edit') ||
+    can('fees.invoice.read') ||
+    can('fees.invoice.create');
+  if (user?.role === 'super_admin' || !allowed) {
+    return <Navigate to="/forbidden" replace />;
+  }
+  return <FeeHeadsPage />;
+}
+
 function ExpensesRoute() {
   const user = useAppSelector(selectUser);
   const { can } = usePermission();
@@ -354,6 +368,7 @@ const router = createBrowserRouter([
       { path: '/dashboard', element: <DashboardRouter /> },
       { path: '/profile', element: <ProfilePage /> },
       { path: '/settings', element: <SchoolSettingsRoute /> },
+      { path: '/fees/heads', element: <FeeHeadsRoute /> },
       {
         element: <StudentsRoute permission="students.read" />,
         children: [

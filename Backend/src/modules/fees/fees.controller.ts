@@ -3,7 +3,11 @@ import { recordAuditFromRequest } from '../../lib/audit.js';
 import { BadRequestError, UnauthorizedError } from '../../lib/errors.js';
 import { ApiResponse } from '../../lib/response.js';
 import { asyncHandler } from '../../middleware/async-handler.js';
-import { listFeeStructuresSchema, listInvoicesSchema } from './fees.validator.js';
+import {
+  listFeeHeadsSchema,
+  listFeeStructuresSchema,
+  listInvoicesSchema,
+} from './fees.validator.js';
 import * as feesService from './fees.service.js';
 
 function getSchoolContext(req: Request) {
@@ -20,6 +24,66 @@ function getId(req: Request) {
 }
 
 export const feesController = {
+  listFeeHeads: asyncHandler(async (req: Request, res: Response) => {
+    const context = getSchoolContext(req);
+    const { query } = listFeeHeadsSchema.parse({ query: req.query });
+    const items = await feesService.listFeeHeads({
+      tenantId: context.tenantId,
+      ...query,
+    });
+    return ApiResponse.success(res, items, 'Fee heads fetched');
+  }),
+
+  createFeeHead: asyncHandler(async (req: Request, res: Response) => {
+    const context = getSchoolContext(req);
+    const item = await feesService.createFeeHead({
+      tenantId: context.tenantId,
+      data: req.body,
+    });
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'fees.head.create',
+      entityType: 'fee_head',
+      entityId: item.id,
+      summary: `Created fee head "${item.name}"`,
+    });
+    return ApiResponse.created(res, item, 'Fee head created');
+  }),
+
+  updateFeeHead: asyncHandler(async (req: Request, res: Response) => {
+    const context = getSchoolContext(req);
+    const item = await feesService.updateFeeHead({
+      feeHeadId: getId(req),
+      tenantId: context.tenantId,
+      data: req.body,
+    });
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'fees.head.update',
+      entityType: 'fee_head',
+      entityId: item.id,
+      summary: `Updated fee head "${item.name}"`,
+    });
+    return ApiResponse.success(res, item, 'Fee head updated');
+  }),
+
+  deleteFeeHead: asyncHandler(async (req: Request, res: Response) => {
+    const context = getSchoolContext(req);
+    const feeHeadId = getId(req);
+    await feesService.deleteFeeHead(feeHeadId, context.tenantId);
+    recordAuditFromRequest(req, {
+      tenantId: context.tenantId,
+      actorId: context.userId,
+      action: 'fees.head.delete',
+      entityType: 'fee_head',
+      entityId: feeHeadId,
+      summary: 'Deleted fee head',
+    });
+    return ApiResponse.success(res, null, 'Fee head deleted');
+  }),
+
   listStructures: asyncHandler(async (req: Request, res: Response) => {
     const context = getSchoolContext(req);
     const { query } = listFeeStructuresSchema.parse({ query: req.query });

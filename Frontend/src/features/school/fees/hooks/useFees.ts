@@ -3,6 +3,9 @@ import { toast } from 'sonner';
 import { api, buildQueryString } from '@/lib/api';
 import {
   feeKeys,
+  type FeeHead,
+  type FeeHeadFilters,
+  type FeeHeadType,
   type FeeFrequency,
   type InvoiceFilters,
   type InvoiceStatus,
@@ -37,6 +40,13 @@ export interface FeePayment {
   createdAt: string;
 }
 
+export interface FeeInvoiceItem {
+  id: string;
+  feeHeadId: string | null;
+  name: string;
+  amount: number;
+}
+
 export interface FeeInvoice {
   id: string;
   studentId: string;
@@ -57,7 +67,89 @@ export interface FeeInvoice {
   createdByName: string | null;
   createdAt: string;
   updatedAt: string;
+  items?: FeeInvoiceItem[];
   payments?: FeePayment[];
+}
+
+export function useFeeHeads(filters: FeeHeadFilters = {}) {
+  return useQuery({
+    queryKey: feeKeys.headList(filters),
+    queryFn: async () => {
+      const response = await api.get<FeeHead[]>(
+        `/school/fees/heads${buildQueryString({
+          search: filters.search,
+          activeOnly:
+            filters.activeOnly === undefined ? undefined : String(filters.activeOnly),
+        })}`,
+      );
+      if (!response.data) throw new Error('The server returned no fee heads');
+      return response.data;
+    },
+  });
+}
+
+export function useCreateFeeHead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      name: string;
+      code: string;
+      type?: FeeHeadType;
+      description?: string;
+      isMandatory?: boolean;
+    }) => {
+      const response = await api.post<FeeHead>('/school/fees/heads', data);
+      if (!response.data?.id) throw new Error('Fee head was not created');
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Fee head created');
+      void queryClient.invalidateQueries({ queryKey: feeKeys.heads() });
+    },
+    onError: (error: Error) => toast.error(error.message || 'Failed to create fee head'),
+  });
+}
+
+export function useUpdateFeeHead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...data
+    }: {
+      id: string;
+      name?: string;
+      code?: string;
+      type?: FeeHeadType;
+      description?: string | null;
+      isMandatory?: boolean;
+      isActive?: boolean;
+    }) => {
+      const response = await api.patch<FeeHead>(`/school/fees/heads/${id}`, data);
+      if (!response.data) throw new Error('Fee head was not updated');
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Fee head updated');
+      void queryClient.invalidateQueries({ queryKey: feeKeys.heads() });
+    },
+    onError: (error: Error) => toast.error(error.message || 'Failed to update fee head'),
+  });
+}
+
+export function useDeleteFeeHead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/school/fees/heads/${id}`);
+      return id;
+    },
+    onSuccess: () => {
+      toast.success('Fee head deleted');
+      void queryClient.invalidateQueries({ queryKey: feeKeys.heads() });
+    },
+    onError: (error: Error) => toast.error(error.message || 'Failed to delete fee head'),
+  });
 }
 
 export function useFeeStructures(filters: StructureFilters = {}) {
@@ -208,7 +300,11 @@ export function useGenerateInvoices() {
       sectionId?: string;
       notes?: string;
     }) => {
-      const response = await api.post<{ createdCount: number }>(
+      const response = await api.post<{
+        createdCount: number;
+        skippedCount: number;
+        invoiceIds: string[];
+      }>(
         '/school/fees/invoices/generate',
         data,
       );
@@ -216,7 +312,9 @@ export function useGenerateInvoices() {
       return response.data;
     },
     onSuccess: (data) => {
-      toast.success(`${data.createdCount} invoice(s) generated`);
+      toast.success(
+        `${data.createdCount} invoice(s) generated${data.skippedCount ? `; ${data.skippedCount} already existed` : ''}`,
+      );
       void queryClient.invalidateQueries({ queryKey: feeKeys.invoices() });
     },
     onError: (error: Error) => toast.error(error.message || 'Failed to generate invoices'),

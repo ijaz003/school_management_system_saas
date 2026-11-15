@@ -1082,6 +1082,25 @@ function InvoiceDetailModal({
             </div>
           </dl>
 
+          {(invoice.items ?? []).length > 0 && (
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-ink-950">Fee breakdown</h3>
+              <ul className="space-y-2">
+                {invoice.items?.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-ink-100 px-3 py-2 text-sm"
+                  >
+                    <span className="text-ink-700">{item.name}</span>
+                    <span className="font-medium text-ink-950">
+                      {formatMoney(item.amount)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div>
             <h3 className="mb-2 text-sm font-semibold text-ink-950">Payments</h3>
             {(invoice.payments ?? []).length === 0 ? (

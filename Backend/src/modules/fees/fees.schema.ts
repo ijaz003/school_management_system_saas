@@ -6,9 +6,11 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { tenants } from '../tenants/tenants.schema.js';
 import { users } from '../auth/auth.schema.js';
 import { classes } from '../classes/classes.schema.js';
@@ -106,9 +108,84 @@ export const feePayments = pgTable(
   }),
 );
 
+export const feeHeads = pgTable(
+  'fee_heads',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 150 }).notNull(),
+    code: varchar('code', { length: 30 }).notNull(),
+    type: varchar('type', { length: 20 }).default('monthly').notNull(),
+    description: text('description'),
+    isActive: boolean('is_active').default(true).notNull(),
+    isMandatory: boolean('is_mandatory').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    deletedAt: timestamp('deleted_at'),
+  },
+  (table) => ({
+    tenantIdx: index('fee_heads_tenant_idx').on(table.tenantId),
+    tenantCodeIdx: uniqueIndex('fee_heads_tenant_code_idx')
+      .on(table.tenantId, table.code)
+      .where(sql`${table.deletedAt} IS NULL`),
+  }),
+);
+
+export const feeStructureItems = pgTable(
+  'fee_structure_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    structureId: uuid('structure_id')
+      .notNull()
+      .references(() => feeStructures.id, { onDelete: 'cascade' }),
+    feeHeadId: uuid('fee_head_id')
+      .notNull()
+      .references(() => feeHeads.id, { onDelete: 'restrict' }),
+    amount: integer('amount').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    structureIdx: index('fee_structure_items_structure_idx').on(table.structureId),
+    headIdx: index('fee_structure_items_head_idx').on(table.feeHeadId),
+  }),
+);
+
+export const feeInvoiceItems = pgTable(
+  'fee_invoice_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    invoiceId: uuid('invoice_id')
+      .notNull()
+      .references(() => feeInvoices.id, { onDelete: 'cascade' }),
+    feeHeadId: uuid('fee_head_id').references(() => feeHeads.id, {
+      onDelete: 'set null',
+    }),
+    name: varchar('name', { length: 150 }).notNull(),
+    amount: integer('amount').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    invoiceIdx: index('fee_invoice_items_invoice_idx').on(table.invoiceId),
+  }),
+);
+
 export type FeeStructure = typeof feeStructures.$inferSelect;
 export type NewFeeStructure = typeof feeStructures.$inferInsert;
 export type FeeInvoice = typeof feeInvoices.$inferSelect;
 export type NewFeeInvoice = typeof feeInvoices.$inferInsert;
 export type FeePayment = typeof feePayments.$inferSelect;
 export type NewFeePayment = typeof feePayments.$inferInsert;
+export type FeeHead = typeof feeHeads.$inferSelect;
+export type NewFeeHead = typeof feeHeads.$inferInsert;
+export type FeeStructureItem = typeof feeStructureItems.$inferSelect;
+export type NewFeeStructureItem = typeof feeStructureItems.$inferInsert;
+export type FeeInvoiceItem = typeof feeInvoiceItems.$inferSelect;
+export type NewFeeInvoiceItem = typeof feeInvoiceItems.$inferInsert;

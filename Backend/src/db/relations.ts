@@ -17,8 +17,11 @@ import { attendanceRecords } from '../modules/attendance/attendance.schema.js';
 import { notices } from '../modules/notices/notices.schema.js';
 import { diaryEntries } from '../modules/diary/diary.schema.js';
 import {
+  feeHeads,
+  feeInvoiceItems,
   feeInvoices,
   feePayments,
+  feeStructureItems,
   feeStructures,
 } from '../modules/fees/fees.schema.js';
 import { examMarks, exams, examSubjects } from '../modules/exams/exams.schema.js';
@@ -54,6 +57,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   feeStructures: many(feeStructures),
   feeInvoices: many(feeInvoices),
   feePayments: many(feePayments),
+  feeHeads: many(feeHeads),
   exams: many(exams),
   examSubjects: many(examSubjects),
   examMarks: many(examMarks),
@@ -296,6 +300,7 @@ export const feeStructuresRelations = relations(feeStructures, ({ one, many }) =
     references: [classes.id],
   }),
   invoices: many(feeInvoices),
+  items: many(feeStructureItems),
 }));
 
 export const feeInvoicesRelations = relations(feeInvoices, ({ one, many }) => ({
@@ -316,7 +321,53 @@ export const feeInvoicesRelations = relations(feeInvoices, ({ one, many }) => ({
     references: [users.id],
   }),
   payments: many(feePayments),
+  items: many(feeInvoiceItems),
 }));
+
+export const feeHeadsRelations = relations(feeHeads, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [feeHeads.tenantId],
+    references: [tenants.id],
+  }),
+  structureItems: many(feeStructureItems),
+  invoiceItems: many(feeInvoiceItems),
+}));
+
+export const feeStructureItemsRelations = relations(
+  feeStructureItems,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [feeStructureItems.tenantId],
+      references: [tenants.id],
+    }),
+    structure: one(feeStructures, {
+      fields: [feeStructureItems.structureId],
+      references: [feeStructures.id],
+    }),
+    feeHead: one(feeHeads, {
+      fields: [feeStructureItems.feeHeadId],
+      references: [feeHeads.id],
+    }),
+  }),
+);
+
+export const feeInvoiceItemsRelations = relations(
+  feeInvoiceItems,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [feeInvoiceItems.tenantId],
+      references: [tenants.id],
+    }),
+    invoice: one(feeInvoices, {
+      fields: [feeInvoiceItems.invoiceId],
+      references: [feeInvoices.id],
+    }),
+    feeHead: one(feeHeads, {
+      fields: [feeInvoiceItems.feeHeadId],
+      references: [feeHeads.id],
+    }),
+  }),
+);
 
 export const feePaymentsRelations = relations(feePayments, ({ one }) => ({
   tenant: one(tenants, {

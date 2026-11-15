@@ -1,18 +1,38 @@
-import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNull,
+  ne,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { db } from '../../config/database.js';
 import { BadRequestError, NotFoundError } from '../../lib/errors.js';
 import { classes } from '../classes/classes.schema.js';
 import { sections } from '../sections/sections.schema.js';
 import { students } from '../students/students.schema.js';
 import { users } from '../auth/auth.schema.js';
-import { feeInvoices, feePayments, feeStructures } from './fees.schema.js';
+import {
+  feeHeads,
+  feeInvoiceItems,
+  feeInvoices,
+  feePayments,
+  feeStructureItems,
+  feeStructures,
+} from './fees.schema.js';
 import type {
+  CreateFeeHeadInput,
   CreateFeeStructureInput,
   CreateInvoiceInput,
   GenerateInvoicesInput,
+  ListFeeHeadsFilters,
   ListFeeStructuresFilters,
   ListInvoicesFilters,
   RecordPaymentInput,
+  UpdateFeeHeadInput,
   UpdateFeeStructureInput,
 } from './fees.types.js';
 
@@ -36,6 +56,22 @@ async function requireStructure(structureId: string, tenantId: string) {
     )
     .limit(1);
   if (!row) throw new NotFoundError('Fee structure');
+  return row;
+}
+
+async function requireFeeHead(feeHeadId: string, tenantId: string) {
+  const [row] = await db
+    .select()
+    .from(feeHeads)
+    .where(
+      and(
+        eq(feeHeads.id, feeHeadId),
+        eq(feeHeads.tenantId, tenantId),
+        isNull(feeHeads.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!row) throw new NotFoundError('Fee head');
   return row;
 }
 
@@ -179,6 +215,128 @@ function mapInvoice(row: {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+export async function listFeeHeads(filters: ListFeeHeadsFilters) {
+  const conditions = [
+    eq(feeHeads.tenantId, filters.tenantId),
+    isNull(feeHeads.deletedAt),
+  ];
+  if (filters.activeOnly) conditions.push(eq(feeHeads.isActive, true));
+  if (filters.search) {
+    const escaped = `%${filters.search.replace(/[\\%_]/g, '\\$&')}%`;
+    const searchFilter = or(
+      ilike(feeHeads.name, escaped),
+      ilike(feeHeads.code, escaped),
+    );
+    if (searchFilter) conditions.push(searchFilter);
+  }
+
+  return db
+    .select()
+    .from(feeHeads)
+    .where(and(...conditions))
+    .orderBy(feeHeads.name);
+}
+
+export async function createFeeHead(input: CreateFeeHeadInput) {
+  const [created] = await db
+    .insert(feeHeads)
+    .values({
+      tenantId: input.tenantId,
+      name: input.data.name.trim(),
+      code: input.data.code.trim().toUpperCase(),
+      type: input.data.type ?? 'monthly',
+      description: input.data.description?.trim() || null,
+      isMandatory: input.data.isMandatory ?? true,
+    })
+    .onConflictDoNothing({
+      target: [feeHeads.tenantId, feeHeads.code],
+      where: isNull(feeHeads.deletedAt),
+    })
+    .returning();
+
+  if (!created) {
+    throw new BadRequestError(`Fee head code "${input.data.code}" already exists`);
+  }
+  return created;
+}
+
+export async function updateFeeHead(input: UpdateFeeHeadInput) {
+  const existing = await requireFeeHead(input.feeHeadId, input.tenantId);
+  const code = input.data.code?.trim().toUpperCase();
+  if (code && code !== existing.code) {
+    const [conflict] = await db
+      .select({ id: feeHeads.id })
+      .from(feeHeads)
+      .where(
+        and(
+          eq(feeHeads.tenantId, input.tenantId),
+          eq(feeHeads.code, code),
+          ne(feeHeads.id, existing.id),
+          isNull(feeHeads.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (conflict) {
+      throw new BadRequestError(`Fee head code "${code}" already exists`);
+    }
+  }
+
+  const [updated] = await db
+    .update(feeHeads)
+    .set({
+      ...(input.data.name !== undefined ? { name: input.data.name.trim() } : {}),
+      ...(code !== undefined ? { code } : {}),
+      ...(input.data.type !== undefined ? { type: input.data.type } : {}),
+      ...(input.data.description !== undefined
+        ? { description: input.data.description?.trim() || null }
+        : {}),
+      ...(input.data.isMandatory !== undefined
+        ? { isMandatory: input.data.isMandatory }
+        : {}),
+      ...(input.data.isActive !== undefined ? { isActive: input.data.isActive } : {}),
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(feeHeads.id, existing.id),
+        eq(feeHeads.tenantId, input.tenantId),
+      ),
+    )
+    .returning();
+
+  if (!updated) throw new NotFoundError('Fee head');
+  return updated;
+}
+
+export async function deleteFeeHead(feeHeadId: string, tenantId: string) {
+  const existing = await requireFeeHead(feeHeadId, tenantId);
+  const [usage] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(feeStructureItems)
+    .where(
+      and(
+        eq(feeStructureItems.feeHeadId, existing.id),
+        eq(feeStructureItems.tenantId, tenantId),
+      ),
+    );
+
+  if ((usage?.count ?? 0) > 0) {
+    throw new BadRequestError(
+      `Cannot delete fee head; it is used in ${usage?.count} fee structure(s)`,
+    );
+  }
+
+  await db
+    .update(feeHeads)
+    .set({ deletedAt: new Date(), updatedAt: new Date(), isActive: false })
+    .where(
+      and(
+        eq(feeHeads.id, existing.id),
+        eq(feeHeads.tenantId, tenantId),
+      ),
+    );
 }
 
 export async function listFeeStructures(filters: ListFeeStructuresFilters) {
@@ -430,37 +588,59 @@ export async function listInvoices(filters: ListInvoicesFilters) {
 
 export async function getInvoiceById(invoiceId: string, tenantId: string) {
   const invoice = await getInvoiceMapped(invoiceId, tenantId);
-  const payments = await db
-    .select({
-      id: feePayments.id,
-      amount: feePayments.amount,
-      method: feePayments.method,
-      paidAt: feePayments.paidAt,
-      reference: feePayments.reference,
-      notes: feePayments.notes,
-      recordedBy: feePayments.recordedBy,
-      recordedByName: users.fullName,
-      createdAt: feePayments.createdAt,
-    })
-    .from(feePayments)
-    .leftJoin(users, eq(feePayments.recordedBy, users.id))
-    .where(
-      and(
-        eq(feePayments.invoiceId, invoiceId),
-        eq(feePayments.tenantId, tenantId),
-        isNull(feePayments.deletedAt),
-      ),
-    )
-    .orderBy(desc(feePayments.paidAt));
+  const [items, payments] = await Promise.all([
+    db
+      .select({
+        id: feeInvoiceItems.id,
+        feeHeadId: feeInvoiceItems.feeHeadId,
+        name: feeInvoiceItems.name,
+        amount: feeInvoiceItems.amount,
+      })
+      .from(feeInvoiceItems)
+      .where(
+        and(
+          eq(feeInvoiceItems.invoiceId, invoiceId),
+          eq(feeInvoiceItems.tenantId, tenantId),
+        ),
+      )
+      .orderBy(feeInvoiceItems.createdAt),
+    db
+      .select({
+        id: feePayments.id,
+        amount: feePayments.amount,
+        method: feePayments.method,
+        paidAt: feePayments.paidAt,
+        reference: feePayments.reference,
+        notes: feePayments.notes,
+        recordedBy: feePayments.recordedBy,
+        recordedByName: users.fullName,
+        createdAt: feePayments.createdAt,
+      })
+      .from(feePayments)
+      .leftJoin(users, eq(feePayments.recordedBy, users.id))
+      .where(
+        and(
+          eq(feePayments.invoiceId, invoiceId),
+          eq(feePayments.tenantId, tenantId),
+          isNull(feePayments.deletedAt),
+        ),
+      )
+      .orderBy(desc(feePayments.paidAt)),
+  ]);
 
-  return { ...invoice, payments };
+  return { ...invoice, items, payments };
 }
 
 export async function createInvoice(input: CreateInvoiceInput) {
   const student = await requireStudent(input.data.studentId, input.tenantId);
   let amount = input.data.amount;
   let title = input.data.title?.trim();
-  let feeStructureId = input.data.feeStructureId ?? null;
+  const feeStructureId = input.data.feeStructureId ?? null;
+  let lineItems: Array<{
+    feeHeadId: string | null;
+    name: string;
+    amount: number;
+  }> = [];
 
   if (feeStructureId) {
     const structure = await requireStructure(feeStructureId, input.tenantId);
@@ -473,6 +653,26 @@ export async function createInvoice(input: CreateInvoiceInput) {
     }
     amount = amount ?? structure.amount;
     title = title || structure.name;
+    lineItems = await db
+      .select({
+        feeHeadId: feeStructureItems.feeHeadId,
+        name: feeHeads.name,
+        amount: feeStructureItems.amount,
+      })
+      .from(feeStructureItems)
+      .innerJoin(
+        feeHeads,
+        and(
+          eq(feeStructureItems.feeHeadId, feeHeads.id),
+          eq(feeHeads.tenantId, input.tenantId),
+        ),
+      )
+      .where(
+        and(
+          eq(feeStructureItems.structureId, structure.id),
+          eq(feeStructureItems.tenantId, input.tenantId),
+        ),
+      );
   }
 
   if (amount === undefined || amount <= 0) {
@@ -481,25 +681,40 @@ export async function createInvoice(input: CreateInvoiceInput) {
   if (!title) throw new BadRequestError('Invoice title is required');
 
   const issue = input.data.issue !== false;
-  const [created] = await db
-    .insert(feeInvoices)
-    .values({
-      tenantId: input.tenantId,
-      studentId: student.id,
-      feeStructureId,
-      title,
-      periodLabel: input.data.periodLabel?.trim() || null,
-      amount,
-      amountPaid: 0,
-      dueDate: input.data.dueDate,
-      status: issue ? 'issued' : 'draft',
-      notes: input.data.notes?.trim() || null,
-      createdBy: input.createdBy,
-    })
-    .returning({ id: feeInvoices.id });
+  const invoiceId = await db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(feeInvoices)
+      .values({
+        tenantId: input.tenantId,
+        studentId: student.id,
+        feeStructureId,
+        title,
+        periodLabel: input.data.periodLabel?.trim() || null,
+        amount,
+        amountPaid: 0,
+        dueDate: input.data.dueDate,
+        status: issue ? 'issued' : 'draft',
+        notes: input.data.notes?.trim() || null,
+        createdBy: input.createdBy,
+      })
+      .returning({ id: feeInvoices.id });
 
-  if (!created) throw new BadRequestError('Could not create invoice');
-  return getInvoiceById(created.id, input.tenantId);
+    if (!created) throw new BadRequestError('Could not create invoice');
+    if (lineItems.length > 0) {
+      await tx.insert(feeInvoiceItems).values(
+        lineItems.map((item) => ({
+          tenantId: input.tenantId,
+          invoiceId: created.id,
+          feeHeadId: item.feeHeadId,
+          name: item.name,
+          amount: item.amount,
+        })),
+      );
+    }
+    return created.id;
+  });
+
+  return getInvoiceById(invoiceId, input.tenantId);
 }
 
 export async function generateInvoices(input: GenerateInvoicesInput) {
@@ -537,32 +752,97 @@ export async function generateInvoices(input: GenerateInvoicesInput) {
     throw new BadRequestError('No active students found for generation');
   }
 
-  const title = input.data.periodLabel
-    ? `${structure.name} — ${input.data.periodLabel}`
-    : structure.name;
+  const periodLabel = input.data.periodLabel.trim();
+  const title = `${structure.name} — ${periodLabel}`;
+  const studentIds = targetStudents.map((student) => student.id);
 
-  const createdIds: string[] = [];
-  for (const student of targetStudents) {
-    const [created] = await db
+  return db.transaction(async (tx) => {
+    const existingInvoices = await tx
+      .select({ studentId: feeInvoices.studentId })
+      .from(feeInvoices)
+      .where(
+        and(
+          eq(feeInvoices.tenantId, input.tenantId),
+          eq(feeInvoices.feeStructureId, structure.id),
+          eq(feeInvoices.periodLabel, periodLabel),
+          isNull(feeInvoices.deletedAt),
+          inArray(feeInvoices.studentId, studentIds),
+        ),
+      );
+    const existingStudentIds = new Set(
+      existingInvoices.map((invoice) => invoice.studentId),
+    );
+    const studentsToBill = targetStudents.filter(
+      (student) => !existingStudentIds.has(student.id),
+    );
+    if (studentsToBill.length === 0) {
+      return {
+        createdCount: 0,
+        skippedCount: targetStudents.length,
+        invoiceIds: [],
+      };
+    }
+
+    const createdInvoices = await tx
       .insert(feeInvoices)
-      .values({
-        tenantId: input.tenantId,
-        studentId: student.id,
-        feeStructureId: structure.id,
-        title,
-        periodLabel: input.data.periodLabel.trim(),
-        amount: structure.amount,
-        amountPaid: 0,
-        dueDate: input.data.dueDate,
-        status: 'issued',
-        notes: input.data.notes?.trim() || null,
-        createdBy: input.createdBy,
-      })
+      .values(
+        studentsToBill.map((student) => ({
+          tenantId: input.tenantId,
+          studentId: student.id,
+          feeStructureId: structure.id,
+          title,
+          periodLabel,
+          amount: structure.amount,
+          amountPaid: 0,
+          dueDate: input.data.dueDate,
+          status: 'issued',
+          notes: input.data.notes?.trim() || null,
+          createdBy: input.createdBy,
+        })),
+      )
       .returning({ id: feeInvoices.id });
-    if (created) createdIds.push(created.id);
-  }
 
-  return { createdCount: createdIds.length, invoiceIds: createdIds };
+    const structureItems = await tx
+      .select({
+        feeHeadId: feeStructureItems.feeHeadId,
+        amount: feeStructureItems.amount,
+        name: feeHeads.name,
+      })
+      .from(feeStructureItems)
+      .innerJoin(
+        feeHeads,
+        and(
+          eq(feeStructureItems.feeHeadId, feeHeads.id),
+          eq(feeHeads.tenantId, input.tenantId),
+        ),
+      )
+      .where(
+        and(
+          eq(feeStructureItems.structureId, structure.id),
+          eq(feeStructureItems.tenantId, input.tenantId),
+        ),
+      );
+
+    if (structureItems.length > 0 && createdInvoices.length > 0) {
+      await tx.insert(feeInvoiceItems).values(
+        createdInvoices.flatMap((invoice) =>
+          structureItems.map((item) => ({
+            tenantId: input.tenantId,
+            invoiceId: invoice.id,
+            feeHeadId: item.feeHeadId,
+            name: item.name,
+            amount: item.amount,
+          })),
+        ),
+      );
+    }
+
+    return {
+      createdCount: createdInvoices.length,
+      skippedCount: existingStudentIds.size,
+      invoiceIds: createdInvoices.map((invoice) => invoice.id),
+    };
+  });
 }
 
 export async function issueInvoice(invoiceId: string, tenantId: string) {

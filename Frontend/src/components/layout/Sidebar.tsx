@@ -113,6 +113,12 @@ const SCHOOL_GROUPS: MenuGroup[] = [
     label: 'Operations',
     items: [
       { label: 'Fees', path: '/fees', icon: DollarSign, permission: 'fees.invoice.read' },
+      {
+        label: 'Fee Heads',
+        path: '/fees/heads',
+        icon: FileText,
+        anyOf: ['settings.feeheads.edit', 'fees.invoice.read', 'fees.invoice.create'],
+      },
       { label: 'Expenses', path: '/expenses', icon: Wallet, permission: 'expenses.read' },
       {
         label: 'Reports',

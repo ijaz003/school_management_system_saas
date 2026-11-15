@@ -5,21 +5,54 @@ import { enforceTenantScope } from '../../middleware/enforce-tenant-scope.js';
 import { validate } from '../../middleware/validate.js';
 import { feesController } from './fees.controller.js';
 import {
+  createFeeHeadSchema,
   createFeeStructureSchema,
   createInvoiceSchema,
+  feeHeadIdSchema,
   generateInvoicesSchema,
   invoiceIdSchema,
+  listFeeHeadsSchema,
   listFeeStructuresSchema,
   listInvoicesSchema,
   paymentIdSchema,
   recordPaymentSchema,
   structureIdSchema,
+  updateFeeHeadSchema,
   updateFeeStructureSchema,
 } from './fees.validator.js';
 
 const router = Router();
 
 router.use(authenticate, enforceTenantScope);
+
+router.get(
+  '/heads',
+  canAny(
+    'settings.feeheads.edit',
+    'fees.invoice.read',
+    'fees.invoice.create',
+  ),
+  validate(listFeeHeadsSchema),
+  feesController.listFeeHeads,
+);
+router.post(
+  '/heads',
+  can('settings.feeheads.edit'),
+  validate(createFeeHeadSchema),
+  feesController.createFeeHead,
+);
+router.patch(
+  '/heads/:id',
+  can('settings.feeheads.edit'),
+  validate(updateFeeHeadSchema),
+  feesController.updateFeeHead,
+);
+router.delete(
+  '/heads/:id',
+  can('settings.feeheads.edit'),
+  validate(feeHeadIdSchema),
+  feesController.deleteFeeHead,
+);
 
 router.get(
   '/structures',

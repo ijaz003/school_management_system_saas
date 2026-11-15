@@ -13,6 +13,39 @@ export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 export const PAYMENT_METHODS = ['cash', 'bank', 'cheque', 'online', 'other'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
+export const FEE_HEAD_TYPES = ['monthly', 'term', 'annual', 'one_time'] as const;
+export type FeeHeadType = (typeof FEE_HEAD_TYPES)[number];
+
+export interface ListFeeHeadsFilters {
+  tenantId: string;
+  search?: string;
+  activeOnly?: boolean;
+}
+
+export interface CreateFeeHeadInput {
+  tenantId: string;
+  data: {
+    name: string;
+    code: string;
+    type?: FeeHeadType;
+    description?: string;
+    isMandatory?: boolean;
+  };
+}
+
+export interface UpdateFeeHeadInput {
+  feeHeadId: string;
+  tenantId: string;
+  data: {
+    name?: string;
+    code?: string;
+    type?: FeeHeadType;
+    description?: string | null;
+    isMandatory?: boolean;
+    isActive?: boolean;
+  };
+}
+
 export interface ListFeeStructuresFilters {
   tenantId: string;
   classId?: string;
