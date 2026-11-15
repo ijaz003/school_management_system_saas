@@ -29,6 +29,7 @@ import {
   useDeleteFeeStructure,
   useFeeStructures,
   useGenerateInvoices,
+  useFeeHeads,
   useInvoice,
   useInvoices,
   useRecordPayment,
@@ -518,6 +519,23 @@ function StructurePreviewModal({
             {structure.className ?? 'All classes'}
           </dd>
         </div>
+        {structure.items.length > 0 && (
+          <div className="rounded-xl bg-ink-50/80 px-3 py-3 ring-1 ring-ink-100 sm:col-span-2">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+              Fee breakdown
+            </h3>
+            <ul className="mt-2 divide-y divide-ink-200 text-sm">
+              {structure.items.map((item) => (
+                <li key={item.id} className="flex justify-between gap-3 py-2">
+                  <span className="text-ink-800">
+                    {item.feeHeadName} <span className="text-ink-500">({item.feeHeadCode})</span>
+                  </span>
+                  <span className="font-medium text-ink-900">{formatMoney(item.amount)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="rounded-xl bg-ink-50/80 px-3 py-2.5 ring-1 ring-ink-100 sm:col-span-2">
           <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
             Description
@@ -646,6 +664,7 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
             min={1}
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
+            disabled={Boolean(feeStructureId)}
           />
           <DateInput
             label="Due date *"
@@ -796,23 +815,39 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
 function CreateStructureModal({ onClose }: { onClose: () => void }) {
   const create = useCreateFeeStructure();
   const classesQuery = useClasses();
+  const feeHeadsQuery = useFeeHeads({ activeOnly: true });
   const [name, setName] = useState('');
   const [classId, setClassId] = useState('');
   const [sectionId, setSectionId] = useState('');
-  const [amount, setAmount] = useState('');
+  const [items, setItems] = useState([{ feeHeadId: '', amount: '' }]);
   const [frequency, setFrequency] = useState<FeeFrequency>('monthly');
   const [description, setDescription] = useState('');
   const sectionsQuery = useSections(classId);
+  const feeHeads = feeHeadsQuery.data ?? [];
+  const selectedFeeHeadIds = items.map((item) => item.feeHeadId).filter(Boolean);
+  const parsedItems = items.map((item) => ({
+    feeHeadId: item.feeHeadId,
+    amount: Number(item.amount),
+  }));
+  const total = parsedItems.reduce((sum, item) => sum + (Number.isFinite(item.amount) ? item.amount : 0), 0);
+  const validItems =
+    items.length > 0 &&
+    items.every(
+      (item) =>
+        item.feeHeadId &&
+        Number.isSafeInteger(Number(item.amount)) &&
+        Number(item.amount) > 0,
+    ) &&
+    new Set(selectedFeeHeadIds).size === items.length &&
+    total <= 2_147_483_647;
 
   const submit = () => {
-    const parsed = Number(amount);
-    if (name.trim().length < 2 || !Number.isFinite(parsed) || parsed <= 0) return;
     create.mutate(
       {
         name: name.trim(),
         classId: classId || null,
         sectionId: sectionId || null,
-        amount: parsed,
+        items: parsedItems,
         frequency,
         description: description.trim() || null,
       },
@@ -825,7 +860,7 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
       open
       onClose={onClose}
       title="New fee structure"
-      description="Define a reusable fee amount for a class and optional section."
+      description="Compose a reusable fee structure from fee heads."
       size="lg"
       closeDisabled={create.isPending}
       footer={
@@ -833,7 +868,12 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
           <Button type="button" variant="outline" onClick={onClose} disabled={create.isPending}>
             Cancel
           </Button>
-          <Button type="button" onClick={submit} isLoading={create.isPending}>
+          <Button
+            type="button"
+            onClick={submit}
+            isLoading={create.isPending}
+            disabled={name.trim().length < 2 || !validItems || feeHeadsQuery.isPending}
+          >
             Save structure
           </Button>
         </>
@@ -889,14 +929,101 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
             )}
           </div>
         )}
+        <section className="space-y-3 rounded-xl border border-ink-200 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-ink-900">Fee heads *</h3>
+              <p className="text-xs text-ink-500">Each head contributes to the total.</p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setItems((current) => [...current, { feeHeadId: '', amount: '' }])}
+              disabled={feeHeads.length === 0}
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" /> Add item
+            </Button>
+          </div>
+          {feeHeadsQuery.isPending ? (
+            <p className="text-sm text-ink-500">Loading fee heads...</p>
+          ) : feeHeadsQuery.error ? (
+            <p className="text-sm text-danger-600">{feeHeadsQuery.error.message}</p>
+          ) : feeHeads.length === 0 ? (
+            <p className="text-sm text-ink-500">
+              No active fee heads. Create a fee head before setting up a structure.
+            </p>
+          ) : (
+            items.map((item, index) => (
+              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                <div>
+                  <label
+                    htmlFor={`structure-head-${index}`}
+                    className="mb-1 block text-xs font-medium text-ink-700"
+                  >
+                    Fee head
+                  </label>
+                  <select
+                    id={`structure-head-${index}`}
+                    className="field-select"
+                    value={item.feeHeadId}
+                    onChange={(event) =>
+                      setItems((current) =>
+                        current.map((row, rowIndex) =>
+                          rowIndex === index ? { ...row, feeHeadId: event.target.value } : row,
+                        ),
+                      )
+                    }
+                  >
+                    <option value="">Select fee head</option>
+                    {feeHeads.map((head) => (
+                      <option
+                        key={head.id}
+                        value={head.id}
+                        disabled={head.id !== item.feeHeadId && selectedFeeHeadIds.includes(head.id)}
+                      >
+                        {head.name} ({head.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Input
+                  label="Amount"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={item.amount}
+                  onChange={(event) =>
+                    setItems((current) =>
+                      current.map((row, rowIndex) =>
+                        rowIndex === index ? { ...row, amount: event.target.value } : row,
+                      ),
+                    )
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="self-end"
+                  aria-label={`Remove fee item ${index + 1}`}
+                  onClick={() => setItems((current) => current.filter((_, rowIndex) => rowIndex !== index))}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))
+          )}
+          {items.length > 0 && (
+            <div className="flex justify-between border-t border-ink-200 pt-3 text-sm">
+              <span className="font-medium text-ink-700">Total</span>
+              <span className="font-semibold text-ink-950">{formatMoney(total)}</span>
+            </div>
+          )}
+          {total > 2_147_483_647 && (
+            <p className="text-sm text-danger-600">The total fee amount is too large.</p>
+          )}
+        </section>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="Amount *"
-            type="number"
-            min={1}
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-          />
           <div>
             <label htmlFor="structure-freq" className="mb-1.5 block text-sm font-medium text-ink-800">
               Frequency

@@ -52,15 +52,26 @@ export interface ListFeeStructuresFilters {
   activeOnly?: boolean;
 }
 
+export interface FeeStructureItemInput {
+  feeHeadId: string;
+  amount: number;
+}
+
+export interface FeeStructureItemResponse extends FeeStructureItemInput {
+  id: string;
+  feeHeadName: string;
+  feeHeadCode: string;
+}
+
 export interface CreateFeeStructureInput {
   tenantId: string;
   data: {
     name: string;
     classId?: string | null;
     sectionId?: string | null;
-    amount: number;
     frequency?: FeeFrequency;
     description?: string | null;
+    items: FeeStructureItemInput[];
   };
 }
 
@@ -71,10 +82,10 @@ export interface UpdateFeeStructureInput {
     name?: string;
     classId?: string | null;
     sectionId?: string | null;
-    amount?: number;
     frequency?: FeeFrequency;
     description?: string | null;
     isActive?: boolean;
+    items?: FeeStructureItemInput[];
   };
 }
 

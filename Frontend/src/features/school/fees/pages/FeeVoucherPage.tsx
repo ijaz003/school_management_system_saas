@@ -110,6 +110,24 @@ export function FeeVoucherPage() {
             </div>
           </div>
 
+          {(invoice.items?.length ?? 0) > 0 && (
+            <section className="mt-6">
+              <h2 className="text-sm font-semibold text-ink-900">Fee breakdown</h2>
+              <ul className="mt-2 divide-y divide-ink-100 border-y border-ink-200 text-sm">
+                {invoice.items?.map((item) => (
+                  <li key={item.id} className="flex justify-between gap-3 py-2.5">
+                    <span className="text-ink-700">{item.name}</span>
+                    <span className="font-medium text-ink-900">{money(item.amount)}</span>
+                  </li>
+                ))}
+                <li className="flex justify-between gap-3 py-2.5 font-semibold">
+                  <span>Total</span>
+                  <span>{money(invoice.amount)}</span>
+                </li>
+              </ul>
+            </section>
+          )}
+
           <dl className="mt-6 grid gap-3 border-y border-ink-200 py-5 text-sm sm:grid-cols-3">
             <div>
               <dt className="text-ink-500">Amount</dt>

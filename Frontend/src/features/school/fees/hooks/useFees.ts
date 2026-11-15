@@ -23,9 +23,18 @@ export interface FeeStructure {
   amount: number;
   frequency: FeeFrequency;
   description: string | null;
+  items: FeeStructureItem[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FeeStructureItem {
+  id: string;
+  feeHeadId: string;
+  feeHeadName: string;
+  feeHeadCode: string;
+  amount: number;
 }
 
 export interface FeePayment {
@@ -175,9 +184,9 @@ export function useCreateFeeStructure() {
       name: string;
       classId?: string | null;
       sectionId?: string | null;
-      amount: number;
       frequency?: FeeFrequency;
       description?: string | null;
+      items: Array<{ feeHeadId: string; amount: number }>;
     }) => {
       const response = await api.post<FeeStructure>('/school/fees/structures', data);
       if (!response.data?.id) throw new Error('Fee structure was not created');
@@ -202,10 +211,10 @@ export function useUpdateFeeStructure() {
       name?: string;
       classId?: string | null;
       sectionId?: string | null;
-      amount?: number;
       frequency?: FeeFrequency;
       description?: string | null;
       isActive?: boolean;
+      items?: Array<{ feeHeadId: string; amount: number }>;
     }) => {
       const response = await api.patch<FeeStructure>(`/school/fees/structures/${id}`, data);
       if (!response.data) throw new Error('Fee structure was not updated');

@@ -32,9 +32,12 @@ import type {
   ListFeeStructuresFilters,
   ListInvoicesFilters,
   RecordPaymentInput,
+  FeeStructureItemResponse,
   UpdateFeeHeadInput,
   UpdateFeeStructureInput,
 } from './fees.types.js';
+
+const MAX_STRUCTURE_AMOUNT = 2_147_483_647;
 
 function deriveInvoiceStatus(amount: number, amountPaid: number, current: string) {
   if (current === 'cancelled' || current === 'draft') return current;
@@ -239,6 +242,88 @@ export async function listFeeHeads(filters: ListFeeHeadsFilters) {
     .orderBy(feeHeads.name);
 }
 
+async function validateFeeHeads(feeHeadIds: string[], tenantId: string) {
+  const uniqueIds = [...new Set(feeHeadIds)];
+  if (uniqueIds.length !== feeHeadIds.length || uniqueIds.length === 0) {
+    throw new BadRequestError('Select at least one unique fee head');
+  }
+
+  const rows = await db
+    .select({ id: feeHeads.id })
+    .from(feeHeads)
+    .where(
+      and(
+        eq(feeHeads.tenantId, tenantId),
+        eq(feeHeads.isActive, true),
+        isNull(feeHeads.deletedAt),
+        inArray(feeHeads.id, uniqueIds),
+      ),
+    );
+  if (rows.length !== uniqueIds.length) {
+    throw new BadRequestError('One or more fee heads are invalid or inactive');
+  }
+}
+
+async function loadStructureItems(
+  structureId: string,
+  tenantId: string,
+): Promise<FeeStructureItemResponse[]> {
+  return db
+    .select({
+      id: feeStructureItems.id,
+      feeHeadId: feeStructureItems.feeHeadId,
+      feeHeadName: feeHeads.name,
+      feeHeadCode: feeHeads.code,
+      amount: feeStructureItems.amount,
+    })
+    .from(feeStructureItems)
+    .innerJoin(
+      feeHeads,
+      and(
+        eq(feeStructureItems.feeHeadId, feeHeads.id),
+        eq(feeHeads.tenantId, tenantId),
+      ),
+    )
+    .where(
+      and(
+        eq(feeStructureItems.structureId, structureId),
+        eq(feeStructureItems.tenantId, tenantId),
+      ),
+    )
+    .orderBy(feeHeads.name);
+}
+
+async function getStructureWithItems(structureId: string, tenantId: string) {
+  const [row] = await db
+    .select({
+      id: feeStructures.id,
+      name: feeStructures.name,
+      classId: feeStructures.classId,
+      className: classes.name,
+      sectionId: feeStructures.sectionId,
+      sectionName: sections.name,
+      amount: feeStructures.amount,
+      frequency: feeStructures.frequency,
+      description: feeStructures.description,
+      isActive: feeStructures.isActive,
+      createdAt: feeStructures.createdAt,
+      updatedAt: feeStructures.updatedAt,
+    })
+    .from(feeStructures)
+    .leftJoin(classes, eq(feeStructures.classId, classes.id))
+    .leftJoin(sections, eq(feeStructures.sectionId, sections.id))
+    .where(
+      and(
+        eq(feeStructures.id, structureId),
+        eq(feeStructures.tenantId, tenantId),
+        isNull(feeStructures.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!row) throw new NotFoundError('Fee structure');
+  return { ...row, items: await loadStructureItems(structureId, tenantId) };
+}
+
 export async function createFeeHead(input: CreateFeeHeadInput) {
   const [created] = await db
     .insert(feeHeads)
@@ -368,7 +453,47 @@ export async function listFeeStructures(filters: ListFeeStructuresFilters) {
     .where(and(...conditions))
     .orderBy(desc(feeStructures.createdAt));
 
-  return rows.map(mapStructure);
+  if (rows.length === 0) return [];
+  const items = await db
+    .select({
+      id: feeStructureItems.id,
+      structureId: feeStructureItems.structureId,
+      feeHeadId: feeStructureItems.feeHeadId,
+      feeHeadName: feeHeads.name,
+      feeHeadCode: feeHeads.code,
+      amount: feeStructureItems.amount,
+    })
+    .from(feeStructureItems)
+    .innerJoin(
+      feeHeads,
+      and(
+        eq(feeStructureItems.feeHeadId, feeHeads.id),
+        eq(feeHeads.tenantId, filters.tenantId),
+      ),
+    )
+    .where(
+      and(
+        eq(feeStructureItems.tenantId, filters.tenantId),
+        inArray(feeStructureItems.structureId, rows.map((row) => row.id)),
+      ),
+    )
+    .orderBy(feeHeads.name);
+  const itemsByStructure = new Map<string, FeeStructureItemResponse[]>();
+  for (const item of items) {
+    const structureItems = itemsByStructure.get(item.structureId) ?? [];
+    structureItems.push({
+      id: item.id,
+      feeHeadId: item.feeHeadId,
+      feeHeadName: item.feeHeadName,
+      feeHeadCode: item.feeHeadCode,
+      amount: item.amount,
+    });
+    itemsByStructure.set(item.structureId, structureItems);
+  }
+  return rows.map((row) => ({
+    ...mapStructure(row),
+    items: itemsByStructure.get(row.id) ?? [],
+  }));
 }
 
 export async function createFeeStructure(input: CreateFeeStructureInput) {
@@ -382,42 +507,38 @@ export async function createFeeStructure(input: CreateFeeStructureInput) {
     await requireSectionForClass(input.data.sectionId, input.data.classId, input.tenantId);
   }
 
-  const [created] = await db
-    .insert(feeStructures)
-    .values({
-      tenantId: input.tenantId,
-      name: input.data.name.trim(),
-      classId: input.data.classId ?? null,
-      sectionId: input.data.sectionId ?? null,
-      amount: input.data.amount,
-      frequency: input.data.frequency ?? 'monthly',
-      description: input.data.description?.trim() || null,
-    })
-    .returning({ id: feeStructures.id });
+  await validateFeeHeads(input.data.items.map((item) => item.feeHeadId), input.tenantId);
+  const amount = input.data.items.reduce((total, item) => total + item.amount, 0);
+  if (amount > MAX_STRUCTURE_AMOUNT) {
+    throw new BadRequestError('The total fee amount is too large');
+  }
 
-  if (!created) throw new BadRequestError('Could not create fee structure');
-  const [row] = await db
-    .select({
-      id: feeStructures.id,
-      name: feeStructures.name,
-      classId: feeStructures.classId,
-      className: classes.name,
-      sectionId: feeStructures.sectionId,
-      sectionName: sections.name,
-      amount: feeStructures.amount,
-      frequency: feeStructures.frequency,
-      description: feeStructures.description,
-      isActive: feeStructures.isActive,
-      createdAt: feeStructures.createdAt,
-      updatedAt: feeStructures.updatedAt,
-    })
-    .from(feeStructures)
-    .leftJoin(classes, eq(feeStructures.classId, classes.id))
-    .leftJoin(sections, eq(feeStructures.sectionId, sections.id))
-    .where(eq(feeStructures.id, created.id))
-    .limit(1);
-  if (!row) throw new NotFoundError('Fee structure');
-  return mapStructure(row);
+  const structureId = await db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(feeStructures)
+      .values({
+        tenantId: input.tenantId,
+        name: input.data.name.trim(),
+        classId: input.data.classId ?? null,
+        sectionId: input.data.sectionId ?? null,
+        amount,
+        frequency: input.data.frequency ?? 'monthly',
+        description: input.data.description?.trim() || null,
+      })
+      .returning({ id: feeStructures.id });
+    if (!created) throw new BadRequestError('Could not create fee structure');
+
+    await tx.insert(feeStructureItems).values(
+      input.data.items.map((item) => ({
+        tenantId: input.tenantId,
+        structureId: created.id,
+        feeHeadId: item.feeHeadId,
+        amount: item.amount,
+      })),
+    );
+    return created.id;
+  });
+  return getStructureWithItems(structureId, input.tenantId);
 }
 
 export async function updateFeeStructure(input: UpdateFeeStructureInput) {
@@ -433,44 +554,54 @@ export async function updateFeeStructure(input: UpdateFeeStructureInput) {
     await requireSectionForClass(sectionId, classId, input.tenantId);
   }
 
-  await db
-    .update(feeStructures)
-    .set({
-      ...(input.data.name !== undefined ? { name: input.data.name.trim() } : {}),
-      ...(input.data.classId !== undefined ? { classId: input.data.classId } : {}),
-      ...(input.data.sectionId !== undefined ? { sectionId: input.data.sectionId } : {}),
-      ...(input.data.amount !== undefined ? { amount: input.data.amount } : {}),
-      ...(input.data.frequency !== undefined ? { frequency: input.data.frequency } : {}),
-      ...(input.data.description !== undefined
-        ? { description: input.data.description?.trim() || null }
-        : {}),
-      ...(input.data.isActive !== undefined ? { isActive: input.data.isActive } : {}),
-      updatedAt: new Date(),
-    })
-    .where(and(eq(feeStructures.id, existing.id), eq(feeStructures.tenantId, input.tenantId)));
+  if (input.data.items) {
+    await validateFeeHeads(
+      input.data.items.map((item) => item.feeHeadId),
+      input.tenantId,
+    );
+  }
+  const amount = input.data.items?.reduce((total, item) => total + item.amount, 0);
+  if (amount !== undefined && amount > MAX_STRUCTURE_AMOUNT) {
+    throw new BadRequestError('The total fee amount is too large');
+  }
 
-  const [row] = await db
-    .select({
-      id: feeStructures.id,
-      name: feeStructures.name,
-      classId: feeStructures.classId,
-      className: classes.name,
-      sectionId: feeStructures.sectionId,
-      sectionName: sections.name,
-      amount: feeStructures.amount,
-      frequency: feeStructures.frequency,
-      description: feeStructures.description,
-      isActive: feeStructures.isActive,
-      createdAt: feeStructures.createdAt,
-      updatedAt: feeStructures.updatedAt,
-    })
-    .from(feeStructures)
-    .leftJoin(classes, eq(feeStructures.classId, classes.id))
-    .leftJoin(sections, eq(feeStructures.sectionId, sections.id))
-    .where(eq(feeStructures.id, existing.id))
-    .limit(1);
-  if (!row) throw new NotFoundError('Fee structure');
-  return mapStructure(row);
+  await db.transaction(async (tx) => {
+    await tx
+      .update(feeStructures)
+      .set({
+        ...(input.data.name !== undefined ? { name: input.data.name.trim() } : {}),
+        ...(input.data.classId !== undefined ? { classId: input.data.classId } : {}),
+        ...(input.data.sectionId !== undefined ? { sectionId: input.data.sectionId } : {}),
+        ...(amount !== undefined ? { amount } : {}),
+        ...(input.data.frequency !== undefined ? { frequency: input.data.frequency } : {}),
+        ...(input.data.description !== undefined
+          ? { description: input.data.description?.trim() || null }
+          : {}),
+        ...(input.data.isActive !== undefined ? { isActive: input.data.isActive } : {}),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(feeStructures.id, existing.id), eq(feeStructures.tenantId, input.tenantId)));
+
+    if (input.data.items) {
+      await tx
+        .delete(feeStructureItems)
+        .where(
+          and(
+            eq(feeStructureItems.structureId, existing.id),
+            eq(feeStructureItems.tenantId, input.tenantId),
+          ),
+        );
+      await tx.insert(feeStructureItems).values(
+        input.data.items.map((item) => ({
+          tenantId: input.tenantId,
+          structureId: existing.id,
+          feeHeadId: item.feeHeadId,
+          amount: item.amount,
+        })),
+      );
+    }
+  });
+  return getStructureWithItems(existing.id, input.tenantId);
 }
 
 export async function deleteFeeStructure(structureId: string, tenantId: string) {
@@ -645,13 +776,16 @@ export async function createInvoice(input: CreateInvoiceInput) {
   if (feeStructureId) {
     const structure = await requireStructure(feeStructureId, input.tenantId);
     if (!structure.isActive) throw new BadRequestError('Fee structure is inactive');
+    if (input.data.amount !== undefined && input.data.amount !== structure.amount) {
+      throw new BadRequestError('Invoice amount must match the selected fee structure');
+    }
     if (structure.classId && structure.classId !== student.classId) {
       throw new BadRequestError('Fee structure is assigned to a different class');
     }
     if (structure.sectionId && structure.sectionId !== student.sectionId) {
       throw new BadRequestError('Fee structure is assigned to a different section');
     }
-    amount = amount ?? structure.amount;
+    amount = structure.amount;
     title = title || structure.name;
     lineItems = await db
       .select({

@@ -7,6 +7,7 @@ import {
 } from './fees.types.js';
 
 const moneyAmount = z.coerce.number().int().positive().max(100_000_000);
+const MAX_STRUCTURE_AMOUNT = 2_147_483_647;
 const feeHeadCode = z
   .string()
   .trim()
@@ -55,14 +56,32 @@ export const feeHeadIdSchema = z.object({
   params: z.object({ id: z.string().uuid() }),
 });
 
+const feeStructureItemsSchema = z
+  .array(
+    z.object({
+      feeHeadId: z.string().uuid(),
+      amount: moneyAmount,
+    }),
+  )
+  .min(1, 'At least one fee head is required')
+  .max(100, 'A fee structure can contain at most 100 fee heads')
+  .refine(
+    (items) => new Set(items.map((item) => item.feeHeadId)).size === items.length,
+    { message: 'Duplicate fee heads are not allowed' },
+  )
+  .refine(
+    (items) => items.reduce((total, item) => total + item.amount, 0) <= MAX_STRUCTURE_AMOUNT,
+    { message: 'The total fee amount is too large' },
+  );
+
 export const createFeeStructureSchema = z.object({
   body: z.object({
     name: z.string().trim().min(2).max(150),
     classId: z.string().uuid().nullable().optional(),
     sectionId: z.string().uuid().nullable().optional(),
-    amount: moneyAmount,
     frequency: z.enum(FEE_FREQUENCIES).optional(),
     description: z.string().trim().max(2000).nullable().optional(),
+    items: feeStructureItemsSchema,
   }),
 });
 
@@ -73,10 +92,10 @@ export const updateFeeStructureSchema = z.object({
       name: z.string().trim().min(2).max(150).optional(),
       classId: z.string().uuid().nullable().optional(),
       sectionId: z.string().uuid().nullable().optional(),
-      amount: moneyAmount.optional(),
       frequency: z.enum(FEE_FREQUENCIES).optional(),
       description: z.string().trim().max(2000).nullable().optional(),
       isActive: z.boolean().optional(),
+      items: feeStructureItemsSchema.optional(),
     })
     .refine((body) => Object.keys(body).length > 0, {
       message: 'At least one field must be provided',
