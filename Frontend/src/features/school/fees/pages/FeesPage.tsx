@@ -36,6 +36,7 @@ import {
   useInvoices,
   useRecordPayment,
   useVoidPayment,
+  useUpdateFeeStructure,
   type FeeInvoice,
   type FeeStructure,
 } from '../hooks/useFees';
@@ -77,6 +78,7 @@ export function FeesPage() {
   const [creatingInvoice, setCreatingInvoice] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [creatingStructure, setCreatingStructure] = useState(false);
+  const [editingStructure, setEditingStructure] = useState<FeeStructure | null>(null);
   const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null);
   const [detailInvoiceId, setDetailInvoiceId] = useState<string | null>(null);
   const [pendingStructureDelete, setPendingStructureDelete] = useState<FeeStructure | null>(null);
@@ -341,6 +343,9 @@ export function FeesPage() {
                 </div>
                 <RowActions
                   onPreview={() => setPreviewStructure(structure)}
+                  onEdit={
+                    canEditStructure ? () => setEditingStructure(structure) : undefined
+                  }
                   onDelete={
                     canEditStructure ? () => setPendingStructureDelete(structure) : undefined
                   }
@@ -355,6 +360,12 @@ export function FeesPage() {
       {generating && <GenerateInvoicesModal onClose={() => setGenerating(false)} />}
       {creatingStructure && (
         <CreateStructureModal onClose={() => setCreatingStructure(false)} />
+      )}
+      {editingStructure && (
+        <CreateStructureModal
+          structure={editingStructure}
+          onClose={() => setEditingStructure(null)}
+        />
       )}
       {paymentInvoiceId && (
         <PaymentModal invoiceId={paymentInvoiceId} onClose={() => setPaymentInvoiceId(null)} />
@@ -906,7 +917,13 @@ function GenerateInvoicesModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function CreateStructureModal({ onClose }: { onClose: () => void }) {
+function CreateStructureModal({
+  structure,
+  onClose,
+}: {
+  structure?: FeeStructure;
+  onClose: () => void;
+}) {
   type StructureItemDraft = {
     feeHeadId: string;
     amount: string;
@@ -915,17 +932,28 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
     academicYear: string;
   };
   const create = useCreateFeeStructure();
+  const update = useUpdateFeeStructure();
   const classesQuery = useClasses();
   const feeHeadsQuery = useFeeHeads({ activeOnly: true });
   const sessionYearsQuery = useSessionYears();
-  const [name, setName] = useState('');
-  const [classId, setClassId] = useState('');
-  const [sectionId, setSectionId] = useState('');
-  const [items, setItems] = useState<StructureItemDraft[]>([
-    { feeHeadId: '', amount: '', scheduleType: 'monthly', months: [], academicYear: '' },
-  ]);
-  const [frequency, setFrequency] = useState<FeeFrequency>('monthly');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState(structure?.name ?? '');
+  const [classId, setClassId] = useState(structure?.classId ?? '');
+  const [sectionId, setSectionId] = useState(structure?.sectionId ?? '');
+  const [items, setItems] = useState<StructureItemDraft[]>(
+    structure?.items.map((item) => ({
+      feeHeadId: item.feeHeadId,
+      amount: String(item.amount),
+      scheduleType: item.scheduleType,
+      months: item.months,
+      academicYear: item.academicYear ?? '',
+    })) ?? [
+      { feeHeadId: '', amount: '', scheduleType: 'monthly', months: [], academicYear: '' },
+    ],
+  );
+  const [frequency, setFrequency] = useState<FeeFrequency>(structure?.frequency ?? 'monthly');
+  const [description, setDescription] = useState(structure?.description ?? '');
+  const [isActive, setIsActive] = useState(structure?.isActive ?? true);
+  const isPending = create.isPending || update.isPending;
   const sectionsQuery = useSections(classId);
   const feeHeads = feeHeadsQuery.data ?? [];
   const selectedFeeHeadIds = items.map((item) => item.feeHeadId).filter(Boolean);
@@ -952,39 +980,45 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
     total <= 2_147_483_647;
 
   const submit = () => {
-    create.mutate(
-      {
-        name: name.trim(),
-        classId: classId || null,
-        sectionId: sectionId || null,
-        items: parsedItems,
-        frequency,
-        description: description.trim() || null,
-      },
-      { onSuccess: onClose },
-    );
+    const data = {
+      name: name.trim(),
+      classId: classId || null,
+      sectionId: sectionId || null,
+      items: parsedItems,
+      frequency,
+      description: description.trim() || null,
+    };
+    if (structure) {
+      update.mutate({ id: structure.id, ...data, isActive }, { onSuccess: onClose });
+    } else {
+      create.mutate(data, { onSuccess: onClose });
+    }
   };
 
   return (
     <Modal
       open
       onClose={onClose}
-      title="New fee structure"
-      description="Compose a reusable fee structure from fee heads."
+      title={structure ? 'Edit fee structure' : 'New fee structure'}
+      description={
+        structure
+          ? 'Update the structure details, fee items, and schedules.'
+          : 'Compose a reusable fee structure from fee heads.'
+      }
       size="lg"
-      closeDisabled={create.isPending}
+      closeDisabled={isPending}
       footer={
         <>
-          <Button type="button" variant="outline" onClick={onClose} disabled={create.isPending}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
             Cancel
           </Button>
           <Button
             type="button"
             onClick={submit}
-            isLoading={create.isPending}
+            isLoading={isPending}
             disabled={name.trim().length < 2 || !validItems || feeHeadsQuery.isPending}
           >
-            Save structure
+            {structure ? 'Save changes' : 'Save structure'}
           </Button>
         </>
       }
@@ -1287,6 +1321,17 @@ function CreateStructureModal({ onClose }: { onClose: () => void }) {
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
+        {structure && (
+          <label className="flex items-center gap-2 text-sm text-ink-700">
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(event) => setIsActive(event.target.checked)}
+              className="h-4 w-4 rounded border-ink-300 text-primary-600 focus:ring-primary-500"
+            />
+            Active fee structure
+          </label>
+        )}
       </div>
     </Modal>
   );
